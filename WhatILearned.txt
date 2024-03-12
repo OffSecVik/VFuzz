@@ -1,0 +1,10 @@
+static initializer blocks { ... }, runs once when the class is loaded.
+
+Sets, HashSets
+
+Using <> to determine a type
+
+Queues and Blocking Queues
+
+Producer Consumer model
+

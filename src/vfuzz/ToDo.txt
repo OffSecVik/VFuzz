@@ -1,0 +1,64 @@
+	NEXT STEPS
+	
+> implement stable output with some kind of terminal control or GUI - DONE
+
+> test performance metrics with new output
+
+> implement CPU and RAM metrics
+
+
+	OTHER
+
+> url variable in WebRequester.buildRequest(url, payload) method is unneccessary?
+
+
+	TESTING
+	
+> test against robust site (htb labs)
+
+> ensure proper error handling (most important)
+
+	FEATURES
+
+> Metrics
+-> give extra thread in thread orchestrator to metrics class DONE
+-> validate that everything metrics related is off when not using --metrics flag
+
+> Retry Logic
+	> --max-retry flag DONE
+	> DynamicRateLimiter class, which controls a variable that adjusts the fuzzer's speed depending on the number of exceptions caught within a time window
+		> --no-limit turns off the rate limiter
+
+> Print Class for pretty output and progress bar
+
+> rate limiting
+-> pressing plus or minus during fuzzing to increase the rate, having a button to enable/disable rate limiting (this would be super sick)
+-> max value for exponential backoff
+
+> Flags:
+	-w (Path to Wordlist) DONE
+	-u (URL) DONE
+	-e (Exclude Status Code) TEST IT
+	-l (Exclude Length) TEST IT
+	-H (add Header) -> have to be able to add large number of headers!
+	-d (send post data, automatically sets RequestMode to POST)
+	
+> VHOST mode DONE - also added SUBDOMAIN mode
+
+> Strip "/" from url if present - DONE - also ensured a scheme is present
+
+> Handle receiving IPs instead of FQDNs
+
+> Recursive Fuzzing
+
+> POST/PUT requests -- POST DONE, PUT later (does it even make sense to fuzz with PUT requests?)
+
+> File Extension Fuzzing
+
+> Fuzzing from a Text file web request like SQLmap, and placing a * inside the file where to fuzz
+
+-> Use Java Profiler to index performance of my tool?
+
+	IDEAS
+	
+> pass a config object to components that require it
