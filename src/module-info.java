@@ -5,7 +5,6 @@
  * 
  */
 module VFuzz {
-	requires java.net.http;
-	requires com.googlecode.lanterna;
-	requires java.management;
+	requires org.apache.httpcomponents.httpclient;
+	requires org.apache.httpcomponents.httpcore;
 }
