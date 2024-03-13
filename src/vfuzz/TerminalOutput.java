@@ -24,7 +24,6 @@ public class TerminalOutput implements Runnable {
 				Thread.currentThread().interrupt();
 			}
 			*/
-			
 		}
 	}
 	

@@ -1,9 +1,11 @@
 package vfuzz;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 public class ThreadOrchestrator {
@@ -18,18 +20,42 @@ public class ThreadOrchestrator {
 		this.THREAD_COUNT = THREAD_COUNT;
 	}
 	
+	private BlockingQueue<String> queueCopy() {
+		BlockingQueue<String> copy = new LinkedBlockingQueue<>();
+		for (String item : queue) {
+			copy.add(item);
+		}
+		return copy;
+	}
+	
 	public void startFuzzing() {
 
 		executor = Executors.newFixedThreadPool(THREAD_COUNT + 20); // one extra for WordlistReader, one for TerminalOutput, 18 for recursion??
 		
-		// Producer: reads the wordlist and puts it into the queue
-		executor.submit(new WordlistReader(queue, wordlistPath));
+		// Producer: reads the wordlist and puts it into the original queue
+		Future<?> wordlistReaderFuture = executor.submit(new WordlistReader(queue, wordlistPath));
+		try {
+			wordlistReaderFuture.get();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			e.printStackTrace();
+		}
 		
 		// Consumers: take payloads from the wordlist
+		BlockingQueue<String> firstQueue = queueCopy();
+		//System.out.println("First queue code: " + firstQueue.hashCode());
+		//System.out.println("First queue size: " + firstQueue.size());
 		for (int i = 0; i < THREAD_COUNT; i++) {
-			executor.submit(new QueueConsumer(this, queue, ArgParse.getUrl()));
+			executor.submit(new QueueConsumer(this, firstQueue, ArgParse.getUrl()));
 		}
-				
+		
+		
+		
+
+		
+		
+		
 		// Terminal Output Thread
 		TerminalOutput terminalOutput = new TerminalOutput();
 		executor.submit(terminalOutput);
@@ -47,10 +73,6 @@ public class ThreadOrchestrator {
 			System.out.println("Goodbye");
 		}));
 		
-		
-		// shutdown executor after tasks submission
-		executor.shutdown();
-		
 		try {
 			// wait for all tasks to finish
 			if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
@@ -63,11 +85,12 @@ public class ThreadOrchestrator {
 	}
 	
 	public void initiateRecursion(String url) {
-		
-		QueueConsumer recursiveConsumer = new QueueConsumer(this, queue, url);
-		System.out.println("Initiating recursion for url " + url + " under thread " + recursiveConsumer.threadNumber);
-		// System.out.println("Thread number for recursion: " + recursiveConsumer.threadNumber);
+		BlockingQueue<String> deepCopy = queueCopy();
+		// System.out.println("Recursive queue code: " + deepCopy.hashCode());
+		// System.out.println("Recursive queue size: " + deepCopy.size());
+		QueueConsumer recursiveConsumer = new QueueConsumer (this, deepCopy, url);
 		executor.submit(recursiveConsumer);
-		//executor.submit(new QueueConsumer(this, queue, url));
+		// System.out.println("Initiating recursion for url " + url + " under thread " + recursiveConsumer.threadNumber); //******
+		//executor.submit(new QueueConsumer(this, queueCopy(), url));
 	}
 }

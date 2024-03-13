@@ -88,6 +88,8 @@ public class WebRequester {
 		
 		try {
 			String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8.toString());
+			// for now every url gets a slash
+			requestUrl = requestUrl.endsWith("/") ? requestUrl : requestUrl + "/";
 			
 			if (!payload.equals(encodedPayload)) {
 				payload = encodedPayload;
@@ -95,7 +97,7 @@ public class WebRequester {
 			}
 				
 			switch (ArgParse.getRequestMode()) {
-				case STANDARD -> requestUrl += "/" + payload;
+				case STANDARD -> requestUrl += payload;
 				case SUBDOMAIN -> requestUrl = urlRebuilder(requestUrl, payload);
 				case VHOST -> requestBuilder.header("Host", urlRebuilder(requestUrl, payload));
 			}

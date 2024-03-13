@@ -23,15 +23,27 @@ public class QueueConsumer implements Runnable {
 
 	@Override
 	public void run() {
-		WaitingIterator<String> iterator = new WaitingIterator<String>(queue);
+
 		while (true) {
-			String payload = iterator.next(); // this will block if the queue is empty
+			String payload = null;
+			try {
+				payload = queue.take();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
 			if (payload.equals("EOF")) { // special marker to indicate the end of the queue
 				break; // Frau Steinberger rotiert
 			}
 			
 			// building the request
 			HttpRequest request = WebRequester.buildRequest(url, payload);
+			/* more debug prints for the recursive threads
+			if (this.threadNumber == 11) {
+				System.out.println("Testing " + request.uri() + " with payload " + payload);
+			}
+			*/
 			// sending the request
 			HttpResponse<String> response = WebRequester.makeRequest(request);
 			// parsing the response
@@ -46,22 +58,46 @@ public class QueueConsumer implements Runnable {
 			// checking for excluding the response due to flags:
 			int statusCode = response.statusCode();
 			int responseLength = response.body().length();
+			/* multithread debug adventures
 			if (this.threadNumber == 10) {
 				System.out.println("Response for recursive thread " + 10 + ": \t" + response.uri().toString());
 			}
-			if (!excludeRequest(statusCode, responseLength)) {
-				// System.out.printf("Found: %s\t\t(Status Code %d)\t(Length: %d)%n", response.uri(), statusCode, responseLength);
-				new Hit(response.uri().toString(), statusCode, responseLength);
-				// handle recursion right here
-				if (ArgParse.getRecursionEnabled()) {
-					System.out.println("Hit: " + response.uri().toString());
+			*/
+			if (excludeRequest(statusCode, responseLength)) {
+				return;
+			}
+			
+			for (Hit hit : Hit.getHits()) {
+				if (hit.getUrl().equals(response.uri().toString())) {
+					return;
+				}
+			}
+			
+			
+			System.out.println("Thread " + this.threadNumber + " found " + response.uri()); //******
+			// handle recursion right here
+			if (ArgParse.getRecursionEnabled()) {
+				if (recursionRedundancyCheck(response.uri().toString())) {
 					orchestrator.initiateRecursion(response.uri().toString());
 				}
 			}
+			new Hit(response.uri().toString(), statusCode, responseLength); // this has to be last, otherwise recursionRedudnacyCheck takes a huge shit
 		}
 	}
 	
 	private boolean excludeRequest(int statusCode, int responseLength) {
 		return ArgParse.getExcludedStatusCodes().contains(statusCode) || ArgParse.getExcludedLength().contains(responseLength);
+	}
+	
+	private boolean recursionRedundancyCheck(String url) { // shoddy patchwork
+		if (url.equals(ArgParse.getUrl() + "/")) { // this does fix the initial forking
+			return false;
+		}
+		for (Hit hit : Hit.getHits()) {
+			if (hit.getUrl().equals(url + "/") || (hit.getUrl() + "/").equals(url)) {
+				return false;
+			}
+		}
+		return true; // true means passed the check
 	}
 }
