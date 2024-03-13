@@ -1,10 +1,13 @@
 package vfuzz;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpResponse.BodyHandlers;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpHead;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.HttpResponse;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -13,10 +16,7 @@ import java.nio.charset.StandardCharsets;
 public class WebRequester {
 	
 	private static RateLimiter requestRateLimiter;
-	private static final HttpClient client = HttpClient.newBuilder()
-			.version(HttpClient.Version.HTTP_2)
-			.followRedirects(HttpClient.Redirect.NORMAL)
-			.build();
+	private static final CloseableHttpClient client = HttpClients.createDefault();
 	
 	public static void enableRequestRateLimiter() {
 		requestRateLimiter.enable();
@@ -32,8 +32,7 @@ public class WebRequester {
 	
 	
 	// method for SENDING the request
-	public static HttpResponse<String> makeRequest(HttpRequest request) {
-		
+	public static HttpResponse makeRequest(HttpRequestBase request) {
 		long retryDelay = 1000; // milliseconds
 		
 		// retry loop
@@ -41,7 +40,7 @@ public class WebRequester {
 			// see if metrics is enabled
 			if (ArgParse.getMetricsEnabled() ) {
 				Metrics.incrementRequestsCount(); // increments the requests
-				Metrics.setCurrentRequest(request.uri().toString());
+				Metrics.setCurrentRequest(request.getURI().toString());
 			}
 			
 			// await a free token if we use the rate limiter
@@ -51,7 +50,7 @@ public class WebRequester {
 			
 			// attempting to send the request
 			try {
-				HttpResponse<String> response =  client.send(request, BodyHandlers.ofString()); // request succeeded
+				HttpResponse response =  client.execute(request); // request succeeded
 				if (attempt > 1) { // LOGGING
 					// System.err.println("Attempt " + attempt + " successful for " + request.uri());
 					// Debug.logRequest(request.uri().toString(), "Attempt " + attempt + " successful " + request.uri());
@@ -61,10 +60,6 @@ public class WebRequester {
 				// System.err.println("Attempt " + attempt + " failed for " + request.uri()); // OLD LOGGING
 				// Debug.logRequest(request.uri().toString(), "Attempt " + attempt + " failed for " + request.uri());
 				// e.printStackTrace();
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-				System.err.println("Request was interrupted: " + e.getMessage());
-				return null;
 			} catch (Exception e) {
 				System.err.println("Unexpected error during request: " + e.getMessage());
 				return null;
@@ -83,39 +78,54 @@ public class WebRequester {
 	
 
 	// method for BUILDING the request
-	public static HttpRequest buildRequest(String requestUrl, String payload) {
-		HttpRequest.Builder requestBuilder = HttpRequest.newBuilder();
-		
+	public static HttpRequestBase buildRequest(String requestUrl, String payload) {
 		try {
-			String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8.toString());
+			String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8);
+			HttpRequestBase request = null;
+
 			// for now every url gets a slash
 			requestUrl = requestUrl.endsWith("/") ? requestUrl : requestUrl + "/";
-			
+
 			if (!payload.equals(encodedPayload)) {
 				payload = encodedPayload;
 				// System.out.println("Encoded \"" + payload + " to \"" + encodedPayload); // debug prints
 			}
-				
+
 			switch (ArgParse.getRequestMode()) {
-				case STANDARD -> requestUrl += payload;
-				case SUBDOMAIN -> requestUrl = urlRebuilder(requestUrl, payload);
-				case VHOST -> requestBuilder.header("Host", urlRebuilder(requestUrl, payload));
+				case STANDARD -> {
+					requestUrl += payload;
+					request = new HttpGet(requestUrl);
+				}
+				case SUBDOMAIN -> {
+					requestUrl = urlRebuilder(requestUrl, payload);
+					request = new HttpGet(requestUrl);
+				}
+				case VHOST -> {
+					request = new HttpGet(requestUrl);
+					request.setHeader("Host", payload);
+				}
 			}
 			
 			switch (ArgParse.getRequestMethod()) {
-				case GET -> requestBuilder.uri(URI.create(requestUrl)).GET();
-				case HEAD -> requestBuilder.uri(URI.create(requestUrl)).method("HEAD", HttpRequest.BodyPublishers.noBody());
-				case POST -> requestBuilder.uri(URI.create(requestUrl)).POST(HttpRequest.BodyPublishers.ofString("my post data")); // post data?
+				case GET -> {
+					request = new HttpGet(requestUrl);
+				}
+				case HEAD -> {
+					request = new HttpHead(requestUrl);
+				}
+				case POST -> {
+					request = new HttpPost(requestUrl);
+					((HttpPost) request).setEntity(new StringEntity("my post data")); // TODO: Variable
+				}
 			}
 			
-			return requestBuilder.build();
+			return request;
 			
 		} catch (IllegalArgumentException e) {
 			System.err.println("Invalid URI: " + e.getMessage());
-		} catch (UnsupportedEncodingException uee) {
-			System.out.println("There was an error URL-encoding " + payload + ".");
-		}
-		return null;
+		} catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e); // TODO: Find out what that shit does
+        }
+        return null;
 	}
 }
-

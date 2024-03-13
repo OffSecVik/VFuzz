@@ -1,8 +1,13 @@
 package vfuzz;
 
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.util.EntityUtils;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.client.HttpClient;
 import java.util.concurrent.BlockingQueue;
+import java.io.IOException;
 
 public class QueueConsumer implements Runnable {
 	
@@ -23,77 +28,73 @@ public class QueueConsumer implements Runnable {
 
 	@Override
 	public void run() {
-
 		while (true) {
-			String payload = null;
+			String payload;
 			try {
 				payload = queue.take();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+				if ("EOF".equals(payload)) {
+					break;
+				}
 
-			if (payload.equals("EOF")) { // special marker to indicate the end of the queue
-				break; // Frau Steinberger rotiert
+				HttpRequestBase request = WebRequester.buildRequest(url, payload);
+				if (request != null) {
+					HttpResponse response = WebRequester.makeRequest(request);
+					parseResponse(response, request.getURI().toString());
+				}
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				System.err.println("Queue consumption was interrupted.");
 			}
-			
-			// building the request
-			HttpRequest request = WebRequester.buildRequest(url, payload);
-			/* more debug prints for the recursive threads
-			if (this.threadNumber == 11) {
-				System.out.println("Testing " + request.uri() + " with payload " + payload);
-			}
-			*/
-			// sending the request
-			HttpResponse<String> response = WebRequester.makeRequest(request);
-			// parsing the response
-			parseResponse(response);
 		}
 	}
 	
-	private void parseResponse(HttpResponse<String> response) {
-		// Response Handling //
+	private void parseResponse(HttpResponse response, String requestUrl) {
 		if (response != null) {
-			
-			// checking for excluding the response due to flags:
-			int statusCode = response.statusCode();
-			int responseLength = response.body().length();
-			String responseUrl = response.uri().toString();
+			try {
+				// checking for excluding the response due to flags:
+				int statusCode = response.getStatusLine().getStatusCode();
+				String responseBody = EntityUtils.toString(response.getEntity());
+				int responseLength = responseBody.length();
+
 			/* multithread debug adventures
 			if (this.threadNumber == 10) {
 				System.out.println("Response for recursive thread " + 10 + ": \t" + response.uri().toString());
 			}
 			*/
-			if (excludeRequest(statusCode, responseLength)) {
-				return;
-			}
-			
-			// check if it's a false positive
-			for (Hit hit : Hit.getHits()) { 
-				if (hit.getUrl().equals(responseUrl)) {
+
+				if (excludeRequest(statusCode, responseLength)) {
 					return;
 				}
-			}
-			
+
+				// check if it's a false positive
+				for (Hit hit : Hit.getHits()) {
+					if (hit.getUrl().equals(requestUrl)) {
+						return;
+					}
+				}
+
 			/*
 			// check if there's a case insensitive match
 			for (Hit hit : Hit.getHits()) {
 				if (hit.getUrl().equalsIgnoreCase(responseUrl)) {
-					
+
 				}
 			}
 			*/
-			
-			// from here on we have a hit
-			System.out.println("Thread " + this.threadNumber + " found " + responseUrl); //******
-			// handle recursion right here
-			if (ArgParse.getRecursionEnabled()) {
-				if (recursionRedundancyCheck(responseUrl)) {
-					orchestrator.initiateRecursion(responseUrl);
+
+				// from here on we have a hit
+				System.out.println("Thread " + this.threadNumber + " found " + requestUrl); //******
+				// handle recursion right here
+				if (ArgParse.getRecursionEnabled()) {
+					if (recursionRedundancyCheck(requestUrl)) {
+						orchestrator.initiateRecursion(requestUrl);
+					}
 				}
+				// finally make the hit object
+				new Hit(requestUrl, statusCode, responseLength); // this has to be last, otherwise recursionRedundancyCheck takes a huge shit
+			} catch (IOException e) {
+				System.err.println("Error parsing response body for URL " + requestUrl);
 			}
-			// finally make the hit object
-			new Hit(responseUrl, statusCode, responseLength); // this has to be last, otherwise recursionRedundancyCheck takes a huge shit
 		}
 	}
 	
