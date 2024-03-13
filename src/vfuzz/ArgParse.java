@@ -36,6 +36,12 @@ public class ArgParse {
 	// --metrics
 	private static boolean metricsEnabled = false;
 	
+	// --debug
+	private static boolean debugEnabled = false;
+	
+	// --recursion
+	private static boolean recursionEnabled = false;
+	
 	static { // static initalizer block
 		excludedStatusCodes.add(404); // excluding 404 by default.
 	}
@@ -213,6 +219,14 @@ public class ArgParse {
 						Metrics.startMetrics();
 					break;
 					
+				case "--debug":
+					debugEnabled = true;
+					break;
+					
+				case "--recursive":
+					recursionEnabled = true;
+					break;
+					
 				default:
 					System.out.println("Unknown option: " + args[i]);
 					return -1;
@@ -263,5 +277,13 @@ public class ArgParse {
 	
 	public static boolean getMetricsEnabled() {
 		return metricsEnabled;
+	}
+	
+	public static boolean getDebugEnabled() {
+		return debugEnabled;
+	}
+	
+	public static boolean getRecursionEnabled() {
+		return recursionEnabled;
 	}
 }

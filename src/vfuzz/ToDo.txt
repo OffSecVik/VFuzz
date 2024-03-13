@@ -59,6 +59,23 @@
 
 -> Use Java Profiler to index performance of my tool?
 
+
 	IDEAS
 	
 > pass a config object to components that require it
+
+
+	LOG
+	
+> added URLEncoding the payload in WebRequester
+-> should be able to turn this off with a flag, or maybe in performance mode
+
+
+
+IDEAS FOR RECURSION
+
+-> Implement an iterator instead of queue.take() to preserve the queue.
+the iterator would get a custom wait implementation, so that it doesn't choke in case the queue is empty. DONE
+then modify the requestBuilder to build a request for each recursion target, it needs to take url as argument DONE
+for this, we need to save the recursive targets in a data structure (ArrayList) -> We have this in Hit class DONE
+now on a hit we need to call another thread that starts fuzzing the new target with a new queue

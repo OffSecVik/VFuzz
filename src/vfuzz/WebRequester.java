@@ -6,10 +6,13 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 public class WebRequester {
 	
-	private static RateLimiter requestRateLimiter = new RateLimiter(ArgParse.getRateLimit());
+	private static RateLimiter requestRateLimiter;
 	private static final HttpClient client = HttpClient.newBuilder()
 			.version(HttpClient.Version.HTTP_2)
 			.followRedirects(HttpClient.Redirect.NORMAL)
@@ -17,6 +20,7 @@ public class WebRequester {
 	
 	public static void enableRequestRateLimiter() {
 		requestRateLimiter.enable();
+		requestRateLimiter = new RateLimiter(ArgParse.getRateLimit());
 	}
 	
 	private static String urlRebuilder(String url, String payload) { // rebuilds URL for VHOST and SUBDOMAIN mode
@@ -37,6 +41,7 @@ public class WebRequester {
 			// see if metrics is enabled
 			if (ArgParse.getMetricsEnabled() ) {
 				Metrics.incrementRequestsCount(); // increments the requests
+				Metrics.setCurrentRequest(request.uri().toString());
 			}
 			
 			// await a free token if we use the rate limiter
@@ -48,11 +53,13 @@ public class WebRequester {
 			try {
 				HttpResponse<String> response =  client.send(request, BodyHandlers.ofString()); // request succeeded
 				if (attempt > 1) { // LOGGING
-					System.err.println("Attempt " + attempt + " successful for " + request.uri());
+					// System.err.println("Attempt " + attempt + " successful for " + request.uri());
+					// Debug.logRequest(request.uri().toString(), "Attempt " + attempt + " successful " + request.uri());
 				}
 				return response;
 			} catch (IOException e) {
-				System.err.println("Attempt " + attempt + " failed for " + request.uri()); // LOGGING
+				// System.err.println("Attempt " + attempt + " failed for " + request.uri()); // OLD LOGGING
+				// Debug.logRequest(request.uri().toString(), "Attempt " + attempt + " failed for " + request.uri());
 				// e.printStackTrace();
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
@@ -76,11 +83,16 @@ public class WebRequester {
 	
 
 	// method for BUILDING the request
-	public static HttpRequest buildRequest(String payload) {
+	public static HttpRequest buildRequest(String requestUrl, String payload) {
 		HttpRequest.Builder requestBuilder = HttpRequest.newBuilder();
 		
 		try {
-			String requestUrl = ArgParse.getUrl();
+			String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8.toString());
+			
+			if (!payload.equals(encodedPayload)) {
+				payload = encodedPayload;
+				// System.out.println("Encoded \"" + payload + " to \"" + encodedPayload); // debug prints
+			}
 				
 			switch (ArgParse.getRequestMode()) {
 				case STANDARD -> requestUrl += "/" + payload;
@@ -98,6 +110,8 @@ public class WebRequester {
 			
 		} catch (IllegalArgumentException e) {
 			System.err.println("Invalid URI: " + e.getMessage());
+		} catch (UnsupportedEncodingException uee) {
+			System.out.println("There was an error URL-encoding " + payload + ".");
 		}
 		return null;
 	}

@@ -1,9 +1,10 @@
 package vfuzz;
-
+/*
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.lang.management.OperatingSystemMXBean;
+*/
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -15,6 +16,7 @@ public class Metrics {
 	// request metrics variables
 	private static final AtomicLong requestCount = new AtomicLong(0); // thread safe incrementation of requests
 	private static double requestsPerSecond = 0.0;
+	private static String currentRequest;
 	
 	// producer metrics variables
 	private static final AtomicLong producerCount = new AtomicLong(0);
@@ -70,5 +72,13 @@ public class Metrics {
 	
 	public static double getProducedPerSecond() {
 		return producedPerSecond;
+	}
+	
+	public static void setCurrentRequest(String request) {
+		currentRequest = request;
+	}
+	
+	public static String getCurrentRequest() {
+		return currentRequest;
 	}
 }

@@ -1,62 +1,99 @@
 package vfuzz;
 
-import com.googlecode.lanterna.TerminalPosition;
-import com.googlecode.lanterna.TerminalSize;
-import com.googlecode.lanterna.TextColor;
-import com.googlecode.lanterna.graphics.TextGraphics;
-import com.googlecode.lanterna.screen.Screen;
-import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
-import com.googlecode.lanterna.terminal.Terminal;
-
 public class TerminalOutput implements Runnable {
 
-	private Screen screen;
+
 	private volatile boolean running = true;
-	
-	public TerminalOutput() {
-		try {
-			//Terminal terminal = new DefaultTerminalFactory().createTerminal();
-			screen = new DefaultTerminalFactory().createScreen();
-			screen.startScreen();
-			screen.clear();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
 	
 	@Override
 	public void run() {
 		while (running) {
-			updateMetrics();
+			/*
+			if (ArgParse.getMetricsEnabled()) {
+				updateMetrics();
+			}
+			updateOutput();
+			if (ArgParse.getMetricsEnabled()) {
+				updatePayload();
+			}
+			returnCursorToTop();
 			try {
-				Thread.sleep(1000);
+				Thread.sleep(50);
 			} catch (InterruptedException e) {
 				running = false;
 				Thread.currentThread().interrupt();
 			}
+			*/
+			
 		}
 	}
 	
-	public synchronized void updateMetrics() {
-		try {
-			screen.clear();
-			TextGraphics textGraphics = screen.newTextGraphics();
-			//textGraphics.setBackgroundColor(TextColor.ANSI.WHITE);
-			textGraphics.setForegroundColor(TextColor.ANSI.GREEN);
-			textGraphics.putString(new TerminalPosition(0, 0), "Words read from wordlist per Second: " + Metrics.getProducedPerSecond());
-			textGraphics.putString(new TerminalPosition(0, 1), "Requests per Second: " + Metrics.getRequestsPerSecond());	
-			screen.refresh();
-		} catch (Exception e) {
-			e.printStackTrace();
+	public void returnCursorToTop() {
+		if (Hit.getHitCount() + getMetricsLines() > 0) {
+			moveCursorUpBegLine(Hit.getHitCount() + getMetricsLines());
 		}
 	}
 	
-	public void stop() {
-		running = false;
-		try {
-			screen.stopScreen();
-		} catch (Exception e) {
-			e.printStackTrace();
+	public void returnCursorToBottom() {
+		if (Hit.getHitCount() + getMetricsLines() > 0) {
+			moveCursorDownBegLine(Hit.getHitCount() + getMetricsLines());
 		}
+	}
+	
+	public void updateOutput() {
+		for (Hit hit : Hit.getHits()) {
+			System.out.println(hit.toString());
+		}
+	}
+	
+	public void updateMetrics() { // gogo ANSI
+		eraseToEOL();
+		System.out.println("Requests per Second: " + Metrics.getRequestsPerSecond());
+
+	}
+	
+	public void updatePayload() {
+		eraseToEOL();
+		System.out.println("Now fuzzing " + Metrics.getCurrentRequest());
+
+	}
+	
+	private int getMetricsLines() { // calculates lines needed by metrics
+		if (ArgParse.getMetricsEnabled()) {
+			return 2;
+		}
+		return 0;
+	}
+	
+	private void clearScreen() {
+		System.out.print("\033[J2");
+	}
+	
+	private void moveUp(int n) {
+		System.out.printf("\033[%dA", n);
+	}
+	
+	private void moveDown(int n) {
+		System.out.printf("\033[%dB", n);
+	}
+	
+	private void eraseToEOL() {
+		System.out.print("\033[0K");
+	}
+	
+	private void moveCursorDownBegLine(int n) {
+		System.out.printf("\033[%dE", n);
+	}
+	
+	private void moveCursorUpBegLine(int n) {
+		System.out.printf("\033[%dF", n);
+	}
+	
+	public void setRunning(boolean running) {
+		this.running = running;
+	}
+	
+	public void shutdown() {
+		moveCursorDownBegLine(Hit.getHitCount() + getMetricsLines());
 	}
 }

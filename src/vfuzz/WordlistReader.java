@@ -21,12 +21,13 @@ public class WordlistReader implements Runnable {
 			String payload;
 			while ((payload = reader.readLine()) != null) {
 				queue.put(payload);
-				if (ArgParse.getMetricsEnabled() ) {
+				if (ArgParse.getMetricsEnabled()) {
 					Metrics.incrementProducerCount(); // increments the requests
 				}
 			}
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			System.out.println("File \"" + path + "\" could not be found.");
+			System.exit(-1);
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
