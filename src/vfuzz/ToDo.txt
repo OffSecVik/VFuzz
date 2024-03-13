@@ -47,9 +47,9 @@
 
 > Strip "/" from url if present - DONE - also ensured a scheme is present
 
-> Handle receiving IPs instead of FQDNs
+> Handle receiving IPs instead of FQDNs DONE
 
-> Recursive Fuzzing
+> Recursive Fuzzing DONE
 
 > POST/PUT requests -- POST DONE, PUT later (does it even make sense to fuzz with PUT requests?)
 

@@ -58,6 +58,7 @@ public class QueueConsumer implements Runnable {
 			// checking for excluding the response due to flags:
 			int statusCode = response.statusCode();
 			int responseLength = response.body().length();
+			String responseUrl = response.uri().toString();
 			/* multithread debug adventures
 			if (this.threadNumber == 10) {
 				System.out.println("Response for recursive thread " + 10 + ": \t" + response.uri().toString());
@@ -67,21 +68,32 @@ public class QueueConsumer implements Runnable {
 				return;
 			}
 			
-			for (Hit hit : Hit.getHits()) {
-				if (hit.getUrl().equals(response.uri().toString())) {
+			// check if it's a false positive
+			for (Hit hit : Hit.getHits()) { 
+				if (hit.getUrl().equals(responseUrl)) {
 					return;
 				}
 			}
 			
-			
-			System.out.println("Thread " + this.threadNumber + " found " + response.uri()); //******
-			// handle recursion right here
-			if (ArgParse.getRecursionEnabled()) {
-				if (recursionRedundancyCheck(response.uri().toString())) {
-					orchestrator.initiateRecursion(response.uri().toString());
+			/*
+			// check if there's a case insensitive match
+			for (Hit hit : Hit.getHits()) {
+				if (hit.getUrl().equalsIgnoreCase(responseUrl)) {
+					
 				}
 			}
-			new Hit(response.uri().toString(), statusCode, responseLength); // this has to be last, otherwise recursionRedudnacyCheck takes a huge shit
+			*/
+			
+			// from here on we have a hit
+			System.out.println("Thread " + this.threadNumber + " found " + responseUrl); //******
+			// handle recursion right here
+			if (ArgParse.getRecursionEnabled()) {
+				if (recursionRedundancyCheck(responseUrl)) {
+					orchestrator.initiateRecursion(responseUrl);
+				}
+			}
+			// finally make the hit object
+			new Hit(responseUrl, statusCode, responseLength); // this has to be last, otherwise recursionRedundancyCheck takes a huge shit
 		}
 	}
 	

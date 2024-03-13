@@ -50,12 +50,6 @@ public class ThreadOrchestrator {
 			executor.submit(new QueueConsumer(this, firstQueue, ArgParse.getUrl()));
 		}
 		
-		
-		
-
-		
-		
-		
 		// Terminal Output Thread
 		TerminalOutput terminalOutput = new TerminalOutput();
 		executor.submit(terminalOutput);
