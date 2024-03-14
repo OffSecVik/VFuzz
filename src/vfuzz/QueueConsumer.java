@@ -3,9 +3,6 @@ package vfuzz;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.util.EntityUtils;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.client.HttpClient;
 import java.util.concurrent.BlockingQueue;
 import java.io.IOException;
 
@@ -53,8 +50,11 @@ public class QueueConsumer implements Runnable {
 			try {
 				// checking for excluding the response due to flags:
 				int statusCode = response.getStatusLine().getStatusCode();
-				String responseBody = EntityUtils.toString(response.getEntity());
-				int responseLength = responseBody.length();
+				int responseLength = 0;
+				if (response.getEntity() != null) {
+					String responseBody = EntityUtils.toString(response.getEntity());
+					responseLength = responseBody.length();
+				}
 
 			/* multithread debug adventures
 			if (this.threadNumber == 10) {
@@ -94,6 +94,8 @@ public class QueueConsumer implements Runnable {
 				new Hit(requestUrl, statusCode, responseLength); // this has to be last, otherwise recursionRedundancyCheck takes a huge shit
 			} catch (IOException e) {
 				System.err.println("Error parsing response body for URL " + requestUrl);
+			} catch (Exception e) {
+				System.err.println(e);
 			}
 		}
 	}
