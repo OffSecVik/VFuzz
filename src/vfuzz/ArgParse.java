@@ -51,6 +51,8 @@ public class ArgParse {
 
 	private static Set<String> headers = new HashSet<>();
 
+	public static String fuzzMarker = "FUZZ"; // fuzzmarker is FUZZ by default
+
 
 	static { // static initalizer block
 		excludedStatusCodes.add(404); // excluding 404 by default.
@@ -265,6 +267,14 @@ public class ArgParse {
 					requestFileFuzzing = true;
 					break;
 
+				case "--fuzz-marker":
+					if (!argSyntaxVerified(args, i)) {
+						System.out.println("Error: --fuzz-marker requires a String.");
+						return -1;
+					}
+					fuzzMarker = args[++i];
+					break;
+
 				default:
 					System.out.println("Unknown option: " + args[i]);
 					return -1;
@@ -339,5 +349,9 @@ public class ArgParse {
 
 	public static String getRequestFilePath() {
 		return requestFilePath;
+	}
+
+	public static String getFuzzMarker() {
+		return fuzzMarker;
 	}
 }

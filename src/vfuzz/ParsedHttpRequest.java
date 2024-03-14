@@ -17,9 +17,14 @@ public class ParsedHttpRequest {
     private Map<String, String> headers = new HashMap<>();
     private String body;
 
-    ParsedHttpRequest() {
+    private static void updateFuzzMarker() {
+        fuzzMarker = ArgParse.getFuzzMarker();
     }
-    ParsedHttpRequest(ParsedHttpRequest that) { // copy constructor
+
+    ParsedHttpRequest() {
+        updateFuzzMarker();
+    }
+    ParsedHttpRequest(ParsedHttpRequest that) { // copy constructor - this will be called very very often
         method = that.method;
         url = that.url;
         headers = that.headers; // TODO: Ensure that this actually makes a deep copy of the original headers Map

@@ -83,13 +83,11 @@ public class WebRequester {
 	public static HttpRequestBase buildRequestFromFile(ParsedHttpRequest parsedRequest, String payload) {
 		try {
 			String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8); // urlencoding, some wordlists have weird payloads
-			parsedRequest.replaceFuzzMarker(encodedPayload); // injecting the payload into the request
+			parsedRequest.replaceFuzzMarker(encodedPayload); // injecting the payload into the request // TODO: OPTIONAL: could avoid making deep copies of the parsedRequest in QueueConsumer if we found a way to parse for FUZZ AFTER extracting the data from the parsedRequest. This would likely involve making a method in this class right here or checking for FUZZ every time we read data from the request
 			// String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8);
 			HttpRequestBase request = null;
-
 			String requestUrl = parsedRequest.getUrl();
 			// requestUrl = requestUrl.endsWith("/") ? requestUrl : requestUrl + "/"; // TODO: Take care of duplicate due to backslashes another way, this is a little janky
-
 
 			// set request method
 			switch (parsedRequest.getMethod().toUpperCase()) {

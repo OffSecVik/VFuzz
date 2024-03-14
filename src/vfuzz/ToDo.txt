@@ -22,6 +22,11 @@
 > test to see how flags are read - are the quotes part of the processed values? (e.g. --user-agent "Mozilla" - will the program read "Mozilla" or Mozilla?)
 
 	FEATURES
+> FLAG COMPATIBILITY is a huge thing we need to think about, there's flags that directly work against each other and shouldn't be used together, e.g. --subdomain and --vhost
+-> also checking that flags can only be supplied once
+
+> FUZZ mode where I can specify something like http://admin.mysite.com/FUZZ/login.php
+-> FUZZ mode AND FILE mode both use the fuzzMarker
 
 > have --exclude-length exclude ranges of lengths (e.g. 200-450)
 
