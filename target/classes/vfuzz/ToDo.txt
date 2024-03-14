@@ -9,8 +9,9 @@
 
 	OTHER
 
-> url variable in WebRequester.buildRequest(url, payload) method is unneccessary?
+> url variable in WebRequester.buildRequest(url, payload) method is unnecessary? - FIXED
 
+> Recursion Thread handling - Thread Pool? Who gets how many thread? Max threads?
 
 	TESTING
 	
@@ -18,11 +19,19 @@
 
 > ensure proper error handling (most important)
 
+> test to see how flags are read - are the quotes part of the processed values? (e.g. --user-agent "Mozilla" - will the program read "Mozilla" or Mozilla?)
+
 	FEATURES
+
+> have --exclude-length exclude ranges of lengths (e.g. 200-450)
+
+> allow ranges in status codes
+
+> fix request building (new) - DONE
 
 > Metrics
 -> give extra thread in thread orchestrator to metrics class DONE
--> validate that everything metrics related is off when not using --metrics flag
+-> validate that everything metrics related is off when not using --metrics flag DONE
 
 > Retry Logic
 	> --max-retry flag DONE
@@ -31,17 +40,22 @@
 
 > Print Class for pretty output and progress bar
 
-> rate limiting
+> rate limiting DONE
+-> Dynamic Rate Limiting
 -> pressing plus or minus during fuzzing to increase the rate, having a button to enable/disable rate limiting (this would be super sick)
 -> max value for exponential backoff
 
 > Flags:
-	-w (Path to Wordlist) DONE
-	-u (URL) DONE
-	-e (Exclude Status Code) TEST IT
-	-l (Exclude Length) TEST IT
-	-H (add Header) -> have to be able to add large number of headers!
-	-d (send post data, automatically sets RequestMode to POST)
+	-w (Path to Wordlist) - DONE
+	-u (URL) - DONE
+	-e (Exclude Status Code) - TEST IT - WORKS
+	-l (Exclude Length) - //TODO TEST IT
+	-H (add Header) -> have to be able to add large number of headers! - //TODO TEST IT
+	-d (send post data, automatically sets RequestMode to POST) (CONFLICT CHECK)
+	-a --user-agent (User-Agent) (CONFLICT CHECK with --random-agent)
+	--random-agent (set random user agent)
+	-r (read request from file)
+	---> allow specification of a custom marker
 	
 > VHOST mode DONE - also added SUBDOMAIN mode
 

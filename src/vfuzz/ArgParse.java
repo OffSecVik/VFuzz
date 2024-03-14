@@ -41,17 +41,24 @@ public class ArgParse {
 	
 	// --recursion
 	private static boolean recursionEnabled = false;
-	
+
+	// -a --user-agent
+	private static String userAgent;
+
+	private static boolean requestFileFuzzing = false;
+
+	private static String requestFilePath;
+
+	private static Set<String> headers = new HashSet<>();
+
+
 	static { // static initalizer block
 		excludedStatusCodes.add(404); // excluding 404 by default.
 	}
 	
 	private static boolean argSyntaxVerified(String[] args, int i) {
-		if (i + 1 >= args.length) {
-			return false;
-		}
-		return true;
-	}
+        return i + 1 < args.length;
+    }
 	
 	public static boolean checkRequired() { // needs to be public!
 		if (wordlistPath == null) {
@@ -207,7 +214,7 @@ public class ArgParse {
 					try {
 						rateLimiterEnabled = true;
 						rateLimit = Integer.parseInt(args[++i]);
-						WebRequester.enableRequestRateLimiter();
+						WebRequester.enableRequestRateLimiter(rateLimit);
 					} catch (NumberFormatException e) {
 						System.out.println("Error: --rate-limit requires an integer.");
 						return -1;
@@ -226,7 +233,38 @@ public class ArgParse {
 				case "--recursive":
 					recursionEnabled = true;
 					break;
-					
+
+				case "-a":
+				case "--user-agent":
+					if (!argSyntaxVerified(args, i)) {
+						System.out.println("Error: --user-agent requires a String");
+						return -1;
+					}
+					userAgent = args[++i];
+					break;
+
+				case "-H": // Header - should be able to set an endless amount
+					if (!argSyntaxVerified(args, i)) {
+						System.out.println("Error: -H requires a String");
+						return -1;
+					}
+					String headerInput = args[++i];
+					if (!headerInput.contains(":") || headerInput.startsWith(":") || headerInput.endsWith(":")) {
+						System.out.println("Error: Invalid header format. Header must be in 'Name: Value' format.");
+						return -1;
+					}
+					headers.add(args[++i]);
+					break;
+
+				case "-r":
+					if (!argSyntaxVerified(args, i)) {
+						System.out.println("Error: -r requires a filepath to the HTTP request file.");
+						return -1;
+					}
+					requestFilePath = args[++i];
+					requestFileFuzzing = true;
+					break;
+
 				default:
 					System.out.println("Unknown option: " + args[i]);
 					return -1;
@@ -285,5 +323,21 @@ public class ArgParse {
 	
 	public static boolean getRecursionEnabled() {
 		return recursionEnabled;
+	}
+
+	public static String getUserAgent() {
+		return userAgent;
+	}
+
+	public static Set<String> getHeaders() {
+		return headers;
+	}
+
+	public static boolean getRequestFileFuzzing() {
+		return requestFileFuzzing;
+	}
+
+	public static String getRequestFilePath() {
+		return requestFilePath;
 	}
 }

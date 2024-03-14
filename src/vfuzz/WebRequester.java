@@ -10,17 +10,20 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.HttpResponse;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 public class WebRequester {
 	
 	private static RateLimiter requestRateLimiter;
 	private static final CloseableHttpClient client = HttpClients.createDefault();
 	
-	public static void enableRequestRateLimiter() {
+	public static void enableRequestRateLimiter(int rateLimit) { // gets called by ArgParse upon reading the flags if the --rate-limit flag is provided
+		requestRateLimiter = new RateLimiter(rateLimit);
 		requestRateLimiter.enable();
-		requestRateLimiter = new RateLimiter(ArgParse.getRateLimit());
 	}
 	
 	private static String urlRebuilder(String url, String payload) { // rebuilds URL for VHOST and SUBDOMAIN mode
@@ -29,8 +32,7 @@ public class WebRequester {
 		String urlWithoutWww = urlWithoutScheme.startsWith("www") ? urlWithoutScheme.substring(4) : urlWithoutScheme; // cuts "www." if present in the url
 		return httpPrefix + payload + "." + urlWithoutWww; // test this
 	}
-	
-	
+
 	// method for SENDING the request
 	public static HttpResponse makeRequest(HttpRequestBase request) {
 		long retryDelay = 1000; // milliseconds
@@ -64,6 +66,7 @@ public class WebRequester {
 				System.err.println("Unexpected error during request: " + e.getMessage());
 				return null;
 			}
+
 			// retrying
 			try {
 				Thread.sleep(retryDelay);
@@ -76,6 +79,42 @@ public class WebRequester {
 		return null;
 	}
 	
+	// method for building FILE MODE request
+	public static HttpRequestBase buildRequestFromFile(ParsedHttpRequest parsedRequest, String payload) {
+		try {
+			String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8); // urlencoding, some wordlists have weird payloads
+			parsedRequest.replaceFuzzMarker(encodedPayload); // injecting the payload into the request
+			// String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8);
+			HttpRequestBase request = null;
+
+			String requestUrl = parsedRequest.getUrl();
+			// requestUrl = requestUrl.endsWith("/") ? requestUrl : requestUrl + "/"; // TODO: Take care of duplicate due to backslashes another way, this is a little janky
+
+
+			// set request method
+			switch (parsedRequest.getMethod().toUpperCase()) {
+				case "GET" -> request = new HttpGet(requestUrl);
+				case "HEAD" -> request = new HttpHead(requestUrl);
+				case "POST" -> {
+					HttpPost postRequest = new HttpPost();
+					postRequest.setEntity(new StringEntity(parsedRequest.getBody())); // TODO: check if POST body is preserved, handle content-length dynamically based on payload length
+					request = postRequest;
+				}
+			}
+
+			// set up headers
+			for (Map.Entry<String, String>entry : parsedRequest.getHeaders().entrySet()) {
+                assert request != null;
+                request.setHeader(entry.getKey(), entry.getValue());
+			}
+
+			return request;
+
+		} catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+
+	}
 
 	// method for BUILDING the request
 	public static HttpRequestBase buildRequest(String requestUrl, String payload) {
@@ -91,40 +130,57 @@ public class WebRequester {
 				// System.out.println("Encoded \"" + payload + " to \"" + encodedPayload); // debug prints
 			}
 
-			switch (ArgParse.getRequestMode()) {
-				case STANDARD -> {
-					requestUrl += payload;
-					request = new HttpGet(requestUrl);
+			// initialize request here and set HTTP Method
+			switch (ArgParse.getRequestMethod()) {
+				case GET -> request = new HttpGet(requestUrl);
+				case HEAD -> request = new HttpHead(requestUrl);
+				case POST -> {
+					HttpPost postRequest = new HttpPost();
+					postRequest.setEntity(new StringEntity("my post data")); // TODO: Variable
+					request = postRequest;
 				}
+			}
+
+			// load the payload depending on Mode
+			switch (ArgParse.getRequestMode()) {
+				case STANDARD -> request.setURI(new URI(requestUrl += payload));
 				case SUBDOMAIN -> {
-					requestUrl = urlRebuilder(requestUrl, payload);
-					request = new HttpGet(requestUrl);
+					String rebuiltUrl = urlRebuilder(requestUrl, payload);
+					request.setURI(new URI(rebuiltUrl));
 				}
 				case VHOST -> {
-					request = new HttpGet(requestUrl);
+					request.setURI(new URI(requestUrl));
 					request.setHeader("Host", payload);
 				}
 			}
-			
-			switch (ArgParse.getRequestMethod()) {
-				case GET -> {
-					request = new HttpGet(requestUrl);
-				}
-				case HEAD -> {
-					request = new HttpHead(requestUrl);
-				}
-				case POST -> {
-					request = new HttpPost(requestUrl);
-					((HttpPost) request).setEntity(new StringEntity("my post data")); // TODO: Variable
+
+			// set up User-Agent
+			if (ArgParse.getUserAgent() != null) {
+				request.setHeader("User-Agent", ArgParse.getUserAgent());
+			}
+
+			// set up Headers
+			if (!ArgParse.getHeaders().isEmpty()) {
+				for (String header : ArgParse.getHeaders()) {
+					String[] parts = header.split(":", 2); // split at the first colon
+					if (parts.length == 2) {
+						String headerName = parts[0].trim();
+						String headerValue = parts[1].trim();
+						request.setHeader(headerName, headerValue);
+					} else {
+						System.err.println("Invalid header format while building request: " + header);
+					}
 				}
 			}
-			
+
 			return request;
 			
 		} catch (IllegalArgumentException e) {
 			System.err.println("Invalid URI: " + e.getMessage());
 		} catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e); // TODO: Find out what that shit does
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
         }
         return null;
 	}

@@ -25,6 +25,14 @@ public class QueueConsumer implements Runnable {
 
 	@Override
 	public void run() {
+		if (ArgParse.getRequestFileFuzzing()) {
+			requestFileMode();
+		} else {
+			standardMode();
+		}
+	}
+
+	private void standardMode() {
 		while (true) {
 			String payload;
 			try {
@@ -34,7 +42,9 @@ public class QueueConsumer implements Runnable {
 				}
 
 				HttpRequestBase request = WebRequester.buildRequest(url, payload);
+
 				if (request != null) {
+					// System.out.println(request.toString());
 					HttpResponse response = WebRequester.makeRequest(request);
 					parseResponse(response, request.getURI().toString());
 				}
@@ -44,7 +54,38 @@ public class QueueConsumer implements Runnable {
 			}
 		}
 	}
-	
+
+	private void requestFileMode() {
+		ParsedHttpRequest rawRequest = null;
+        try {
+			rawRequest = new ParsedHttpRequest().parseHttpRequestFromFile(ArgParse.getRequestFilePath());
+
+        } catch (IOException e) {
+			System.err.println("There was an error parsing the request from the file:\n" + e.getMessage());
+        }
+		while (true) {
+			String payload;
+			try {
+				payload = queue.take();
+				if ("EOF".equals(payload)) {
+					break;
+				}
+				if (rawRequest != null) {
+					// System.out.println("RAW url before buildRequestFromFile: " + rawRequest.getUrl());
+					ParsedHttpRequest rawCopy = new ParsedHttpRequest(rawRequest);
+					HttpRequestBase request = WebRequester.buildRequestFromFile(rawCopy, payload); // TODO NEED TO COPY THE REQUEST; NOT SEND THE ORIGINAL
+					// System.out.println("Requesting: " + request.getURI());
+					HttpResponse response = WebRequester.makeRequest(request);
+					parseResponse(response, request.getURI().toString());
+				}
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				System.err.println("Queue consumption was interrupted.");
+			}
+		}
+
+    }
+
 	private void parseResponse(HttpResponse response, String requestUrl) {
 		if (response != null) {
 			try {
@@ -74,7 +115,7 @@ public class QueueConsumer implements Runnable {
 				}
 
 			/*
-			// check if there's a case insensitive match
+			// check if there's a case insensitive match // TODO: continue this
 			for (Hit hit : Hit.getHits()) {
 				if (hit.getUrl().equalsIgnoreCase(responseUrl)) {
 
@@ -95,7 +136,7 @@ public class QueueConsumer implements Runnable {
 			} catch (IOException e) {
 				System.err.println("Error parsing response body for URL " + requestUrl);
 			} catch (Exception e) {
-				System.err.println(e);
+				System.err.println(e.getMessage());
 			}
 		}
 	}
