@@ -33,6 +33,17 @@ public class WebRequester {
 		return httpPrefix + payload + "." + urlWithoutWww; // test this
 	}
 
+	private static String vhostRebuilder(String url, String payload) {
+		String httpPrefix = url.startsWith("https://") ? "https://" : "http://";
+		String urlWithoutScheme = url.substring(httpPrefix.length());
+		String[] splitUrl = urlWithoutScheme.split("/", 2);
+		String domainPart = splitUrl[0];
+		if(domainPart.startsWith("www.")) {
+			domainPart = domainPart.substring(4);
+		}
+        return payload + "." + domainPart;
+	}
+
 	// method for SENDING the request
 	public static HttpResponse makeRequest(HttpRequestBase request) {
 		long retryDelay = 1000; // milliseconds
@@ -147,8 +158,9 @@ public class WebRequester {
 					request.setURI(new URI(rebuiltUrl));
 				}
 				case VHOST -> {
+					String rebuiltUrl = vhostRebuilder(requestUrl, payload);
 					request.setURI(new URI(requestUrl));
-					request.setHeader("Host", payload);
+					request.setHeader("Host", rebuiltUrl);
 				}
 			}
 
