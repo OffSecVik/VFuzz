@@ -21,16 +21,12 @@ public class ThreadOrchestrator {
 	}
 	
 	private BlockingQueue<String> queueCopy() {
-		BlockingQueue<String> copy = new LinkedBlockingQueue<>();
-		for (String item : queue) {
-			copy.add(item);
-		}
-		return copy;
+        return new LinkedBlockingQueue<>(queue); // TODO ensure that each copied queue retains all the elements
 	}
 	
 	public void startFuzzing() {
 
-		executor = Executors.newFixedThreadPool(THREAD_COUNT + 20); // one extra for WordlistReader, one for TerminalOutput, 18 for recursion??
+		executor = Executors.newFixedThreadPool(THREAD_COUNT + 90); // one extra for WordlistReader, one for TerminalOutput, 18 for recursion??
 		
 		// Producer: reads the wordlist and puts it into the original queue
 		Future<?> wordlistReaderFuture = executor.submit(new WordlistReader(queue, wordlistPath));
@@ -46,7 +42,7 @@ public class ThreadOrchestrator {
 		BlockingQueue<String> firstQueue = queueCopy();
 		//System.out.println("First queue code: " + firstQueue.hashCode());
 		//System.out.println("First queue size: " + firstQueue.size());
-		for (int i = 0; i < THREAD_COUNT; i++) {
+		for (int i = 0; i < THREAD_COUNT + 40; i++) {
 			executor.submit(new QueueConsumer(this, firstQueue, ArgParse.getUrl()));
 		}
 		

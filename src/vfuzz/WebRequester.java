@@ -1,13 +1,17 @@
 package vfuzz;
 
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.conn.ConnectionKeepAliveStrategy;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -19,13 +23,40 @@ import java.util.Map;
 public class WebRequester {
 	
 	private static RateLimiter requestRateLimiter;
-	private static final CloseableHttpClient client = HttpClients.createDefault();
-	
 	public static void enableRequestRateLimiter(int rateLimit) { // gets called by ArgParse upon reading the flags if the --rate-limit flag is provided
 		requestRateLimiter = new RateLimiter(rateLimit);
 		requestRateLimiter.enable();
 	}
-	
+	// attempting some net code
+	private static final CloseableHttpClient client;
+	static {
+		System.setProperty("networkaddress.cache.ttl", "60");
+		System.setProperty("networkaddress.cache.negative.ttl", "10");
+		PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
+		ConnectionKeepAliveStrategy keepAliveStrategy = (response, context) -> {
+			return 5 * 1000; // keep alive for 5 seconds
+		};
+		RequestConfig requestConfig = RequestConfig.custom()
+				.setConnectTimeout(5000) // timeout until connection is established
+				.setConnectionRequestTimeout(5000) // timeout when requesting a connection from the connection manager
+				.setSocketTimeout(5000) // maximum period of inactivity between two consecutive data packets. unstucks threads waiting for responses
+				.build();
+		connManager.setMaxTotal(10000); // set maximum number of total open connections
+		connManager.setDefaultMaxPerRoute(100); // set default maximum number of connections per route
+		client = HttpClients.custom()
+				.setDefaultRequestConfig(requestConfig)
+				.setConnectionManager(connManager)
+				.setKeepAliveStrategy(keepAliveStrategy)
+				.build();
+	}
+
+	private static String removeTrailingSlash(String url) {
+		if (url != null && url.endsWith("/")) {
+			return url.substring(0, url.length() - 1);
+		}
+		return url;
+	}
+
 	private static String urlRebuilder(String url, String payload) { // rebuilds URL for VHOST and SUBDOMAIN mode
 		String httpPrefix = url.startsWith("https://") ? "https://" : "http://"; // selects which scheme the url starts with.
 		String urlWithoutScheme = url.substring(httpPrefix.length()); // gets everything except the scheme
@@ -34,14 +65,10 @@ public class WebRequester {
 	}
 
 	private static String vhostRebuilder(String url, String payload) {
-		String httpPrefix = url.startsWith("https://") ? "https://" : "http://";
-		String urlWithoutScheme = url.substring(httpPrefix.length());
-		String[] splitUrl = urlWithoutScheme.split("/", 2);
-		String domainPart = splitUrl[0];
-		if(domainPart.startsWith("www.")) {
-			domainPart = domainPart.substring(4);
-		}
-        return payload + "." + domainPart;
+		String httpPrefix = url.startsWith("https://") ? "https://" : "http://"; // selects which scheme the url starts with.
+		String urlWithoutScheme = url.substring(httpPrefix.length()); // gets everything except the scheme
+		String urlWithoutWww = urlWithoutScheme.startsWith("www") ? urlWithoutScheme.substring(4) : urlWithoutScheme; // cuts "www." if present in the url
+		return payload + "." + removeTrailingSlash(urlWithoutWww); // test this
 	}
 
 	// method for SENDING the request
@@ -158,9 +185,11 @@ public class WebRequester {
 					request.setURI(new URI(rebuiltUrl));
 				}
 				case VHOST -> {
-					String rebuiltUrl = vhostRebuilder(requestUrl, payload);
+					// String rebuiltUrl = urlRebuilder(requestUrl, payload);
+					String vhostUrl = vhostRebuilder(requestUrl, payload);
 					request.setURI(new URI(requestUrl));
-					request.setHeader("Host", rebuiltUrl);
+					request.setHeader("Host", vhostUrl);
+					// System.out.println(request.getHeaders("Host").toString());
 				}
 			}
 

@@ -2,7 +2,7 @@
 	
 > implement stable output with some kind of terminal control or GUI - DONE
 
-> test performance metrics with new output
+> test performance metrics with new output - DONE
 
 > implement CPU and RAM metrics
 
@@ -13,13 +13,22 @@
 
 > Recursion Thread handling - Thread Pool? Who gets how many thread? Max threads?
 
+
 	TESTING
-	
+
+> VHOST testing next steps:
+-> find target that has VHOST
+-> adjust parseResponse to take request object as argument so that we can print the Host header
+--> maybe unnecessary? maybe print payload? check how FFUF does it
+
+> test metrics against actual target, find bottleneck
+
 > test against robust site (htb labs)
 
 > ensure proper error handling (most important)
 
 > test to see how flags are read - are the quotes part of the processed values? (e.g. --user-agent "Mozilla" - will the program read "Mozilla" or Mozilla?)
+
 
 	FEATURES
 > FLAG COMPATIBILITY is a huge thing we need to think about, there's flags that directly work against each other and shouldn't be used together, e.g. --subdomain and --vhost
@@ -47,6 +56,8 @@
 
 > rate limiting DONE
 -> Dynamic Rate Limiting
+----> TRACKING: track nRetries, nSuccessfulRequests, nFailedRequests, include in metrics
+----> use as basis for calculation for RateLimiter (could use something like Number of Retries per Successful Requests, or if a Failure per Second is exceeded)
 -> pressing plus or minus during fuzzing to increase the rate, having a button to enable/disable rate limiting (this would be super sick)
 -> max value for exponential backoff
 

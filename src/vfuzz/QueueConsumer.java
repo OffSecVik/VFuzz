@@ -46,7 +46,7 @@ public class QueueConsumer implements Runnable {
 				if (request != null) {
 					// System.out.println(request.toString());
 					HttpResponse response = WebRequester.makeRequest(request);
-					parseResponse(response, request.getURI().toString());
+					parseResponse(response, request);
 				}
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
@@ -76,7 +76,7 @@ public class QueueConsumer implements Runnable {
 					HttpRequestBase request = WebRequester.buildRequestFromFile(rawCopy, payload); // TODO NEED TO COPY THE REQUEST; NOT SEND THE ORIGINAL
 					// System.out.println("Requesting: " + request.getURI());
 					HttpResponse response = WebRequester.makeRequest(request);
-					parseResponse(response, request.getURI().toString());
+					parseResponse(response, request);
 				}
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
@@ -86,7 +86,8 @@ public class QueueConsumer implements Runnable {
 
     }
 
-	private void parseResponse(HttpResponse response, String requestUrl) {
+	private void parseResponse(HttpResponse response, HttpRequestBase request) {
+		String requestUrl = request.getURI().toString();
 		if (response != null) {
 			try {
 				// checking for excluding the response due to flags:
@@ -97,34 +98,32 @@ public class QueueConsumer implements Runnable {
 					responseLength = responseBody.length();
 				}
 
-			/* multithread debug adventures
-			if (this.threadNumber == 10) {
-				System.out.println("Response for recursive thread " + 10 + ": \t" + response.uri().toString());
-			}
-			*/
-
 				if (excludeRequest(statusCode, responseLength)) {
 					return;
 				}
+				// TODO: Print Formatting for VHost mode
+				// System.out.println("Hit: " + requestUrl + "\tStatus Code: " + statusCode + "\tResponse Length: " + responseLength + "\tVHost:" + request.getHeaders("Host")[0].getValue());
 
 				// check if it's a false positive
-				for (Hit hit : Hit.getHits()) {
-					if (hit.getUrl().equals(requestUrl)) {
-						return;
+				if (!ArgParse.getRequestMode().equals(RequestMode.VHOST)) {
+					for (Hit hit : Hit.getHits()) {
+						if (hit.getUrl().equals(requestUrl)) {
+							return;
+						}
 					}
 				}
 
-			/*
-			// check if there's a case insensitive match // TODO: continue this
-			for (Hit hit : Hit.getHits()) {
-				if (hit.getUrl().equalsIgnoreCase(responseUrl)) {
 
+				/*
+				// check if there's a case insensitive match // TODO: continue this
+				for (Hit hit : Hit.getHits()) {
+					if (hit.getUrl().equalsIgnoreCase(responseUrl)) {
+
+					}
 				}
-			}
-			*/
+				*/
 
 				// from here on we have a hit
-				System.out.println("Thread " + this.threadNumber + " found " + requestUrl); //******
 				// handle recursion right here
 				if (ArgParse.getRecursionEnabled()) {
 					if (recursionRedundancyCheck(requestUrl)) {
@@ -132,6 +131,7 @@ public class QueueConsumer implements Runnable {
 					}
 				}
 				// finally make the hit object
+
 				new Hit(requestUrl, statusCode, responseLength); // this has to be last, otherwise recursionRedundancyCheck takes a huge shit
 			} catch (IOException e) {
 				System.err.println("Error parsing response body for URL " + requestUrl);
