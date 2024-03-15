@@ -86,7 +86,7 @@ public class QueueConsumer implements Runnable {
 
     }
 
-	private void parseResponse(HttpResponse response, HttpRequestBase request) {
+	private void parseResponse(HttpResponse response, HttpRequestBase request){
 		String requestUrl = request.getURI().toString();
 		if (response != null) {
 			try {
@@ -101,8 +101,6 @@ public class QueueConsumer implements Runnable {
 				if (excludeRequest(statusCode, responseLength)) {
 					return;
 				}
-				// TODO: Print Formatting for VHost mode
-				// System.out.println("Hit: " + requestUrl + "\tStatus Code: " + statusCode + "\tResponse Length: " + responseLength + "\tVHost:" + request.getHeaders("Host")[0].getValue());
 
 				// check if it's a false positive
 				if (!ArgParse.getRequestMode().equals(RequestMode.VHOST)) {
@@ -113,7 +111,6 @@ public class QueueConsumer implements Runnable {
 					}
 				}
 
-
 				/*
 				// check if there's a case insensitive match // TODO: continue this
 				for (Hit hit : Hit.getHits()) {
@@ -123,16 +120,21 @@ public class QueueConsumer implements Runnable {
 				}
 				*/
 
-				// from here on we have a hit
+				// from here on we have a hit // from here on we have a hit // from here on we have a hit //
 				// handle recursion right here
 				if (ArgParse.getRecursionEnabled()) {
 					if (recursionRedundancyCheck(requestUrl)) {
 						orchestrator.initiateRecursion(requestUrl);
 					}
 				}
+				// TODO: Print Formatting for VHost mode
+				// System.out.println("Hit: " + requestUrl + "\tStatus Code: " + statusCode + "\tResponse Length: " + responseLength + "\tVHost:" + request.getHeaders("Host")[0].getValue());
+				if (ArgParse.getRequestMode() == RequestMode.VHOST) { // attempt at vhost print formatting.
+					requestUrl = request.getHeaders("HOST")[0].getValue(); // simply setting the requestUrl (which never changes in vhost mode) to the header value (which is the interesting field)
+				}
 				// finally make the hit object
-
-				new Hit(requestUrl, statusCode, responseLength); // this has to be last, otherwise recursionRedundancyCheck takes a huge shit
+				Hit hit = new Hit(requestUrl, statusCode, responseLength); // this has to be last, otherwise recursionRedundancyCheck takes a huge shit
+				System.out.println(hit);
 			} catch (IOException e) {
 				System.err.println("Error parsing response body for URL " + requestUrl);
 			} catch (Exception e) {
@@ -144,7 +146,7 @@ public class QueueConsumer implements Runnable {
 	private boolean excludeRequest(int statusCode, int responseLength) {
 		return ArgParse.getExcludedStatusCodes().contains(statusCode) || ArgParse.getExcludedLength().contains(responseLength);
 	}
-	
+
 	private boolean recursionRedundancyCheck(String url) { // shoddy patchwork
 		if (url.equals(ArgParse.getUrl() + "/")) { // this does fix the initial forking
 			return false;

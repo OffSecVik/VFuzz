@@ -18,13 +18,14 @@ public class TerminalOutput implements Runnable {
 				updatePayload();
 			}
 			returnCursorToTop();
+			*/
 			try {
-				Thread.sleep(50);
+				Thread.sleep(1000);
 			} catch (InterruptedException e) {
 				running = false;
 				Thread.currentThread().interrupt();
 			}
-			*/
+
 		}
 	}
 	
