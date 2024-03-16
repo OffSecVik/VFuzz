@@ -25,7 +25,8 @@ public class ArgParse {
 				},
 				"Number of threads. Must be a number between 1 and 200.", // Description
 				true, // Optional?
-				"10" // Default Value
+				"10", // Default Value
+				false // isFlag? (e.g. --recursive)
 		));
 
 		configManager.registerArgument(new CommandLineArgument(
@@ -34,7 +35,8 @@ public class ArgParse {
 				value -> !value.trim().isEmpty(), // Validator
 				"Path to the word list. This argument is required.",
 				false,
-				null // Null as default due to the arg being non optional
+				null, // Null as default due to the arg being non optional
+				false
 		));
 
 		configManager.registerArgument(new CommandLineArgument(
@@ -47,7 +49,8 @@ public class ArgParse {
 				value -> value.matches("^(http://|https://).*"),
 				"URL to the target website. This argument is required and must start with http:// or https://. Trailing slashes are automatically removed.",
 				false,
-				null
+				null,
+				false
 		));
 
 
@@ -73,7 +76,8 @@ public class ArgParse {
 				value -> value.matches("^[0-9]+(,[0-9]+)*$"),
 				"List of HTTP status codes to exclude, separated by commas. Each code must be a valid integer.",
 				true,
-				"404"
+				"404",
+				false
 		));
 
 		configManager.registerArgument(new CommandLineArgument(
@@ -97,7 +101,8 @@ public class ArgParse {
 				value -> value.matches("^[0-9]+(,[0-9]+)*$"),
 				"List of content lengths to exclude, separated by commas. Each length must be a valid integer.",
 				true,
-				null
+				null,
+				false
 		));
 
 
@@ -109,7 +114,8 @@ public class ArgParse {
 				value -> true,
 				"Activates the virtual host fuzzing mode.",
 				true,
-				null
+				null,
+				false
 		));
 
 		configManager.registerArgument(new CommandLineArgument(
@@ -118,7 +124,8 @@ public class ArgParse {
 				value -> true,
 				"Activates the subdomain fuzzing mode.",
 				true,
-				null
+				null,
+				false
 		));
 
 
@@ -138,7 +145,8 @@ public class ArgParse {
 						.contains(value.toUpperCase()), // Validator, which ensures that the value corresponds to one of the supported methods
 				"Specifies the HTTP method to use for requests. Supported methods are GET, POST, and HEAD. Default is GET.",
 				true,
-				RequestMethod.GET.name()
+				RequestMethod.GET.name(),
+				false
 		));
 
 		configManager.registerArgument(new CommandLineArgument(
@@ -161,7 +169,8 @@ public class ArgParse {
 				},
 				"Specifies the maximum number of retries for a request. This value must be an integer. Default is 5.",
 				true,
-				"5"
+				"5",
+				false
 		));
 
 		configManager.registerArgument(new CommandLineArgument(
@@ -171,7 +180,7 @@ public class ArgParse {
 						int rateLimit = Integer.parseInt(value);
 
 						cm.setConfigValue("rateLimit", String.valueOf(rateLimit));
-						cm.setConfigValue("rateLimiterEnabled", "true");
+						cm.setConfigValue("rateLimiterEnabled", value);
 					} catch (NumberFormatException e) {
 						System.out.println("Error: --rate-limit requires an integer (max requests per second).");
 					}
@@ -186,37 +195,43 @@ public class ArgParse {
 				},
 				"Sets the maximum number of requests per second. This value must be a positive integer.",
 				true,
-				"false"
+				"false",
+				true
 		));
 
 		configManager.registerArgument(new CommandLineArgument(
 				"--metrics", "", "metricsEnabled",
 				(cm, value) -> {
-					cm.setConfigValue("metricsEnabled", "true");
-					Metrics.startMetrics();
+					cm.setConfigValue("metricsEnabled", value);
+					if ("true".equalsIgnoreCase(value)) {
+						Metrics.startMetrics();
+					}
 				},
 				value -> true,
 				"Enables metrics collection.",
 				true,
-				"false"
+				"false",
+				true
 		));
 
 		configManager.registerArgument(new CommandLineArgument(
 				"--debug", "", "debugEnabled",
-				(cm, value) -> cm.setConfigValue("debugEnabled", "true"),
+				(cm, value) -> cm.setConfigValue("debugEnabled", value),
 				value -> true,
 				"Enables debug mode.",
 				true,
-				"false"
+				"false",
+				true
 		));
 
 		configManager.registerArgument(new CommandLineArgument(
 				"--recursive", "", "recursionEnabled",
-				(cm, value) -> cm.setConfigValue("recursionEnabled", "true"),
+				(cm, value) -> cm.setConfigValue("recursionEnabled", value),
 				value -> true,
 				"Enables recursive fuzzing mode.",
 				true,
-				"false"
+				"false",
+				true
 		));
 
 		configManager.registerArgument(new CommandLineArgument(
@@ -225,7 +240,8 @@ public class ArgParse {
 				value -> !value.trim().isEmpty(),
 				"Sets the user agent for requests. Example: --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"",
 				true,
-				null
+				null,
+				false
 		));
 
 		configManager.registerArgument(new CommandLineArgument(
@@ -237,7 +253,8 @@ public class ArgParse {
 				value -> !value.trim().isEmpty() && new File(value).exists(),
 				"Specifies the filepath to the HTTP request file for fuzzing. This activates file-based fuzzing mode. Ensure the file exists. Example: -r \"/path/to/requestfile.txt\"",
 				true,
-				null
+				null,
+				false
 		));
 
 
@@ -255,7 +272,8 @@ public class ArgParse {
 				value -> value.contains(":") && !value.startsWith(":") && !value.endsWith(":"),
 				"Sets custom headers for the requests. Each header must be in the 'Name: Value' format. Can be used multiple times for multiple headers. Example: -H \"Content-Type: application/json\"",
 				true,
-				null
+				null,
+				false
 		));
 
 		configManager.registerArgument(new CommandLineArgument(
@@ -264,7 +282,8 @@ public class ArgParse {
 				value -> !value.trim().isEmpty(),
 				"Specifies the fuzz marker within the request file that will be replaced with dynamic content. Example: --fuzz-marker \"FUZZ\"",
 				true,
-				"FUZZ"
+				"FUZZ",
+				false
 		));
 	}
 
@@ -285,7 +304,7 @@ public class ArgParse {
 	public static Set<Integer> getExcludedStatusCodes() {
 		String codes = configManager.getConfigValue("excludedStatusCodes");
 		if (codes == null || codes.trim().isEmpty()) {
-			return new HashSet<>(); // Gib ein leeres Set zurück, wenn kein Wert gesetzt wurde
+			return new HashSet<>(); // Return an empty set if no value has been set
 		}
 		return Stream.of(codes.split(","))
 				.map(String::trim)
@@ -296,7 +315,7 @@ public class ArgParse {
 	public static Set<Integer> getExcludedLength() {
 		String lengths = configManager.getConfigValue("excludeLength");
 		if (lengths == null || lengths.trim().isEmpty()) {
-			return new HashSet<>(); // Gib ein leeres Set zurück, wenn kein Wert gesetzt wurde.
+			return new HashSet<>(); // Return an empty set if no value has been set
 		}
 		return Stream.of(lengths.split(","))
 				.map(String::trim)

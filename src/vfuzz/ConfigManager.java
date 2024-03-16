@@ -32,37 +32,59 @@ public class ConfigManager {
         }
     }
 
-    public boolean processArgument(String arg, String value) {
-        CommandLineArgument cmdArg = arguments.get(arg);
-        if (cmdArg != null) {
-            if (!cmdArg.validate(value)) {
-                System.out.println("Validation failed for argument: " + arg + " with value: " + value);
-                return false;
+    public void processArguments(String[] args) {
+        for (int i = 0; i < args.length; i++) {
+            String arg = args[i];
+            String value = null;
+
+            // Check whether the next element is a value or represents a new argument
+            if (i + 1 < args.length && !args[i + 1].startsWith("--")) {
+                value = args[++i]; // Take the next value if it exists and is not an argument
             }
-            if (configValues.containsKey(cmdArg.getName())) {
-                System.out.println("Warning: Argument '" + arg + "' was specified multiple times.");
-                return false;
+
+            CommandLineArgument cmdArg = arguments.get(arg);
+            if (cmdArg != null) {
+                if (value == null && !cmdArg.isFlag()) {
+                    System.out.println("Error: Argument '" + arg + "' erwartet einen Wert.");
+                    continue; // Skip this argument if it expects a value but has none
+                }
+
+                value = (value == null) ? "true" : value; // Set "true" for flag arguments without an explicit value
+                if (!cmdArg.validate(value)) {
+                    System.out.println("Validation failed for argument: " + arg + " with value: " + value);
+                    continue;
+                }
+                cmdArg.executeAction(this, value);
+            } else {
+                System.out.println("Unbekanntes Argument: " + arg);
             }
-            cmdArg.executeAction(this, value);
-            configValues.put(cmdArg.getName(), value);
-            providedArgs.add(arg); // Mark the argument as provided
-            return true;
         }
-        return false;
     }
+
 
     public void applyDefaultValues() {
         arguments.values().stream().distinct().forEach(arg -> {
+            // Check whether the argument is optional and has not been provided
             if (arg.isOptional() && !providedArgs.contains(arg.getName())) {
                 String defaultValue = arg.getDefaultValue();
-                if (defaultValue != null) {
-                    // Verwende defaultValue als Wert in der Aktion, wenn das Argument nicht angegeben wurde.
+                // For flag arguments, check whether a default value exists and only set this if the flag has not already been activated
+                if (arg.isFlag()) {
+                    if (!"true".equals(configValues.get(arg.getConfigName()))) {
+                        // Set the default value for the flag, only if it has not already been set to "true"
+                        arg.executeAction(this, defaultValue != null ? defaultValue : "false");
+                    }
+                } else if (defaultValue != null) {
+                    // For non-flag arguments, apply the default value if one is defined
                     arg.executeAction(this, defaultValue);
                 }
             }
         });
 
-        setConfigValue("rateLimit", "0"); //TODO: Find a better solution, maybe eliminate the enabled Config and just get the Value of rateLimit to check
+        // Special treatment for "rateLimit", if required
+        // Check whether "rateLimit" has been explicitly set, otherwise set to default value "0"
+        if (!providedArgs.contains("--rate-limit")) {
+            setConfigValue("rateLimit", "0");
+        }
     }
 
 

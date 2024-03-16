@@ -12,8 +12,9 @@ public class CommandLineArgument {
     private final String description;
     private final boolean isOptional;
     private final String defaultValue;
+    private boolean isFlag;
 
-    public CommandLineArgument(String name, String alias, String configName, BiConsumer<ConfigManager, String> action, Predicate<String> validator, String description, boolean isOptional, String defaultValue) {
+    public CommandLineArgument(String name, String alias, String configName, BiConsumer<ConfigManager, String> action, Predicate<String> validator, String description, boolean isOptional, String defaultValue, boolean isFlag) {
         this.name = name;
         this.alias = alias;
         this.configName = configName;
@@ -22,6 +23,7 @@ public class CommandLineArgument {
         this.description = description;
         this.isOptional = isOptional;
         this.defaultValue = defaultValue;
+        this.isFlag = isFlag;
     }
 
     public String getName() {
@@ -30,6 +32,10 @@ public class CommandLineArgument {
 
     public String getAlias() {
         return alias;
+    }
+
+    public String getConfigName() {
+        return configName;
     }
 
     public String getDescription() { //TODO: --help
@@ -42,6 +48,10 @@ public class CommandLineArgument {
 
     public String getDefaultValue() {
         return defaultValue;
+    }
+
+    public boolean isFlag() {
+        return isFlag;
     }
 
     public boolean validate(String argValue) {

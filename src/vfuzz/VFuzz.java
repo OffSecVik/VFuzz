@@ -14,16 +14,12 @@ public class VFuzz {
 
 		ArgParse.registerArguments();
 
-		for (int i = 0; i < args.length; i++) {
-			if (i + 1 < args.length) {
-				String arg = args[i];
-				String value = args[++i];
-				configManager.processArgument(arg, value);
-			}
-		}
+		configManager.processArguments(args);
 
-//		configManager.verifyRequiredArguments(); //TODO: Fix verifyRequiredArguments
-		configManager.applyDefaultValues();
+        //configManager.verifyRequiredArguments(); // TODO: Fix verifyRequiredArguments
+		// configManager.applyDefaultValues(); // TODO: method is unnecessary.
+
+		configManager.setConfigValue("rateLimit", "5"); // TODO: Find a solution for this case
 
 		System.out.println(Color.BLUE + "Thread Count: " + ArgParse.getThreadCount());
 		System.out.println("Wordlist Path: " + ArgParse.getWordlistPath());
