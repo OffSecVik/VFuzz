@@ -15,6 +15,7 @@ public class QueueConsumer implements Runnable {
 	private static int threadCounter = 0;
 	private int recursionDepth = 0;
 	private volatile boolean running = true;
+	private static boolean firstThreadFinished = false;
 
 	public QueueConsumer(ThreadOrchestrator orchestrator, BlockingQueue<String> queue, String url, int recursionDepth) {
 		this.queue = queue;
@@ -45,6 +46,7 @@ public class QueueConsumer implements Runnable {
 				standardMode();
 			}
 		}
+		firstThreadFinished = true;
 		Target.removeTargetFromList(url);
 		orchestrator.removeTargetFromList(url);
 		orchestrator.redistributeThreads();
@@ -192,4 +194,9 @@ public class QueueConsumer implements Runnable {
 	private void shutdown() {
 		this.running = false;
 	}
+
+	public static boolean isFirstThreadFinished() {
+		return firstThreadFinished;
+	}
+
 }

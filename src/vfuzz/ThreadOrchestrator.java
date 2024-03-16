@@ -23,11 +23,7 @@ public class ThreadOrchestrator {
 	}
 
 	private BlockingQueue<String> queueCopy() {
-		BlockingQueue<String> copy = new LinkedBlockingQueue<>();
-		for (String item : queue) {
-			copy.add(new String(item));
-		}
-		return new LinkedBlockingQueue<>(queue); // TODO ensure that each copied queue retains all the elements
+        return new LinkedBlockingQueue<>(queue); // TODO ensure that each copied queue retains all the elements
 	}
 
 	public void startFuzzing() {
@@ -46,8 +42,8 @@ public class ThreadOrchestrator {
 
 		// submit initial tasks TODO - make this a method
 		BlockingQueue<String> firstQueue = queueCopy();
-		System.out.println("First queue code: " + firstQueue.hashCode()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
-		System.out.println("First queue size: " + firstQueue.size()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
+		// System.out.println("First queue code: " + firstQueue.hashCode()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
+		// System.out.println("First queue size: " + firstQueue.size()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
 
 		Target initialTarget = new Target(firstQueue, ArgParse.getUrl(), 0, THREAD_COUNT);
 		taskAllocations.put(initialTarget, new AtomicInteger(THREAD_COUNT)); // denoting the initial allocation
@@ -94,14 +90,17 @@ public class ThreadOrchestrator {
 		if (currentDepth >= recursionDepthLimit) return; // if max recursion depth is hit, don't add target to list
 		int newDepth = currentDepth + 1;
 		int allocatedThreads = Math.max((THREAD_COUNT / 2) / (taskAllocations.size()), 1); // get one thread minimum?
+		if (QueueConsumer.isFirstThreadFinished()) {
+			allocatedThreads = Math.max((THREAD_COUNT) / (taskAllocations.size() + 1), 1);
+		}
 		Target recursiveTarget = new Target(queueCopy(), newTargetUrl, newDepth, allocatedThreads);
 		taskAllocations.put(recursiveTarget, new AtomicInteger(allocatedThreads));
 
 		// make new threads for new target
 		List<Future<?>> consumersForRecursiveURL = new ArrayList<>();
 		BlockingQueue<String> recursiveQueue = queueCopy(); // we only need one queue copy per targetSystem.out.println("First queue code: " + firstQueue.hashCode()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
-		System.out.println("Recursive queue queue code: " + recursiveQueue.hashCode()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
-		System.out.println("Recursive queue size: " + recursiveQueue.size()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
+		// System.out.println("Recursive queue queue code: " + recursiveQueue.hashCode()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
+		// System.out.println("Recursive queue size: " + recursiveQueue.size()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
 		for (int i = 0; i < allocatedThreads; i++) {
 			QueueConsumer recursiveConsumer = new QueueConsumer(this, recursiveTarget);
 			Future<?> future = executor.submit(recursiveConsumer);
