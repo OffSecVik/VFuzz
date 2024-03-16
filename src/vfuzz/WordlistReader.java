@@ -22,9 +22,10 @@ public class WordlistReader implements Runnable {
 			while ((payload = reader.readLine()) != null) {
 				queue.put(payload);
 				if (ArgParse.getMetricsEnabled()) {
-					Metrics.incrementProducerCount(); // increments the requests
+					Metrics.incrementProducerCount(); // increments the requests TODO delete this once ur sure u dont need it
 				}
 			}
+			queue.put("ENDOFFILEMARKERTHATWONTBEINANYWORDLIST");
 		} catch (FileNotFoundException e) {
 			System.out.println("File \"" + path + "\" could not be found.");
 			System.exit(-1);

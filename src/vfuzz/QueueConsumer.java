@@ -24,7 +24,16 @@ public class QueueConsumer implements Runnable {
 		this.orchestrator = orchestrator;
 		threadCounter++;
 		this.recursionDepth = recursionDepth;
+	}
 
+	public QueueConsumer(ThreadOrchestrator orchestrator, Target target) {
+		this.queue = target.getQueue();
+		this.url = target.getUrl();
+		this.threadNumber = threadCounter;
+		// System.out.println("Number of Consumers so far: " + threadCounter);
+		this.orchestrator = orchestrator;
+		threadCounter++;
+		this.recursionDepth = target.getRecursionDepth();
 	}
 
 	@Override
@@ -36,6 +45,9 @@ public class QueueConsumer implements Runnable {
 				standardMode();
 			}
 		}
+		Target.removeTargetFromList(url);
+		orchestrator.removeTargetFromList(url);
+		orchestrator.redistributeThreads();
 	}
 
 	private void standardMode() {
@@ -43,7 +55,9 @@ public class QueueConsumer implements Runnable {
 			String payload;
 			try {
 				payload = queue.take();
-				if ("EOF".equals(payload)) {
+				if ("ENDOFFILEMARKERTHATWONTBEINANYWORDLIST".equals(payload)) {
+					running = false;
+
 					break;
 				}
 
@@ -74,6 +88,7 @@ public class QueueConsumer implements Runnable {
 			try {
 				payload = queue.take();
 				if ("EOF".equals(payload)) {
+					running = false;
 					break;
 				}
 				if (rawRequest != null) {

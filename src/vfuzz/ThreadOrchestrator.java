@@ -3,7 +3,6 @@ package vfuzz;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -14,8 +13,9 @@ public class ThreadOrchestrator {
 	private ExecutorService executor = null;
 	private BlockingQueue<String> queue = new LinkedBlockingQueue<>();
 	private int recursionDepthLimit = 5;
-	private ConcurrentHashMap<String, AtomicInteger> taskAllocations = new ConcurrentHashMap<>(); // holds target and number of threads allocated
-	private ConcurrentHashMap<String, List<Future<?>>> consumerTasks = new ConcurrentHashMap<>();
+	private ConcurrentHashMap<Target, AtomicInteger> taskAllocations = new ConcurrentHashMap<>(); // holds target and number of threads allocated
+	private ConcurrentHashMap<Target, List<Future<?>>> consumerTasks = new ConcurrentHashMap<>(); // holds target and the number of futures allocated to it
+	private List<String> completedScans = new CopyOnWriteArrayList<>();
 
 	ThreadOrchestrator(String wordlistPath, int THREAD_COUNT) {
 		this.wordlistPath = wordlistPath;
@@ -23,6 +23,10 @@ public class ThreadOrchestrator {
 	}
 
 	private BlockingQueue<String> queueCopy() {
+		BlockingQueue<String> copy = new LinkedBlockingQueue<>();
+		for (String item : queue) {
+			copy.add(new String(item));
+		}
 		return new LinkedBlockingQueue<>(queue); // TODO ensure that each copied queue retains all the elements
 	}
 
@@ -40,20 +44,24 @@ public class ThreadOrchestrator {
 			e.printStackTrace();
 		}
 
-		taskAllocations.put(ArgParse.getUrl(), new AtomicInteger(THREAD_COUNT)); // denoting the initial allocation
-
 		// submit initial tasks TODO - make this a method
 		BlockingQueue<String> firstQueue = queueCopy();
-		//System.out.println("First queue code: " + firstQueue.hashCode()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
-		//System.out.println("First queue size: " + firstQueue.size()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
+		System.out.println("First queue code: " + firstQueue.hashCode()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
+		System.out.println("First queue size: " + firstQueue.size()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
+
+		Target initialTarget = new Target(firstQueue, ArgParse.getUrl(), 0, THREAD_COUNT);
+		taskAllocations.put(initialTarget, new AtomicInteger(THREAD_COUNT)); // denoting the initial allocation
+
 		List<Future<?>> consumersForURL = new ArrayList<>();
 		for (int i = 0; i < THREAD_COUNT; i++) {
-			QueueConsumer consumerTask = new QueueConsumer(this, firstQueue, ArgParse.getUrl(), 0);
+			QueueConsumer consumerTask = new QueueConsumer(this, initialTarget);
 			Future<?> future = executor.submit(consumerTask);
 			consumersForURL.add(future);
 		}
-		consumerTasks.put(ArgParse.getUrl(), consumersForURL);
+		consumerTasks.put(initialTarget, consumersForURL); // putting the initial target and its futures in a map for future reference (needed for recursion)
+
 		printActiveThreadsByTarget();
+
 		// Terminal Output Thread
 		TerminalOutput terminalOutput = new TerminalOutput();
 		executor.submit(terminalOutput);
@@ -85,68 +93,61 @@ public class ThreadOrchestrator {
 	public void initiateRecursion(String newTargetUrl, int currentDepth) {
 		if (currentDepth >= recursionDepthLimit) return; // if max recursion depth is hit, don't add target to list
 		int newDepth = currentDepth + 1;
-		int allocatedThreads = Math.max(THREAD_COUNT / (taskAllocations.size() + 1), 1); // get one thread minimum?
-		taskAllocations.put(newTargetUrl, new AtomicInteger(allocatedThreads));
+		int allocatedThreads = Math.max((THREAD_COUNT / 2) / (taskAllocations.size()), 1); // get one thread minimum?
+		Target recursiveTarget = new Target(queueCopy(), newTargetUrl, newDepth, allocatedThreads);
+		taskAllocations.put(recursiveTarget, new AtomicInteger(allocatedThreads));
 
 		// make new threads for new target
 		List<Future<?>> consumersForRecursiveURL = new ArrayList<>();
-		BlockingQueue<String> recursiveQueue = queueCopy(); // we only need one queue copy per target
+		BlockingQueue<String> recursiveQueue = queueCopy(); // we only need one queue copy per targetSystem.out.println("First queue code: " + firstQueue.hashCode()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
+		System.out.println("Recursive queue queue code: " + recursiveQueue.hashCode()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
+		System.out.println("Recursive queue size: " + recursiveQueue.size()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
 		for (int i = 0; i < allocatedThreads; i++) {
-			QueueConsumer recursiveConsumer = new QueueConsumer(this, recursiveQueue, newTargetUrl, newDepth);
+			QueueConsumer recursiveConsumer = new QueueConsumer(this, recursiveTarget);
 			Future<?> future = executor.submit(recursiveConsumer);
 			consumersForRecursiveURL.add(future);
 		}
-		consumerTasks.put(newTargetUrl, consumersForRecursiveURL);
-
+		consumerTasks.put(recursiveTarget, consumersForRecursiveURL);
 
 		// remove threads
-		for (Map.Entry<String, List<Future<?>>> entry : consumerTasks.entrySet()) {
-			String targetUrl = entry.getKey();
+		for (Map.Entry<Target, List<Future<?>>> entry : consumerTasks.entrySet()) {
+			Target target = entry.getKey();
+			String targetUrl = target.getUrl();
 			List<Future<?>> futures = entry.getValue();
-
-			if (!targetUrl.equals(newTargetUrl)) {
+			if (targetUrl.equals(ArgParse.getUrl())) { // handle our initial target, it gets the chunk of the resources
+				while (futures.size() > THREAD_COUNT / 2) {
+					Future<?> future = futures.remove(futures.size() - 1); // remove from the end
+					future.cancel(true); // attempt to cancel future
+				}
+			} else if (!targetUrl.equals(newTargetUrl)) {
 				while (futures.size() > allocatedThreads) {
 					Future<?> future = futures.remove(futures.size() - 1); // remove from the end
 					future.cancel(true); // attempt to cancel future
 				}
 			}
+			target.setAllocatedThreads(futures.size());
 		}
+		printActiveThreadsByTarget();
 	}
 
-	/*
-	public void initiateRecursion(String newTargetUrl, int currentDepth) {
-		if (currentDepth >= recursionDepthLimit) return; // TODO - make this behave better (can't just skip the target)
-		int newDepth = currentDepth + 1;
-		int allocatedThreads = Math.max(THREAD_COUNT / (taskAllocations.size() + 1), 1); // get one thread minimum?
-		taskAllocations.put(newTargetUrl, new AtomicInteger(allocatedThreads));
 
-		// stop excess threads of previous targets
-		for (Map.Entry<String, List<Future<?>>> entry : consumerTasks.entrySet()) {
-			String targetUrl = entry.getKey();
-			List<Future<?>> futures = entry.getValue();
-
-			// killing excess threads of old targets
-			int excess = futures.size() - allocatedThreads;
-			for (int i = 0; i < excess; i++) {
-				Future<?> future = futures.remove(futures.size() - 1); // remove from the end
-				future.cancel(true); // attempt to cancel future
+	public void redistributeThreads() { // assuming our original target will finish first, and we can now evenly redistribute threads
+		System.out.println("REDISTRIBUTING THREADS:");
+		int allocatedThreads = Math.max((THREAD_COUNT) / (taskAllocations.size()), 1); // again get number of threads to allocate to each target
+		for (Map.Entry<Target, List<Future<?>>> entry : consumerTasks.entrySet()) {
+			Target target = entry.getKey();
+			List<Future<?>> targetConsumers = entry.getValue();
+			String targetUrl = target.getUrl();
+			while (target.getAllocatedThreads() < allocatedThreads) {
+				target.incrementAllocatedThreads();
+				QueueConsumer fillConsumer = new QueueConsumer(this, target);
+				Future<?> future = executor.submit(fillConsumer);
+				targetConsumers.add(future);
+				// System.out.println("Adding thread to " + targetUrl);
 			}
 		}
-		// start new threads
-		List<Future<?>> consumersForRecursiveURL = new ArrayList<>();
-		for (int i = 0; i < allocatedThreads; i++) {
-			QueueConsumer recursiveConsumer = new QueueConsumer(this, queueCopy(), newTargetUrl, newDepth);
-			Future<?> future = executor.submit(recursiveConsumer);
-			consumersForRecursiveURL.add(future);
-		}
-		consumerTasks.put(newTargetUrl, consumersForRecursiveURL);
-		System.out.println("FINALLY HERE");
 		printActiveThreadsByTarget();
-
-		// System.out.println("Recursive queue code: " + deepCopy.hashCode());
-		// System.out.println("Recursive queue size: " + deepCopy.size());
 	}
-	 */
 
 	public int getActiveThreads() {
 		int activeCount = 0;
@@ -161,11 +162,40 @@ public class ThreadOrchestrator {
 	}
 
 	public void printActiveThreadsByTarget() {
-		consumerTasks.forEach((targetUrl, futureList) -> {
+		consumerTasks.forEach((target, futureList) -> {
 			int activeCount = (int) futureList.stream().filter(future -> !future.isDone()).count();
 			int inactiveCount = (int) futureList.stream().filter(future -> future.isDone()).count();
-			System.out.println(targetUrl + " has " + activeCount + " active and " + inactiveCount + " inactive threads.");
+			System.out.println(target.getUrl() + " has " + activeCount + " active and " + inactiveCount + " inactive threads.");
 		});
+	}
+
+	public void addCompletedScan(String url) {
+		completedScans.add(url);
+	}
+
+	public void removeTargetFromList(String targetUrl) {
+
+		// removing from consumerTasks
+		for (Target target : new ArrayList<>(consumerTasks.keySet())) {
+			if (target.getUrl().equals(targetUrl)) {
+				List<Future<?>> futures = consumerTasks.get(target);
+				if (futures != null) {
+					for (Future<?> future : futures) {
+						future.cancel(true);
+					}
+				}
+				consumerTasks.remove(target);
+				break;
+			}
+		}
+
+		// removing from taskAllocations
+		for (Target target : new ArrayList<>(taskAllocations.keySet())) {
+			if (target.getUrl().equals(targetUrl)) {
+				taskAllocations.remove(target);
+				break;
+			}
+		}
 	}
 
 }
