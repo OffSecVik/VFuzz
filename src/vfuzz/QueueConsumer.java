@@ -46,20 +46,29 @@ public class QueueConsumer implements Runnable {
 				standardMode();
 			}
 		}
-		firstThreadFinished = true;
-		Target.removeTargetFromList(url);
-		orchestrator.removeTargetFromList(url);
-		orchestrator.redistributeThreads();
+
+
+
+		if (Target.getTargets().isEmpty()) {
+			orchestrator.shutdownExecutor();
+		}
+
 	}
 
 	private void standardMode() {
-		while (true) {
+		while (running) {
 			String payload;
 			try {
 				payload = queue.take();
 				if ("ENDOFFILEMARKERTHATWONTBEINANYWORDLIST".equals(payload)) {
+					// this chunk happens once the thread is through with the wordlist.
+					firstThreadFinished = true; // need this for calculating thread redistribution. we flip this once we finish any thread, assuming that the first thread to finish is always the main fuzz thread, since it gets the chunk of the thread pool -> edge cases??
+					if (ArgParse.getRecursionEnabled()) {
+						orchestrator.redistributeThreads();
+					}
+					Target.removeTargetFromList(url); // removes the target this thread finished from the URL
+					orchestrator.removeTargetFromList(url);
 					running = false;
-
 					break;
 				}
 
@@ -85,7 +94,7 @@ public class QueueConsumer implements Runnable {
         } catch (IOException e) {
 			System.err.println("There was an error parsing the request from the file:\n" + e.getMessage());
         }
-		while (true) {
+		while (running) {
 			String payload;
 			try {
 				payload = queue.take();
@@ -102,6 +111,7 @@ public class QueueConsumer implements Runnable {
 					parseResponse(response, request);
 				}
 			} catch (InterruptedException e) {
+				running = false;
 				Thread.currentThread().interrupt();
 				System.err.println("Queue consumption was interrupted.");
 			}

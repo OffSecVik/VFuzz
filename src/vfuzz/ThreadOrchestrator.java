@@ -16,6 +16,7 @@ public class ThreadOrchestrator {
 	private ConcurrentHashMap<Target, AtomicInteger> taskAllocations = new ConcurrentHashMap<>(); // holds target and number of threads allocated
 	private ConcurrentHashMap<Target, List<Future<?>>> consumerTasks = new ConcurrentHashMap<>(); // holds target and the number of futures allocated to it
 	private List<String> completedScans = new CopyOnWriteArrayList<>();
+	private TerminalOutput terminalOutput;
 
 	ThreadOrchestrator(String wordlistPath, int THREAD_COUNT) {
 		this.wordlistPath = wordlistPath;
@@ -59,7 +60,7 @@ public class ThreadOrchestrator {
 		printActiveThreadsByTarget();
 
 		// Terminal Output Thread
-		TerminalOutput terminalOutput = new TerminalOutput();
+		terminalOutput = new TerminalOutput();
 		executor.submit(terminalOutput);
 
 		// Shutdown hook
@@ -74,22 +75,12 @@ public class ThreadOrchestrator {
 			}
 			System.out.println("Goodbye");
 		}));
-
-		// await task completion
-		try {
-			if (!executor.awaitTermination(1, TimeUnit.HOURS)) {
-				executor.shutdown();
-			}
-		} catch (InterruptedException e){
-			executor.shutdownNow(); // force shutdown
-			Thread.currentThread().interrupt();
-		}
 	}
 
 	public void initiateRecursion(String newTargetUrl, int currentDepth) {
 		if (currentDepth >= recursionDepthLimit) return; // if max recursion depth is hit, don't add target to list
 		int newDepth = currentDepth + 1;
-		int allocatedThreads = Math.max((THREAD_COUNT / 2) / (taskAllocations.size()), 1); // get one thread minimum?
+		int allocatedThreads = Math.max((THREAD_COUNT / 2) / (taskAllocations.size()), 1); // calculates
 		if (QueueConsumer.isFirstThreadFinished()) {
 			allocatedThreads = Math.max((THREAD_COUNT) / (taskAllocations.size() + 1), 1);
 		}
@@ -114,6 +105,7 @@ public class ThreadOrchestrator {
 			String targetUrl = target.getUrl();
 			List<Future<?>> futures = entry.getValue();
 			if (targetUrl.equals(ArgParse.getUrl())) { // handle our initial target, it gets the chunk of the resources
+				//System.out.println("HANDLING INITIAL TARGET " + ArgParse.getUrl());
 				while (futures.size() > THREAD_COUNT / 2) {
 					Future<?> future = futures.remove(futures.size() - 1); // remove from the end
 					future.cancel(true); // attempt to cancel future
@@ -126,12 +118,13 @@ public class ThreadOrchestrator {
 			}
 			target.setAllocatedThreads(futures.size());
 		}
+		System.out.println(Color.GREEN + "Initiating recursion: " + Color.RESET);
 		printActiveThreadsByTarget();
 	}
 
 
 	public void redistributeThreads() { // assuming our original target will finish first, and we can now evenly redistribute threads
-		System.out.println("REDISTRIBUTING THREADS:");
+		System.out.println(Color.GREEN + "Redistributing threads:" + Color.RESET);
 		int allocatedThreads = Math.max((THREAD_COUNT) / (taskAllocations.size()), 1); // again get number of threads to allocate to each target
 		for (Map.Entry<Target, List<Future<?>>> entry : consumerTasks.entrySet()) {
 			Target target = entry.getKey();
@@ -197,4 +190,44 @@ public class ThreadOrchestrator {
 		}
 	}
 
+	private volatile boolean goodbyeHasBeenSaid = false;
+
+	public void shutdownExecutor() {
+		executor.shutdown();
+		try {
+			if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+				executor.shutdownNow();
+			}
+		} catch (InterruptedException e) {
+			executor.shutdownNow();
+		}
+		Metrics.shutdown();
+		terminalOutput.setRunning(false);
+		//executor.shutdownNow();
+		if (!goodbyeHasBeenSaid) {
+			System.out.println("Fuzzing finished. Thank you for fuzzing with VFuzz.");
+			goodbyeHasBeenSaid = true;
+		}
+
+		//printActiveThreads();
+	}
+
+	public static void printActiveThreads() {
+		ThreadGroup rootGroup = Thread.currentThread().getThreadGroup();
+		while (rootGroup.getParent() != null) {
+			rootGroup = rootGroup.getParent();
+		}
+
+		Thread[] threads = new Thread[rootGroup.activeCount()];
+		while (rootGroup.enumerate(threads, true) == threads.length) {
+			threads = new Thread[threads.length * 2];
+		}
+
+		for (Thread thread : threads) {
+			if (thread != null) {
+				System.out.println("Thread name: " + thread.getName() + " | State: " + thread.getState() + " | Is Daemon: " + thread.isDaemon());
+			}
+		}
+	}
 }
+

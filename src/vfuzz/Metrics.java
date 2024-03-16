@@ -82,4 +82,8 @@ public class Metrics {
 	public static String getCurrentRequest() {
 		return currentRequest;
 	}
+
+	public static void shutdown() {
+		executor.shutdown();
+	}
 }
