@@ -13,22 +13,28 @@ public class QueueConsumer implements Runnable {
 	private final ThreadOrchestrator orchestrator;
 	public final int threadNumber;
 	private static int threadCounter = 0;
-	
-	public QueueConsumer(ThreadOrchestrator orchestrator, BlockingQueue<String> queue, String url) {
+	private int recursionDepth = 0;
+	private volatile boolean running = true;
+
+	public QueueConsumer(ThreadOrchestrator orchestrator, BlockingQueue<String> queue, String url, int recursionDepth) {
 		this.queue = queue;
 		this.url = url;
 		this.threadNumber = threadCounter;
 		// System.out.println("Number of Consumers so far: " + threadCounter);
 		this.orchestrator = orchestrator;
 		threadCounter++;
+		this.recursionDepth = recursionDepth;
+
 	}
 
 	@Override
 	public void run() {
-		if (ArgParse.getRequestFileFuzzing()) {
-			requestFileMode();
-		} else {
-			standardMode();
+		while (running && !Thread.currentThread().isInterrupted()) { // what does the second one check?
+			if (ArgParse.getRequestFileFuzzing()) {
+				requestFileMode();
+			} else {
+				standardMode();
+			}
 		}
 	}
 
@@ -49,8 +55,8 @@ public class QueueConsumer implements Runnable {
 					parseResponse(response, request);
 				}
 			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-				System.err.println("Queue consumption was interrupted.");
+				running = false;
+				//System.err.println("Queue consumption was interrupted, finishing task");
 			}
 		}
 	}
@@ -87,6 +93,7 @@ public class QueueConsumer implements Runnable {
     }
 
 	private void parseResponse(HttpResponse response, HttpRequestBase request){
+		boolean thisIsRecursiveTarget = false;
 		String requestUrl = request.getURI().toString();
 		if (response != null) {
 			try {
@@ -122,11 +129,14 @@ public class QueueConsumer implements Runnable {
 
 				// from here on we have a hit // from here on we have a hit // from here on we have a hit //
 				// handle recursion right here
+
+
 				if (ArgParse.getRecursionEnabled()) {
 					if (recursionRedundancyCheck(requestUrl)) {
-						orchestrator.initiateRecursion(requestUrl);
+						thisIsRecursiveTarget = true;
 					}
 				}
+
 				// TODO: Print Formatting for VHost mode
 				// System.out.println("Hit: " + requestUrl + "\tStatus Code: " + statusCode + "\tResponse Length: " + responseLength + "\tVHost:" + request.getHeaders("Host")[0].getValue());
 				if (ArgParse.getRequestMode() == RequestMode.VHOST) { // attempt at vhost print formatting.
@@ -135,6 +145,9 @@ public class QueueConsumer implements Runnable {
 				// finally make the hit object
 				Hit hit = new Hit(requestUrl, statusCode, responseLength); // this has to be last, otherwise recursionRedundancyCheck takes a huge shit
 				System.out.println(hit);
+				if (thisIsRecursiveTarget) {
+					orchestrator.initiateRecursion(requestUrl, recursionDepth);
+				}
 			} catch (IOException e) {
 				System.err.println("Error parsing response body for URL " + requestUrl);
 			} catch (Exception e) {
@@ -149,6 +162,7 @@ public class QueueConsumer implements Runnable {
 
 	private boolean recursionRedundancyCheck(String url) { // shoddy patchwork
 		if (url.equals(ArgParse.getUrl() + "/")) { // this does fix the initial forking
+			// System.out.println("Redundant recursion.");
 			return false;
 		}
 		for (Hit hit : Hit.getHits()) {
@@ -156,6 +170,11 @@ public class QueueConsumer implements Runnable {
 				return false;
 			}
 		}
+		// System.out.println("returning true.");
 		return true; // true means passed the check
+	}
+
+	private void shutdown() {
+		this.running = false;
 	}
 }

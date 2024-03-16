@@ -1,5 +1,5 @@
 	NEXT STEPS
-	
+
 > implement stable output with some kind of terminal control or GUI - DONE
 
 > test performance metrics with new output - DONE
@@ -31,6 +31,13 @@
 
 
 	FEATURES
+
+        RECURSION THREAD HANDLING
+
+            > deep and shallow mode? (deep could evenly distribute the number of available threads, shallow would give 1/5th of the threads to the new hit)
+
+            > try to track the number of threads working at each time to see if they adapt dynamically
+
 
 > PROBLEM: Printing in VHOST mode - how to we store the vhost header value? Overcharging the Hit constructor?
 
@@ -75,7 +82,7 @@
 	--random-agent (set random user agent)
 	-r (read request from file)
 	---> allow specification of a custom marker
-	
+
 > VHOST mode DONE - also added SUBDOMAIN mode
 
 > Strip "/" from url if present - DONE - also ensured a scheme is present
@@ -94,12 +101,12 @@
 
 
 	IDEAS
-	
+
 > pass a config object to components that require it
 
 
 	LOG
-	
+
 > added URLEncoding the payload in WebRequester
 -> should be able to turn this off with a flag, or maybe in performance mode
 

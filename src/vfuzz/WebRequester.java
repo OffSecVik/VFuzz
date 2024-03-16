@@ -1,15 +1,15 @@
 package vfuzz;
 
+import org.apache.http.HttpResponse;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.conn.ConnectionKeepAliveStrategy;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.HttpResponse;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
 import java.io.IOException;
@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class WebRequester {
-	
+
 	private static RateLimiter requestRateLimiter;
 	public static void enableRequestRateLimiter(int rateLimit) { // gets called by ArgParse upon reading the flags if the --rate-limit flag is provided
 		requestRateLimiter = new RateLimiter(rateLimit);
@@ -74,7 +74,7 @@ public class WebRequester {
 	// method for SENDING the request
 	public static HttpResponse makeRequest(HttpRequestBase request) {
 		long retryDelay = 1000; // milliseconds
-		
+
 		// retry loop
 		for (int attempt = 1; attempt <= ArgParse.getMaxRetries(); attempt++) {
 			// see if metrics is enabled
@@ -82,12 +82,12 @@ public class WebRequester {
 				Metrics.incrementRequestsCount(); // increments the requests
 				Metrics.setCurrentRequest(request.getURI().toString());
 			}
-			
+
 			// await a free token if we use the rate limiter
 			if (ArgParse.getRateLimiterEnabled()) {
 				requestRateLimiter.awaitToken();
 			}
-			
+
 			// attempting to send the request
 			try {
 				HttpResponse response =  client.execute(request); // request succeeded
@@ -116,7 +116,7 @@ public class WebRequester {
 		}
 		return null;
 	}
-	
+
 	// method for building FILE MODE request
 	public static HttpRequestBase buildRequestFromFile(ParsedHttpRequest parsedRequest, String payload) {
 		try {
@@ -140,15 +140,15 @@ public class WebRequester {
 
 			// set up headers
 			for (Map.Entry<String, String>entry : parsedRequest.getHeaders().entrySet()) {
-                assert request != null;
-                request.setHeader(entry.getKey(), entry.getValue());
+				assert request != null;
+				request.setHeader(entry.getKey(), entry.getValue());
 			}
 
 			return request;
 
 		} catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+			throw new RuntimeException(e);
+		}
 
 	}
 
@@ -213,14 +213,14 @@ public class WebRequester {
 			}
 
 			return request;
-			
+
 		} catch (IllegalArgumentException e) {
 			System.err.println("Invalid URI: " + e.getMessage());
 		} catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e); // TODO: Find out what that shit does
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
-        return null;
+			throw new RuntimeException(e); // TODO: Find out what that shit does
+		} catch (URISyntaxException e) {
+			throw new RuntimeException(e);
+		}
+		return null;
 	}
 }

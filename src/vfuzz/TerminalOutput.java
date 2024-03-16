@@ -8,6 +8,7 @@ public class TerminalOutput implements Runnable {
 	@Override
 	public void run() {
 		while (running) {
+
 			updateMetrics();
 			/*
 			if (ArgParse.getMetricsEnabled()) {

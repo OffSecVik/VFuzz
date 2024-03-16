@@ -52,7 +52,8 @@ public class Metrics {
 		requestsPerSecond = (double) currentCount / 1; // dividing by one second
 		requestCount.set(0); // reset count for next interval
 	}
-	
+
+
 	public static double getRequestsPerSecond() {
 		// updateRequestsPerSecond();
 		return requestsPerSecond;
