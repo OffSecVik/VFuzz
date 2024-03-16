@@ -1,357 +1,359 @@
 package vfuzz;
 
+import java.io.File;
 import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 
 public class ArgParse {
+	public static void registerArguments() {
+		ConfigManager configManager = ConfigManager.getInstance();
 
-	// -t --threads
-	private static int threadCount = 10; // 10 is the default number of threads
-	
-	// -w --wordlist
-	private static String wordlistPath;
-	
-	// -u --url
-	private static String url;
-	
-	// -e --excludeStatusCodes
-	private static Set<Integer> excludedStatusCodes = new HashSet<>();
-	
-	// -l --excludeLength
-	private static Set<Integer> excludedLength = new HashSet<>();
-	
-	// --vhost --subdomain
-	private static RequestMode requestMode = RequestMode.STANDARD;
-	
-	// --method
-	private static RequestMethod requestMethod = RequestMethod.GET;
-	
-	// --max-retries
-	private static int maxRetries = 5;
-	
-	// --rate-limit
-	private static int rateLimit;
-	private static boolean rateLimiterEnabled = false;
-	
-	// --metrics
-	private static boolean metricsEnabled = false;
-	
-	// --debug
-	private static boolean debugEnabled = false;
-	
-	// --recursion
-	private static boolean recursionEnabled = false;
-
-	// -a --user-agent
-	private static String userAgent;
-
-	private static boolean requestFileFuzzing = false;
-
-	private static String requestFilePath;
-
-	private static Set<String> headers = new HashSet<>();
-
-	public static String fuzzMarker = "FUZZ"; // fuzzmarker is FUZZ by default
-
-
-	static { // static initalizer block
-		excludedStatusCodes.add(404); // excluding 404 by default.
-	}
-	
-	private static boolean argSyntaxVerified(String[] args, int i) {
-        return i + 1 < args.length;
-    }
-	
-	public static boolean checkRequired() { // needs to be public!
-		if (wordlistPath == null) {
-			System.out.println("Missing argument: -w (wordlist)"); // TO DO: printHelp here
-			return false;
-		}
-		if (url == null) {
-			System.out.println("Missing argument: -u (url)");
-			return false;
-		}
-		return true;
-	}
-	
-	private static void printHelp() {
-		System.out.println("help ;_;");
-	}
-	
-	public static String urlStripTrailingSlash(String url) {
-		if (url != null && url.endsWith("/")) {
-			return url.substring(0, url.length() -1);
-		}
-		return url;
-	}
-	
-	private static String urlEnsureScheme(String url) {
-		if (!url.startsWith("http://") && !url.startsWith("https://")) {
-			return "http://" + url;
-		}
-		return url;
-	}
-	
-	public static int parse(String[] args) {
-		for (int i = 0; i < args.length; i++) {
-			switch (args[i]) {
-			
-			
-				case "-h":
-				case "--help":
-					printHelp();
-					return -1;
-			
-					
-				case "-w":
-				case "--wordlist":
-					if (argSyntaxVerified(args, i)) {
-						wordlistPath = args[++i];
-					} else {
-						System.out.println("Error: -w requires a wordlist path.");
-						return -1;
+		configManager.registerArgument(new CommandLineArgument(
+				"--threads", "-t", "threadCount",
+				(cm, value) -> cm.setConfigValue("threadCount", value), // Action: Set Value
+				value -> { // Sanitization
+					try {
+						int val = Integer.parseInt(value);
+						return val >= 1 && val <= 200; // TODO: Agree on max threads! Is there even a max???
+					} catch (NumberFormatException e) {
+						return false;
 					}
-					break;
-					
-					
-				case "-u":
-				case "--url":
-					if (argSyntaxVerified(args, i)) {
-						url = urlEnsureScheme(urlStripTrailingSlash(args[++i]));
-					} else {
-						System.out.println("Error: -u requires a URL.");
-						return -1;
-					}
-					break;
-					
-					
-				case "-t":
-				case "--threads":
-					if (argSyntaxVerified(args, i)) {
-						try {
-							threadCount = Integer.parseInt(args[++i]);
-						} catch (NumberFormatException e) {
-							System.out.println("Error: -t requires an integer.");
-							return -1;
-						}
-					} else {
-						System.out.println("Error: -t requires an integer.");
-						return -1;
-					}
-					break;
-					
-				case "-e":
-				case "--excludeStatusCodes":
-					if (!argSyntaxVerified(args, i)) {
-						System.out.println("Error: -e requires one or more HTTP Status code(s).");
-						return -1;
-					}
-					String[] codes = args[++i].split(",");
+				},
+				"Number of threads. Must be a number between 1 and 200.", // Description
+				true, // Optional?
+				"10" // Default Value
+		));
+
+		configManager.registerArgument(new CommandLineArgument(
+				"--wordlist", "-w", "wordlistPath",
+				(cm, value) -> cm.setConfigValue("wordlistPath", value),
+				value -> !value.trim().isEmpty(), // Validator
+				"Path to the word list. This argument is required.",
+				false,
+				null // Null as default due to the arg being non optional
+		));
+
+		configManager.registerArgument(new CommandLineArgument(
+				"--url", "-u", "url",
+				(cm, value) -> {
+					String processedValue = (!value.startsWith("http://") && !value.startsWith("https://")) ? "http://" + value : value;
+					processedValue = processedValue.endsWith("/") ? processedValue.substring(0, processedValue.length() - 1) : processedValue;
+					cm.setConfigValue("url", processedValue);
+				},
+				value -> value.matches("^(http://|https://).*"),
+				"URL to the target website. This argument is required and must start with http:// or https://. Trailing slashes are automatically removed.",
+				false,
+				null
+		));
+
+
+		configManager.registerArgument(new CommandLineArgument(
+				"--excludeStatusCodes", "-e", "excludedStatusCodes",
+				(cm, value) -> {
+					String[] codes = value.split(",");
+					StringBuilder validCodes = new StringBuilder();
 					for (String code : codes) {
 						try {
-							excludedStatusCodes.add(Integer.parseInt(code.trim()));
+							Integer.parseInt(code.trim());
+							if (!validCodes.isEmpty()) validCodes.append(",");
+							validCodes.append(code.trim());
 						} catch (NumberFormatException e) {
-							System.out.println("Error: Invalid status code format '" + code + "' (example: 301,302,303,304).");
-							return -1;
+							System.err.println("Error: Invalid status code format '" + code + "' (example: 301,302,303,304).");
 						}
 					}
-					break;
-						
-				case "--vhost":
-					requestMode = RequestMode.VHOST;
-					break;
-				
-				case "--subdomain":
-					requestMode = RequestMode.SUBDOMAIN;
-					break;				
-				
-				case "--method":
-					if (argSyntaxVerified(args, i)) {
-						try {
-							requestMethod = RequestMethod.valueOf(args[++i].toUpperCase());
-						} catch (IllegalArgumentException e) {
-							System.out.println("Error: Unsupported HTTP method. Currently supported methods are: GET, POST, HEAD");
-						}
-					} else {
-						System.out.println("Error: --method requires a HTTP method (currently supported: GET, HEAD, POST)");
-						return -1;
-					}
-					break;
-					
-				case "-l":
-				case "--excludeLength":
-					if (!argSyntaxVerified(args, i)) {
-						System.out.println("Error: -l requires one or more Decimals (example: 187,304,101)");
-						return -1;
-					}
-					String[] lengths = args[++i].split(",");
-					for (String length: lengths) {
-						try {
-							excludedLength.add(Integer.parseInt(length.trim()));
-						} catch (NumberFormatException e) {
-							System.out.println("Error: --length requires an integer.");
-							return -1;
-						}
-					}
-					break;
 
-				case "--max-retries":
-					if (!argSyntaxVerified(args, i)) {
-						System.out.println("Error: --max-retries requires an integer.");
-						return -1;
+					if (!validCodes.isEmpty()) {
+						cm.setConfigValue("excludedStatusCodes", validCodes.toString());
 					}
+				},
+				value -> value.matches("^[0-9]+(,[0-9]+)*$"),
+				"List of HTTP status codes to exclude, separated by commas. Each code must be a valid integer.",
+				true,
+				"404"
+		));
+
+		configManager.registerArgument(new CommandLineArgument(
+				"--excludeLength", "-l", "excludeLength",
+				(cm, value) -> {
+					String[] lengths = value.split(",");
+					StringBuilder validLengths = new StringBuilder();
+					for (String length : lengths) {
+						try {
+							Integer parsedLength = Integer.parseInt(length.trim());
+							if (!validLengths.isEmpty()) validLengths.append(",");
+							validLengths.append(parsedLength);
+						} catch (NumberFormatException e) {
+							System.err.println("Error: Invalid length format '" + length + "'. Each length must be a valid integer.");
+						}
+					}
+					if (!validLengths.isEmpty()) {
+						cm.setConfigValue("excludeLength", validLengths.toString());
+					}
+				},
+				value -> value.matches("^[0-9]+(,[0-9]+)*$"),
+				"List of content lengths to exclude, separated by commas. Each length must be a valid integer.",
+				true,
+				null
+		));
+
+
+		configManager.setConfigValue("requestMode", RequestMode.STANDARD.name()); // Is used to avoid setting a defaultValue twice
+
+		configManager.registerArgument(new CommandLineArgument(
+				"--vhost", "", "requestMode",
+				(cm, value) -> cm.setConfigValue("requestMode", RequestMode.VHOST.name()),
+				value -> true,
+				"Activates the virtual host fuzzing mode.",
+				true,
+				null
+		));
+
+		configManager.registerArgument(new CommandLineArgument(
+				"--subdomain", "", "requestMode",
+				(cm, value) -> cm.setConfigValue("requestMode", RequestMode.SUBDOMAIN.name()),
+				value -> true,
+				"Activates the subdomain fuzzing mode.",
+				true,
+				null
+		));
+
+
+		configManager.registerArgument(new CommandLineArgument(
+				"--method", "", "requestMethod",
+				(cm, value) -> {
 					try {
-						maxRetries = Integer.parseInt(args[++i]);
+						RequestMethod method = RequestMethod.valueOf(value.toUpperCase());
+						cm.setConfigValue("requestMethod", method.name());
+					} catch (IllegalArgumentException e) {
+						System.err.println("Error: Unsupported HTTP method. Currently supported methods are: GET, POST, HEAD");
+					}
+				},
+				value -> EnumSet.allOf(RequestMethod.class).stream()
+						.map(Enum::name)
+						.toList()
+						.contains(value.toUpperCase()), // Validator, which ensures that the value corresponds to one of the supported methods
+				"Specifies the HTTP method to use for requests. Supported methods are GET, POST, and HEAD. Default is GET.",
+				true,
+				RequestMethod.GET.name()
+		));
+
+		configManager.registerArgument(new CommandLineArgument(
+				"--max-retries", "", "maxRetries",
+				(cm, value) -> {
+					try {
+						int maxRetries = Integer.parseInt(value);
+						cm.setConfigValue("maxRetries", String.valueOf(maxRetries));
 					} catch (NumberFormatException e) {
 						System.out.println("Error: --max-retries requires an integer.");
-						return -1;
 					}
-					break;
-					
-				case "--rate-limit":
-					if (!argSyntaxVerified(args, i)) {
+				},
+				value -> {
+					try {
+						int val = Integer.parseInt(value);
+						return val >= 0;
+					} catch (NumberFormatException e) {
+						return false;
+					}
+				},
+				"Specifies the maximum number of retries for a request. This value must be an integer. Default is 5.",
+				true,
+				"5"
+		));
+
+		configManager.registerArgument(new CommandLineArgument(
+				"--rate-limit", "", "rateLimiterEnabled",
+				(cm, value) -> {
+					try {
+						int rateLimit = Integer.parseInt(value);
+
+						cm.setConfigValue("rateLimit", String.valueOf(rateLimit));
+						cm.setConfigValue("rateLimiterEnabled", "true");
+					} catch (NumberFormatException e) {
 						System.out.println("Error: --rate-limit requires an integer (max requests per second).");
-						return -1;
 					}
+				},
+				value -> {
 					try {
-						rateLimiterEnabled = true;
-						rateLimit = Integer.parseInt(args[++i]);
-						WebRequester.enableRequestRateLimiter(rateLimit);
+						int val = Integer.parseInt(value);
+						return val > 0;
 					} catch (NumberFormatException e) {
-						System.out.println("Error: --rate-limit requires an integer.");
-						return -1;
+						return false;
 					}
-					break;
-					
-				case "--metrics":
-						metricsEnabled = true;
-						Metrics.startMetrics();
-					break;
-					
-				case "--debug":
-					debugEnabled = true;
-					break;
-					
-				case "--recursive":
-					recursionEnabled = true;
-					break;
+				},
+				"Sets the maximum number of requests per second. This value must be a positive integer.",
+				true,
+				"false"
+		));
 
-				case "-a":
-				case "--user-agent":
-					if (!argSyntaxVerified(args, i)) {
-						System.out.println("Error: --user-agent requires a String");
-						return -1;
-					}
-					userAgent = args[++i];
-					break;
+		configManager.registerArgument(new CommandLineArgument(
+				"--metrics", "", "metricsEnabled",
+				(cm, value) -> {
+					cm.setConfigValue("metricsEnabled", "true");
+					Metrics.startMetrics();
+				},
+				value -> true,
+				"Enables metrics collection.",
+				true,
+				"false"
+		));
 
-				case "-H": // Header - should be able to set an endless amount
-					if (!argSyntaxVerified(args, i)) {
-						System.out.println("Error: -H requires a String");
-						return -1;
-					}
-					String headerInput = args[++i];
-					if (!headerInput.contains(":") || headerInput.startsWith(":") || headerInput.endsWith(":")) {
+		configManager.registerArgument(new CommandLineArgument(
+				"--debug", "", "debugEnabled",
+				(cm, value) -> cm.setConfigValue("debugEnabled", "true"),
+				value -> true,
+				"Enables debug mode.",
+				true,
+				"false"
+		));
+
+		configManager.registerArgument(new CommandLineArgument(
+				"--recursive", "", "recursionEnabled",
+				(cm, value) -> cm.setConfigValue("recursionEnabled", "true"),
+				value -> true,
+				"Enables recursive fuzzing mode.",
+				true,
+				"false"
+		));
+
+		configManager.registerArgument(new CommandLineArgument(
+				"--user-agent", "", "userAgent",
+				(cm, value) -> cm.setConfigValue("userAgent", value),
+				value -> !value.trim().isEmpty(),
+				"Sets the user agent for requests. Example: --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"",
+				true,
+				null
+		));
+
+		configManager.registerArgument(new CommandLineArgument(
+				"-r", "", "requestFileFuzzing",
+				(cm, value) -> {
+					cm.setConfigValue("requestFilePath", value);
+					cm.setConfigValue("requestFileFuzzing", "true");
+				},
+				value -> !value.trim().isEmpty() && new File(value).exists(),
+				"Specifies the filepath to the HTTP request file for fuzzing. This activates file-based fuzzing mode. Ensure the file exists. Example: -r \"/path/to/requestfile.txt\"",
+				true,
+				null
+		));
+
+
+		Set<String> headers = new HashSet<>();
+
+		configManager.registerArgument(new CommandLineArgument(
+				"-H", "", "headers",
+				(cm, value) -> {
+					if (!value.contains(":") || value.startsWith(":") || value.endsWith(":")) {
 						System.out.println("Error: Invalid header format. Header must be in 'Name: Value' format.");
-						return -1;
+					} else {
+						headers.add(value);
 					}
-					headers.add(args[++i]);
-					break;
+				},
+				value -> value.contains(":") && !value.startsWith(":") && !value.endsWith(":"),
+				"Sets custom headers for the requests. Each header must be in the 'Name: Value' format. Can be used multiple times for multiple headers. Example: -H \"Content-Type: application/json\"",
+				true,
+				null
+		));
 
-				case "-r":
-					if (!argSyntaxVerified(args, i)) {
-						System.out.println("Error: -r requires a filepath to the HTTP request file.");
-						return -1;
-					}
-					requestFilePath = args[++i];
-					requestFileFuzzing = true;
-					break;
-
-				case "--fuzz-marker":
-					if (!argSyntaxVerified(args, i)) {
-						System.out.println("Error: --fuzz-marker requires a String.");
-						return -1;
-					}
-					fuzzMarker = args[++i];
-					break;
-
-				default:
-					System.out.println("Unknown option: " + args[i]);
-					return -1;
-			}
-		}
-		return 0;
+		configManager.registerArgument(new CommandLineArgument(
+				"--fuzz-marker", "", "fuzzMarker",
+				(cm, value) -> cm.setConfigValue("fuzzMarker", value),
+				value -> !value.trim().isEmpty(),
+				"Specifies the fuzz marker within the request file that will be replaced with dynamic content. Example: --fuzz-marker \"FUZZ\"",
+				true,
+				"FUZZ"
+		));
 	}
-	
+
+	private static final ConfigManager configManager = ConfigManager.getInstance();
+
 	public static int getThreadCount() {
-		return threadCount;
+		return Integer.parseInt(configManager.getConfigValue("threadCount"));
 	}
 
 	public static String getWordlistPath() {
-		return wordlistPath;
+		return configManager.getConfigValue("wordlistPath");
 	}
 
 	public static String getUrl() {
-		return url;
+		return configManager.getConfigValue("url");
 	}
 
 	public static Set<Integer> getExcludedStatusCodes() {
-		return excludedStatusCodes;
+		String codes = configManager.getConfigValue("excludedStatusCodes");
+		if (codes == null || codes.trim().isEmpty()) {
+			return new HashSet<>(); // Gib ein leeres Set zurück, wenn kein Wert gesetzt wurde
+		}
+		return Stream.of(codes.split(","))
+				.map(String::trim)
+				.map(Integer::parseInt)
+				.collect(Collectors.toSet());
 	}
-	
+
 	public static Set<Integer> getExcludedLength() {
-		return excludedLength;
+		String lengths = configManager.getConfigValue("excludeLength");
+		if (lengths == null || lengths.trim().isEmpty()) {
+			return new HashSet<>(); // Gib ein leeres Set zurück, wenn kein Wert gesetzt wurde.
+		}
+		return Stream.of(lengths.split(","))
+				.map(String::trim)
+				.map(Integer::parseInt)
+				.collect(Collectors.toSet());
 	}
 
 	public static RequestMode getRequestMode() {
-		return requestMode;
+		return RequestMode.valueOf(configManager.getConfigValue("requestMode"));
 	}
 
 	public static RequestMethod getRequestMethod() {
-		return requestMethod;
+		return RequestMethod.valueOf(configManager.getConfigValue("requestMethod"));
 	}
-	
+
 	public static int getMaxRetries() {
-		return maxRetries;
+		return Integer.parseInt(configManager.getConfigValue("maxRetries"));
 	}
-	
+
 	public static int getRateLimit() {
-		return rateLimit;
+		return Integer.parseInt(configManager.getConfigValue("rateLimit"));
 	}
-	
+
 	public static boolean getRateLimiterEnabled() {
-		return rateLimiterEnabled;
+		return Boolean.parseBoolean(configManager.getConfigValue("rateLimiterEnabled"));
 	}
-	
+
 	public static boolean getMetricsEnabled() {
-		return metricsEnabled;
+		return Boolean.parseBoolean(configManager.getConfigValue("metricsEnabled"));
 	}
-	
+
 	public static boolean getDebugEnabled() {
-		return debugEnabled;
+		return Boolean.parseBoolean(configManager.getConfigValue("debugEnabled"));
 	}
-	
+
 	public static boolean getRecursionEnabled() {
-		return recursionEnabled;
+		return Boolean.parseBoolean(configManager.getConfigValue("recursionEnabled"));
 	}
 
 	public static String getUserAgent() {
-		return userAgent;
+		return configManager.getConfigValue("userAgent");
 	}
 
 	public static Set<String> getHeaders() {
-		return headers;
+		String headers = configManager.getConfigValue("headers");
+		return headers == null ? Set.of() : Stream.of(headers.split(",\\s*")).collect(Collectors.toSet());
 	}
 
 	public static boolean getRequestFileFuzzing() {
-		return requestFileFuzzing;
+		return Boolean.parseBoolean(configManager.getConfigValue("requestFileFuzzing"));
 	}
 
 	public static String getRequestFilePath() {
-		return requestFilePath;
+		return configManager.getConfigValue("requestFilePath");
 	}
 
 	public static String getFuzzMarker() {
-		return fuzzMarker;
+		return configManager.getConfigValue("fuzzMarker");
 	}
 }
