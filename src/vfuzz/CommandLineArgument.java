@@ -12,7 +12,7 @@ public class CommandLineArgument {
     private final String description;
     private final boolean isOptional;
     private final String defaultValue;
-    private boolean isFlag;
+    private final boolean isFlag;
 
     public CommandLineArgument(String name, String alias, String configName, BiConsumer<ConfigManager, String> action, Predicate<String> validator, String description, boolean isOptional, String defaultValue, boolean isFlag) {
         this.name = name;
