@@ -49,11 +49,13 @@ public class TerminalOutput implements Runnable {
 		}
 	}
 	
-	public void updateMetrics() { // gogo ANSI
+	public void updateMetrics() {
+		/*
 		eraseToEOL();
 		System.out.println("Requests per Second: " + Metrics.getRequestsPerSecond());
 		System.out.println("Retries per Second: " + Metrics.getRetriesPerSecond());
 		System.out.println("Failed Requests per Second: " + Metrics.getFailedRequestsPerSecond());
+		 */
 
 	}
 	

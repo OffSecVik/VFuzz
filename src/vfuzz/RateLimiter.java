@@ -2,13 +2,17 @@ package vfuzz;
 
 public class RateLimiter {
 	
-	private final int maxTokens;
+	private int maxTokens;
 	private int refillRatePerSecond;
 	private long availableTokens;
 	private long lastRefillTimestamp;
 	private boolean enabled = false;
 	
-	
+
+	public RateLimiter() {
+		maxTokens = 0;
+	}
+
 	public RateLimiter(int refillRatePerSecond) {
 		this.maxTokens = refillRatePerSecond;
 		this.refillRatePerSecond = refillRatePerSecond;
@@ -16,8 +20,12 @@ public class RateLimiter {
 		this.lastRefillTimestamp = System.currentTimeMillis();
 	}
 	
-	public void adjustRateLimit(int refillRatePerSecond) { // synonymous to requests per second
+	public void setRateLimit(int refillRatePerSecond) { // synonymous to requests per second
+		this.maxTokens = refillRatePerSecond;
 		this.refillRatePerSecond = refillRatePerSecond;
+		this.availableTokens = maxTokens;
+		this.lastRefillTimestamp = System.currentTimeMillis();
+		System.out.println("Setting rate limit to " + refillRatePerSecond + "/s");
 	}
 
 	public synchronized boolean tokenAvailable() {
@@ -45,15 +53,21 @@ public class RateLimiter {
 
 
 	public void awaitToken() {
-		while (!tokenAvailable()) {
-			try {
-				Thread.sleep(100); // if this is too low there are weird issues and the requests throw IOExceptions
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
+		if (enabled && maxTokens > 0) {
+			while (!tokenAvailable()) {
+				try {
+					Thread.sleep(100); // if this is too low there are weird issues and the requests throw IOExceptions
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				}
 			}
 		}
 	}
-	
+
+	public boolean isEnabled() {
+		return enabled;
+	}
+
 	public void enable() {
 		this.enabled = true;
 	}

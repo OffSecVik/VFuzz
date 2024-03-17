@@ -38,6 +38,26 @@ public class Metrics {
 		updateRequestsPerSecond();
 		updateRetriesPerSecond();
 		updateFailedRequestsPerSecond();
+		updateDynamicRateLimiter();
+	}
+
+	private static void updateDynamicRateLimiter() {
+		double requestsPerSecond = getRequestsPerSecond();
+		double failedRequestsPerSecond = getFailedRequestsPerSecond(); // making new variables here because I was worried the class variables would change values amidst operation of this method
+		double retriesPerSecond = getRetriesPerSecond();
+		double failureRate = failedRequestsPerSecond / requestsPerSecond;
+		double retryRate = retriesPerSecond / requestsPerSecond;
+		System.out.println("\tfailure rate: " + String.format("%.3f", failureRate*100) + "%\t\tretry rate: " + String.format("%.3f", retryRate*100) + "%"); // print the rates in percent
+
+		// dynamic logic for failure and retries:
+		if (failureRate > 0.1 || retryRate > 0.2) { // throttle conditions: 10% of requests fail OR 20% of requests are retries
+			WebRequester.enableRequestRateLimiter((int) (requestsPerSecond * ( 1 - failureRate)));
+		} else if (failureRate < 0.0001 && retryRate < 0.1) { // turn the darn thing off if we have lower than 0.01% failure
+			WebRequester.disableRequestRateLimiter();
+		} else if (failureRate < 0.01 && retryRate < 0.05) { // speed back up if we're below 1% failure rate and 5% retry rate
+			WebRequester.setRequestRateLimiter((int) (requestsPerSecond * (1 + failureRate)));
+	}
+
 	}
 
 	private static void updateRequestsPerSecond() {

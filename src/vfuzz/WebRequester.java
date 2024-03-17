@@ -23,15 +23,22 @@ import java.util.Map;
 public class WebRequester {
 
 	// Rate Limiting
-	private static RateLimiter requestRateLimiter;
+	private static final RateLimiter requestRateLimiter = new RateLimiter();
+
 	public static void enableRequestRateLimiter(int rateLimit) { // gets called by ArgParse upon reading the flags if the --rate-limit flag is provided
-		requestRateLimiter = new RateLimiter(rateLimit);
+		requestRateLimiter.setRateLimit(rateLimit);
 		requestRateLimiter.enable();
 	}
 
-	public void enableDynamicRateLimiting() {
-
+	public static void setRequestRateLimiter(int rateLimit) {
+		requestRateLimiter.setRateLimit(rateLimit);
 	}
+
+	public static void disableRequestRateLimiter() {
+		requestRateLimiter.disable();
+	}
+
+
 
 	// attempting some net code
 	private static final CloseableHttpClient client;
@@ -87,12 +94,12 @@ public class WebRequester {
 			Metrics.incrementRequestsCount();
 			// see if metrics is enabled
 			if (ArgParse.getMetricsEnabled()) {
-				 // increments the requests // TODO - discuss if it makes sense to move the requestCount variable into WebRequester class (performance)
+				 // setting current request for pretty display
 				Metrics.setCurrentRequest(request.getURI().toString());
 			}
 
 			// await a free token if we use the rate limiter
-			if (ArgParse.getRateLimiterEnabled()) {
+			if (requestRateLimiter.isEnabled()) {
 				requestRateLimiter.awaitToken();
 			}
 
