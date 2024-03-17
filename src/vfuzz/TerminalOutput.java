@@ -10,6 +10,7 @@ public class TerminalOutput implements Runnable {
 		while (running) {
 
 			updateMetrics();
+			updateDynamicRateLimiter();
 			/*
 			if (ArgParse.getMetricsEnabled()) {
 				updateMetrics();
@@ -51,6 +52,8 @@ public class TerminalOutput implements Runnable {
 	public void updateMetrics() { // gogo ANSI
 		eraseToEOL();
 		System.out.println("Requests per Second: " + Metrics.getRequestsPerSecond());
+		System.out.println("Retries per Second: " + Metrics.getRetriesPerSecond());
+		System.out.println("Failed Requests per Second: " + Metrics.getFailedRequestsPerSecond());
 
 	}
 	
@@ -65,6 +68,10 @@ public class TerminalOutput implements Runnable {
 			return 2;
 		}
 		return 0;
+	}
+
+	public void updateDynamicRateLimiter() {
+
 	}
 	
 	private void clearScreen() {

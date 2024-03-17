@@ -3,7 +3,7 @@ package vfuzz;
 public class RateLimiter {
 	
 	private final int maxTokens;
-	private final int refillRatePerSecond;
+	private int refillRatePerSecond;
 	private long availableTokens;
 	private long lastRefillTimestamp;
 	private boolean enabled = false;
@@ -16,7 +16,10 @@ public class RateLimiter {
 		this.lastRefillTimestamp = System.currentTimeMillis();
 	}
 	
-	
+	public void adjustRateLimit(int refillRatePerSecond) { // synonymous to requests per second
+		this.refillRatePerSecond = refillRatePerSecond;
+	}
+
 	public synchronized boolean tokenAvailable() {
 		if (!enabled) {
 			return true;

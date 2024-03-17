@@ -22,11 +22,17 @@ import java.util.Map;
 
 public class WebRequester {
 
+	// Rate Limiting
 	private static RateLimiter requestRateLimiter;
 	public static void enableRequestRateLimiter(int rateLimit) { // gets called by ArgParse upon reading the flags if the --rate-limit flag is provided
 		requestRateLimiter = new RateLimiter(rateLimit);
 		requestRateLimiter.enable();
 	}
+
+	public void enableDynamicRateLimiting() {
+
+	}
+
 	// attempting some net code
 	private static final CloseableHttpClient client;
 	static {
@@ -77,9 +83,11 @@ public class WebRequester {
 
 		// retry loop
 		for (int attempt = 1; attempt <= ArgParse.getMaxRetries(); attempt++) {
+
+			Metrics.incrementRequestsCount();
 			// see if metrics is enabled
-			if (ArgParse.getMetricsEnabled() ) {
-				Metrics.incrementRequestsCount(); // increments the requests
+			if (ArgParse.getMetricsEnabled()) {
+				 // increments the requests // TODO - discuss if it makes sense to move the requestCount variable into WebRequester class (performance)
 				Metrics.setCurrentRequest(request.getURI().toString());
 			}
 
@@ -92,6 +100,7 @@ public class WebRequester {
 			try {
 				HttpResponse response =  client.execute(request); // request succeeded
 				if (attempt > 1) { // LOGGING
+					Metrics.incrementRetriesCount();
 					// System.err.println("Attempt " + attempt + " successful for " + request.uri());
 					// Debug.logRequest(request.uri().toString(), "Attempt " + attempt + " successful " + request.uri());
 				}
@@ -102,7 +111,6 @@ public class WebRequester {
 				// e.printStackTrace();
 			} catch (Exception e) {
 				System.err.println("Unexpected error during request: " + e.getMessage());
-				return null;
 			}
 
 			// retrying
@@ -114,6 +122,7 @@ public class WebRequester {
 			}
 			retryDelay *= 2; // exponential backoff
 		}
+		Metrics.incrementFailedRequestsCount();
 		return null;
 	}
 

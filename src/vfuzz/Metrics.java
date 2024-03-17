@@ -1,10 +1,5 @@
 package vfuzz;
-/*
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
-import java.lang.management.MemoryUsage;
-import java.lang.management.OperatingSystemMXBean;
-*/
+
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -14,13 +9,15 @@ public class Metrics {
 	private static ScheduledExecutorService executor = null;
 	
 	// request metrics variables
-	private static final AtomicLong requestCount = new AtomicLong(0); // thread safe incrementation of requests
-	private static double requestsPerSecond = 0.0;
-	private static String currentRequest;
-	
-	// producer metrics variables
-	private static final AtomicLong producerCount = new AtomicLong(0);
+	private static final AtomicLong producerCount = new AtomicLong(0); // ALL the count variables reset to 0 each second
+	private static final AtomicLong requestCount = new AtomicLong(0);
+	private static final AtomicLong retriesCount = new AtomicLong(0);
+	private static final AtomicLong failedRequestsCount = new AtomicLong(0);
 	private static double producedPerSecond = 0.0;
+	private static double requestsPerSecond = 0.0;
+	private static double retriesPerSecond = 0.0;
+	private static double failedRequestsPerSecond = 0.0;
+	private static String currentRequest;
 	
 	public static synchronized void startMetrics() { // initializes the executor
 		if (executor == null || executor.isShutdown()) {
@@ -32,45 +29,68 @@ public class Metrics {
 	public static synchronized void stopMetrics() {
 		if (executor != null) {
 			executor.shutdown();
-			executor = null;
+			executor = null; // flush the executor down the toilet
 		}
 	}
 	
 	private static void updateAll() {
 		updateProducedPerSecond();
 		updateRequestsPerSecond();
+		updateRetriesPerSecond();
+		updateFailedRequestsPerSecond();
 	}
-	
+
+	private static void updateRequestsPerSecond() {
+		// snapshot current count and calculate RPS
+        requestsPerSecond = requestCount.get();
+		requestCount.set(0); // reset count for next interval
+	}
+
+	private static void updateProducedPerSecond() {
+        producedPerSecond = producerCount.get();
+		producerCount.set(0);
+	}
+
+	private static void updateRetriesPerSecond() {
+		retriesPerSecond = retriesCount.get();
+		retriesCount.set(0);
+	}
+
+	private static void updateFailedRequestsPerSecond() {
+		failedRequestsPerSecond = failedRequestsCount.get();
+		failedRequestsCount.set(0);
+	}
+
 	// request metrics methods
 	public static void incrementRequestsCount() {
 		requestCount.incrementAndGet();
 	}
-	
-	private static void updateRequestsPerSecond() {
-		// snapshot current count and calculate RPS
-		long currentCount = requestCount.get(); // current number of requests counted since the last method call
-		requestsPerSecond = (double) currentCount / 1; // dividing by one second
-		requestCount.set(0); // reset count for next interval
+
+	public static void incrementRetriesCount() {
+		retriesCount.incrementAndGet();
 	}
 
+	public static void incrementFailedRequestsCount() {
+		failedRequestsCount.incrementAndGet();
+	}
+
+	public static void incrementProducerCount() {
+		producerCount.incrementAndGet();
+	}
 
 	public static double getRequestsPerSecond() {
 		// updateRequestsPerSecond();
 		return requestsPerSecond;
 	}
-	
-	
-	// implementing a feature to find out the rate at which we add to the queue
-	public static void incrementProducerCount() {
-		producerCount.incrementAndGet();
+
+	public static double getRetriesPerSecond() {
+		return retriesPerSecond;
 	}
-	
-	private static void updateProducedPerSecond() {
-		long currentCount = producerCount.get();
-		producedPerSecond = (double) currentCount / 1;
-		producerCount.set(0);
+
+	public static double getFailedRequestsPerSecond() {
+		return failedRequestsPerSecond;
 	}
-	
+
 	public static double getProducedPerSecond() {
 		return producedPerSecond;
 	}
