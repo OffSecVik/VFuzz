@@ -1,121 +1,34 @@
 	NEXT STEPS
 
-> implement stable output with some kind of terminal control or GUI - DONE
-
-> test performance metrics with new output - DONE
-
-> implement CPU and RAM metrics
-
-
-	OTHER
-
-> url variable in WebRequester.buildRequest(url, payload) method is unnecessary? - FIXED
-
-> Recursion Thread handling - Thread Pool? Who gets how many thread? Max threads?
-
-
-	TESTING
-
-> VHOST testing next steps:
--> find target that has VHOST
--> adjust parseResponse to take request object as argument so that we can print the Host header
---> maybe unnecessary? maybe print payload? check how FFUF does it
-
-> test metrics against actual target, find bottleneck
-
-> test against robust site (htb labs)
-
-> ensure proper error handling (most important)
-
-> test to see how flags are read - are the quotes part of the processed values? (e.g. --user-agent "Mozilla" - will the program read "Mozilla" or Mozilla?)
-
-
-	FEATURES
-
-        RECURSION THREAD HANDLING
-
-            > deep and shallow mode? (deep could evenly distribute the number of available threads, shallow would give 1/5th of the threads to the new hit)
-
-            > try to track the number of threads working at each time to see if they adapt dynamically - DONE and DONE
-
-
-> PROBLEM: Printing in VHOST mode - how to we store the vhost header value? Overcharging the Hit constructor? - DONE
-
-> FLAG COMPATIBILITY is a huge thing we need to think about, there's flags that directly work against each other and shouldn't be used together, e.g. --subdomain and --vhost
--> also checking that flags can only be supplied once
-
-> FUZZ mode where I can specify something like http://admin.mysite.com/FUZZ/login.php
--> FUZZ mode AND FILE mode both use the fuzzMarker
-
 > have --exclude-length exclude ranges of lengths (e.g. 200-450)
 
 > allow ranges in status codes
 
-> fix request building (new) - DONE
+> DESIGN CHOICE: Rate Limiter on or off by default?
+-> Decide on Threshold Values -> have user supply them?
 
-> Metrics
--> give extra thread in thread orchestrator to metrics class DONE
--> validate that everything metrics related is off when not using --metrics flag DONE
-
-> Retry Logic
-	> --max-retry flag DONE
-	> DynamicRateLimiter class, which controls a variable that adjusts the fuzzer's speed depending on the number of exceptions caught within a time window
-		> --no-limit turns off the rate limiter
+> implement CPU and RAM metrics
+-> maybe while doing that find out what is hogging the CPU
+-> Use Java Profiler to index performance?
+> FUZZ mode where I can specify something like http://admin.mysite.com/FUZZ/login.php
+-> FUZZ mode AND FILE mode both use the fuzzMarker
 
 > Print Class for pretty output and progress bar
 
-> rate limiting DONE
--> Dynamic Rate Limiting
-----> TRACKING: track nRetries, nSuccessfulRequests, nFailedRequests, include in metrics
-----> use as basis for calculation for RateLimiter (could use something like Number of Retries per Successful Requests, or if a Failure per Second is exceeded)
--> pressing plus or minus during fuzzing to increase the rate, having a button to enable/disable rate limiting (this would be super sick)
--> max value for exponential backoff
+> File Extension Fuzzing
+
+> TEST FILE MODE (I know it will be buggy)
 
 > Flags:
-	-w (Path to Wordlist) - DONE
-	-u (URL) - DONE
-	-e (Exclude Status Code) - TEST IT - WORKS
-	-l (Exclude Length) - //TODO TEST IT
 	-H (add Header) -> have to be able to add large number of headers! - //TODO TEST IT
 	-d (send post data, automatically sets RequestMode to POST) (CONFLICT CHECK)
 	-a --user-agent (User-Agent) (CONFLICT CHECK with --random-agent)
 	--random-agent (set random user agent)
-	-r (read request from file)
-	---> allow specification of a custom marker
-
-> VHOST mode DONE - also added SUBDOMAIN mode
-
-> Strip "/" from url if present - DONE - also ensured a scheme is present
-
-> Handle receiving IPs instead of FQDNs DONE
-
-> Recursive Fuzzing DONE
-
-> POST/PUT requests -- POST DONE, PUT later (does it even make sense to fuzz with PUT requests?)
-
-> File Extension Fuzzing
-
-> Fuzzing from a Text file web request like SQLmap, and placing a * inside the file where to fuzz
-
--> Use Java Profiler to index performance of my tool?
-
-
-	IDEAS
-
-> pass a config object to components that require it
-
-
-	LOG
-
-> added URLEncoding the payload in WebRequester
--> should be able to turn this off with a flag, or maybe in performance mode
+	-C Cookie
+	-r (read request from file) // TODO TEST IT
 
 
 
-IDEAS FOR RECURSION
 
--> Implement an iterator instead of queue.take() to preserve the queue.
-the iterator would get a custom wait implementation, so that it doesn't choke in case the queue is empty. DONE
-then modify the requestBuilder to build a request for each recursion target, it needs to take url as argument DONE
-for this, we need to save the recursive targets in a data structure (ArrayList) -> We have this in Hit class DONE
-now on a hit we need to call another thread that starts fuzzing the new target with a new queue
+
+
