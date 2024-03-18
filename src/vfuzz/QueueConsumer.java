@@ -6,8 +6,9 @@ import org.apache.http.util.EntityUtils;
 import java.util.concurrent.BlockingQueue;
 import java.io.IOException;
 
+
 public class QueueConsumer implements Runnable {
-	
+
 	private final BlockingQueue<String> queue;
 	private final String url;
 	private final ThreadOrchestrator orchestrator;
@@ -98,7 +99,7 @@ public class QueueConsumer implements Runnable {
 			String payload;
 			try {
 				payload = queue.take();
-				if ("EOF".equals(payload)) {
+				if ("ENDOFFILEMARKERTHATWONTBEINANYWORDLIST".equals(payload)) {
 					running = false;
 					break;
 				}

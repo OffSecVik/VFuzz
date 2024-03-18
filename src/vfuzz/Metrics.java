@@ -1,5 +1,6 @@
 package vfuzz;
 
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -14,19 +15,18 @@ public class Metrics {
 	private static final AtomicLong retriesCount = new AtomicLong(0);
 	private static final AtomicLong failedRequestsCount = new AtomicLong(0);
 	private static double producedPerSecond = 0.0;
-	private static double requestsPerSecond = 0.0;
-	private static double retriesPerSecond = 0.0;
-	private static double failedRequestsPerSecond = 0.0;
+
+
 	private static String currentRequest;
 
 	private static double failureRate = 0;
 	private static double retryRate = 0;
+	private static long updateInterval = 100; // time in milliseconds, this is how often the thread updates its metrics
+	private static double requestsPerSecond[] = new double[1000 / (int)updateInterval]; // calculating actual RPS through this
+	private static double retriesPerSecond[] = new double[1000 / (int)updateInterval]; // calculating actual RPS through thisprivate static double
+	private static double failedRequestsPerSecond[] = new double[1000 / (int)updateInterval];
+	private static int timesUpdated = 0;
 
-	private static long updateInterval = 100;
-	private static long getUpdateInterval() {
-		return updateInterval;
-	}
-	private static long timeSinceLastUpdate = 0;
 
 	public static synchronized void startMetrics() { // initializes the executor
 		if (executor == null || executor.isShutdown()) {
@@ -43,17 +43,14 @@ public class Metrics {
 	}
 	
 	private static void updateAll() {
-		timeSinceLastUpdate += updateInterval;
-		if (timeSinceLastUpdate >= 1000) { // this block executes stuff every second
-			updateProducedPerSecond();
-			updateRequestsPerSecond();
-			updateRetriesPerSecond();
-			updateFailedRequestsPerSecond();
 
-			timeSinceLastUpdate = 0;
-		}
+		updateProducedPerSecond();
+		updateRequestsPerSecond();
+		updateRetriesPerSecond();
+		updateFailedRequestsPerSecond();
 
 		updateDynamicRateLimiter();
+		timesUpdated++;
 	}
 
 	private static void updateDynamicRateLimiter() {
@@ -77,8 +74,7 @@ public class Metrics {
 	}
 
 	private static void updateRequestsPerSecond() {
-		// snapshot current count and calculate RPS
-        requestsPerSecond = requestCount.get();
+		requestsPerSecond[timesUpdated % (1000 / (int)updateInterval)] = requestCount.get(); // places Requests/updateInterval in the array
 		requestCount.set(0); // reset count for next interval
 	}
 
@@ -88,12 +84,12 @@ public class Metrics {
 	}
 
 	private static void updateRetriesPerSecond() {
-		retriesPerSecond = retriesCount.get();
+		retriesPerSecond[timesUpdated % (1000 / (int)updateInterval)] = retriesCount.get();
 		retriesCount.set(0);
 	}
 
 	private static void updateFailedRequestsPerSecond() {
-		failedRequestsPerSecond = failedRequestsCount.get();
+		failedRequestsPerSecond[timesUpdated % (1000 / (int)updateInterval)] = failedRequestsCount.get();
 		failedRequestsCount.set(0);
 	}
 
@@ -116,15 +112,15 @@ public class Metrics {
 
 	public static double getRequestsPerSecond() {
 		// updateRequestsPerSecond();
-		return requestsPerSecond;
+		return Arrays.stream(requestsPerSecond).sum();
 	}
 
 	public static double getRetriesPerSecond() {
-		return retriesPerSecond;
+		return Arrays.stream(retriesPerSecond).sum();
 	}
 
 	public static double getFailedRequestsPerSecond() {
-		return failedRequestsPerSecond;
+		return Arrays.stream(failedRequestsPerSecond).sum();
 	}
 
 	public static double getProducedPerSecond() {
