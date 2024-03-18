@@ -18,11 +18,16 @@ public class Metrics {
 	private static double retriesPerSecond = 0.0;
 	private static double failedRequestsPerSecond = 0.0;
 	private static String currentRequest;
-	
+
+	private static long updateInterval = 100;
+	private static long getUpdateInterval() {
+		return updateInterval;
+	}
+
 	public static synchronized void startMetrics() { // initializes the executor
 		if (executor == null || executor.isShutdown()) {
 			executor = Executors.newSingleThreadScheduledExecutor();
-			executor.scheduleAtFixedRate(Metrics::updateAll, 1, 1, TimeUnit.SECONDS); // (1) executes updateRequestsPerSecond (2) waits 1 second before it executes the task for the first time (3) period between consecutive task executions (4) specifies time unit for (2) and (3)
+			executor.scheduleAtFixedRate(Metrics::updateAll, updateInterval, updateInterval, TimeUnit.MILLISECONDS); // (1) executes updateRequestsPerSecond (2) waits 1 second before it executes the task for the first time (3) period between consecutive task executions (4) specifies time unit for (2) and (3)
 		}
 	}
 	
@@ -45,8 +50,12 @@ public class Metrics {
 		double requestsPerSecond = getRequestsPerSecond();
 		double failedRequestsPerSecond = getFailedRequestsPerSecond(); // making new variables here because I was worried the class variables would change values amidst operation of this method
 		double retriesPerSecond = getRetriesPerSecond();
-		double failureRate = failedRequestsPerSecond / requestsPerSecond;
-		double retryRate = retriesPerSecond / requestsPerSecond;
+		double failureRate = 0;
+		double retryRate = 0;
+		if (requestsPerSecond != 0) {
+			failureRate = failedRequestsPerSecond / requestsPerSecond;
+			retryRate = retriesPerSecond / requestsPerSecond;
+		}
 		System.out.println("\tfailure rate: " + String.format("%.3f", failureRate*100) + "%\t\tretry rate: " + String.format("%.3f", retryRate*100) + "%"); // print the rates in percent
 
 		// dynamic logic for failure and retries:
@@ -62,22 +71,22 @@ public class Metrics {
 
 	private static void updateRequestsPerSecond() {
 		// snapshot current count and calculate RPS
-        requestsPerSecond = requestCount.get();
+        requestsPerSecond = requestCount.get() * (1000 / updateInterval);
 		requestCount.set(0); // reset count for next interval
 	}
 
 	private static void updateProducedPerSecond() {
-        producedPerSecond = producerCount.get();
+        producedPerSecond = producerCount.get() * (1000 / updateInterval);
 		producerCount.set(0);
 	}
 
 	private static void updateRetriesPerSecond() {
-		retriesPerSecond = retriesCount.get();
+		retriesPerSecond = retriesCount.get()  * (1000 / updateInterval);
 		retriesCount.set(0);
 	}
 
 	private static void updateFailedRequestsPerSecond() {
-		failedRequestsPerSecond = failedRequestsCount.get();
+		failedRequestsPerSecond = failedRequestsCount.get() * (1000 / updateInterval);
 		failedRequestsCount.set(0);
 	}
 
