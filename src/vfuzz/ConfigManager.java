@@ -37,29 +37,34 @@ public class ConfigManager {
             String arg = args[i];
             String value = null;
 
-            // Check whether the next element is a value or represents a new argument
-            if (i + 1 < args.length && !args[i + 1].startsWith("--")) {
-                value = args[++i]; // Take the next value if it exists and is not an argument
+            // Determine whether the current element is a known argument
+            CommandLineArgument cmdArg = arguments.get(arg);
+            if (cmdArg == null && arg.startsWith("-")) {
+                // Try to identify the argument by its short or long form
+                cmdArg = arguments.values().stream()
+                        .filter(a -> arg.equals(a.getAlias()) || arg.equals(a.getName()))
+                        .findFirst()
+                        .orElse(null);
             }
 
-            CommandLineArgument cmdArg = arguments.get(arg);
             if (cmdArg != null) {
-                if (value == null && !cmdArg.isFlag()) {
-                    System.out.println("Error: Argument '" + arg + "' erwartet einen Wert.");
-                    continue; // Skip this argument if it expects a value but has none
+                // If the argument is a flag or the next value does not look like an argument
+                if (cmdArg.isFlag() || (i + 1 < args.length && !args[i + 1].startsWith("-"))) {
+                    value = cmdArg.isFlag() ? "true" : args[++i]; // For flags, "true" is set, otherwise the next value is used
                 }
 
-                value = (value == null) ? "true" : value; // Set "true" for flag arguments without an explicit value
-                if (!cmdArg.validate(value)) {
-                    System.out.println("Validation failed for argument: " + arg + " with value: " + value);
-                    continue;
+                // Execute the action if the argument is valid
+                if (value != null && cmdArg.validate(value)) {
+                    cmdArg.executeAction(this, value);
+                } else if (!cmdArg.isFlag()) {
+                    System.out.println("Error: Argument '" + arg + "' expects a value.");
                 }
-                cmdArg.executeAction(this, value);
             } else {
-                System.out.println("Unbekanntes Argument: " + arg);
+                System.out.println("Unknown argument: " + arg);
             }
         }
     }
+
 
 
     public void applyDefaultValues() {
