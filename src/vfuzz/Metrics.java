@@ -19,15 +19,19 @@ public class Metrics {
 	private static double failedRequestsPerSecond = 0.0;
 	private static String currentRequest;
 
+	private static double failureRate = 0;
+	private static double retryRate = 0;
+
 	private static long updateInterval = 100;
 	private static long getUpdateInterval() {
 		return updateInterval;
 	}
+	private static long timeSinceLastUpdate = 0;
 
 	public static synchronized void startMetrics() { // initializes the executor
 		if (executor == null || executor.isShutdown()) {
 			executor = Executors.newSingleThreadScheduledExecutor();
-			executor.scheduleAtFixedRate(Metrics::updateAll, updateInterval, updateInterval, TimeUnit.MILLISECONDS); // (1) executes updateRequestsPerSecond (2) waits 1 second before it executes the task for the first time (3) period between consecutive task executions (4) specifies time unit for (2) and (3)
+			executor.scheduleAtFixedRate(Metrics::updateAll, updateInterval, updateInterval, TimeUnit.MILLISECONDS); // (1) executes updateAll (2) waits 1 second before it executes the task for the first time (3) period between consecutive task executions (4) specifies time unit for (2) and (3)
 		}
 	}
 	
@@ -39,10 +43,16 @@ public class Metrics {
 	}
 	
 	private static void updateAll() {
-		updateProducedPerSecond();
-		updateRequestsPerSecond();
-		updateRetriesPerSecond();
-		updateFailedRequestsPerSecond();
+		timeSinceLastUpdate += updateInterval;
+		if (timeSinceLastUpdate >= 1000) { // this block executes stuff every second
+			updateProducedPerSecond();
+			updateRequestsPerSecond();
+			updateRetriesPerSecond();
+			updateFailedRequestsPerSecond();
+
+			timeSinceLastUpdate = 0;
+		}
+
 		updateDynamicRateLimiter();
 	}
 
@@ -50,13 +60,10 @@ public class Metrics {
 		double requestsPerSecond = getRequestsPerSecond();
 		double failedRequestsPerSecond = getFailedRequestsPerSecond(); // making new variables here because I was worried the class variables would change values amidst operation of this method
 		double retriesPerSecond = getRetriesPerSecond();
-		double failureRate = 0;
-		double retryRate = 0;
 		if (requestsPerSecond != 0) {
 			failureRate = failedRequestsPerSecond / requestsPerSecond;
 			retryRate = retriesPerSecond / requestsPerSecond;
 		}
-		System.out.println("\tfailure rate: " + String.format("%.3f", failureRate*100) + "%\t\tretry rate: " + String.format("%.3f", retryRate*100) + "%"); // print the rates in percent
 
 		// dynamic logic for failure and retries:
 		if (failureRate > 0.1 || retryRate > 0.2) { // throttle conditions: 10% of requests fail OR 20% of requests are retries
@@ -71,22 +78,22 @@ public class Metrics {
 
 	private static void updateRequestsPerSecond() {
 		// snapshot current count and calculate RPS
-        requestsPerSecond = requestCount.get() * (1000 / updateInterval);
+        requestsPerSecond = requestCount.get();
 		requestCount.set(0); // reset count for next interval
 	}
 
 	private static void updateProducedPerSecond() {
-        producedPerSecond = producerCount.get() * (1000 / updateInterval);
+        producedPerSecond = producerCount.get();
 		producerCount.set(0);
 	}
 
 	private static void updateRetriesPerSecond() {
-		retriesPerSecond = retriesCount.get()  * (1000 / updateInterval);
+		retriesPerSecond = retriesCount.get();
 		retriesCount.set(0);
 	}
 
 	private static void updateFailedRequestsPerSecond() {
-		failedRequestsPerSecond = failedRequestsCount.get() * (1000 / updateInterval);
+		failedRequestsPerSecond = failedRequestsCount.get();
 		failedRequestsCount.set(0);
 	}
 
@@ -134,5 +141,13 @@ public class Metrics {
 
 	public static void shutdown() {
 		executor.shutdown();
+	}
+
+	public static double getFailureRate() {
+		return failureRate;
+	}
+
+	public static double getRetryRate() {
+		return retryRate;
 	}
 }
