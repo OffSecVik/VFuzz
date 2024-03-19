@@ -89,7 +89,7 @@ public class ThreadOrchestrator {
 
 		// make new threads for new target
 		List<Future<?>> consumersForRecursiveURL = new ArrayList<>();
-		BlockingQueue<String> recursiveQueue = queueCopy(); // we only need one queue copy per targetSystem.out.println("First queue code: " + firstQueue.hashCode()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
+		// BlockingQueue<String> recursiveQueue = queueCopy(); // we only need one queue copy per targetSystem.out.println("First queue code: " + firstQueue.hashCode()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
 		// System.out.println("Recursive queue queue code: " + recursiveQueue.hashCode()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
 		// System.out.println("Recursive queue size: " + recursiveQueue.size()); // DEBUG PRINTS for queue size - keep these for now, need to test once again
 		for (int i = 0; i < allocatedThreads; i++) {
