@@ -1,39 +1,34 @@
 package vfuzz;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.FileNotFoundException;
-import java.util.concurrent.BlockingQueue;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class WordlistReader implements Runnable {
-	private final BlockingQueue<String> queue;
-	private final String path;
-	
-	public WordlistReader(BlockingQueue<String> queue, String path) {
-		this.queue = queue;
-		this.path = path;
-	}
-	
-	@Override
-	public void run() {
-		try (BufferedReader reader = new BufferedReader(new FileReader(path))) {
-			String payload;
-			while ((payload = reader.readLine()) != null) {
-				queue.put(payload);
-				if (ArgParse.getMetricsEnabled()) {
-					Metrics.incrementProducerCount(); // increments the requests TODO delete this once ur sure u dont need it
-				}
-			}
-			queue.put("ENDOFFILEMARKERTHATWONTBEINANYWORDLIST");
-		} catch (FileNotFoundException e) {
-			System.out.println("File \"" + path + "\" could not be found.");
-			System.exit(-1);
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			e.printStackTrace();
-		}
-	}
+public class WordlistReader {
+    private static List<String> wordlist; // static wordlist because we only use one wordlist
+    private AtomicInteger currentIndex = new AtomicInteger(0);
+
+    public WordlistReader(String path) {
+        synchronized (WordlistReader.class) { // ensure that only one thread can initialize wordlist at a time
+            if (wordlist == null) {
+
+                try {
+                    wordlist = Collections.unmodifiableList(Files.readAllLines(Paths.get(path))); // check if we already have a wordlist to avoid unnecessary file IO
+                } catch (IOException ie) {
+                    System.out.println("Wordlist reader took a shit.");
+                }
+            }
+        }
+
+    }
+
+    public String getNextPayload() {
+        int index = currentIndex.getAndIncrement();
+        return index < wordlist.size() ? wordlist.get(index) : null;
+    }
+
+    // For recursion, reset the index or create a new WordlistReader instance
 }
