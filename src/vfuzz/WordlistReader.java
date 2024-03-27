@@ -1,11 +1,11 @@
 package vfuzz;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class WordlistReader {
     private static List<String> wordlist; // static wordlist because we only use one wordlist

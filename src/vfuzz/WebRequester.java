@@ -13,14 +13,20 @@ import org.apache.http.impl.nio.reactor.DefaultConnectingIOReactor;
 import org.apache.http.impl.nio.reactor.IOReactorConfig;
 import org.apache.http.nio.reactor.ConnectingIOReactor;
 import org.apache.http.nio.reactor.IOReactorException;
-
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 public class WebRequester {
+
+    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     private static int delay = 1000;
 
     private static final CloseableHttpAsyncClient client;
+
     static {
         System.setProperty("networkaddress.cache.ttl", "60");
         System.setProperty("networkaddress.cache.negative.ttl", "10");
@@ -60,8 +66,39 @@ public class WebRequester {
     }
 
 
+    public static CompletableFuture<HttpResponse> sendRequestWithRetry(String url, int maxRetries, long delay, TimeUnit unit) {
+        CompletableFuture<HttpResponse> attempt = sendRequest(url);
+
+        return attempt.handle((resp, th) -> {
+            if (th == null) {
+                // Success case, return the response
+                return CompletableFuture.completedFuture(resp);
+            } else if (maxRetries > 0) {
+                // Retry case, schedule the retry with a delay
+                CompletableFuture<HttpResponse> delayedRetry = new CompletableFuture<>();
+                scheduler.schedule(() ->
+                                sendRequestWithRetry(url, maxRetries - 1, delay, unit).whenComplete((retryResp, retryTh) -> {
+                                    if (retryTh == null) {
+                                        delayedRetry.complete(retryResp);
+                                    } else {
+                                        delayedRetry.completeExceptionally(retryTh);
+                                    }
+                                }),
+                        delay, unit
+                );
+                return delayedRetry;
+            } else {
+                // Failure case, no retries left
+                CompletableFuture<HttpResponse> failed = new CompletableFuture<>();
+                failed.completeExceptionally(th);
+                return failed;
+            }
+        }).thenCompose(Function.identity());
+    }
+
     public static CompletableFuture<HttpResponse> sendRequest(String url) {
         CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+
 
         HttpUriRequest request = new HttpGet(url); // keeping it simple for now
 

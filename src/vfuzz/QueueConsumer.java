@@ -4,6 +4,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.util.EntityUtils;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 // TECHNICALLY there's no more queue but this still iterates over a wordlist.
@@ -34,19 +35,24 @@ public class QueueConsumer implements Runnable {
         System.out.println("STANDARD MODE");
         while (running) {
             String payload = wordlistReader.getNextPayload();
-            System.out.println("Payload: " + payload);
+            // System.out.println("Payload: " + payload);
             if (payload == null) {
                 break;
             }
 
-            CompletableFuture<HttpResponse> webRequestFuture = WebRequester.sendRequest(url + payload);
-
+            CompletableFuture<HttpResponse> webRequestFuture = WebRequester.sendRequestWithRetry(url + payload, 20, 20, TimeUnit.MILLISECONDS);
+            orchestrator.addTask(webRequestFuture);
             CompletableFuture<Void> task = webRequestFuture.thenApplyAsync(response -> {
                 try {
                     // Here, you process the HTTP response
                     String responseBody = EntityUtils.toString(response.getEntity());
                     succesfulReqeusts.incrementAndGet();
                     //System.out.println("Succesful requests: " + succesfulReqeusts);
+
+                    int statusCode = response.getStatusLine().getStatusCode();
+                    if (statusCode == 200) {
+                        System.out.println("Found: " + payload);
+                    }
                     // System.out.println("Response for " + payload + ": " + responseBody);
                     //System.out.println("Received response for " + payload);
                     // Here, you could include logic to determine if it's a "hit" based on the response content

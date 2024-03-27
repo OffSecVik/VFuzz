@@ -1,6 +1,7 @@
 package vfuzz;
 
 import java.io.IOException;
+import org.apache.http.HttpResponse;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -12,7 +13,7 @@ public class ThreadOrchestrator {
 
     private final String wordlistPath;
     private final AtomicInteger activeTasks = new AtomicInteger(0);
-    private final List<CompletableFuture<Void>> tasks = new CopyOnWriteArrayList<>();
+    private final List<CompletableFuture<HttpResponse>> tasks = new CopyOnWriteArrayList<>();
     private ExecutorService executor;
     private final int THREAD_COUNT;
     private final String targetUrl;
@@ -21,7 +22,7 @@ public class ThreadOrchestrator {
         return executor;
     }
 
-    public void addTask(CompletableFuture<Void> task) {
+    public void addTask(CompletableFuture<HttpResponse> task) {
         tasks.add(task);
     }
 
@@ -43,11 +44,9 @@ public class ThreadOrchestrator {
             QueueConsumer consumerTask = new QueueConsumer(this, wordlistReader, targetUrl, 0);
             executor.submit(consumerTask);
         }
+    }
 
-
-
-
-        // Wait for all tasks to complete
+    public void awaitCompletion() throws InterruptedException {
         CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).join();
     }
 
