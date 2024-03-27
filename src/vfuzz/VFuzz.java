@@ -10,7 +10,8 @@ public class VFuzz {
 
 
         try {
-            ThreadOrchestrator orchestrator = new ThreadOrchestrator(wordlistPath, "http://127.0.0.1:8000/", 20);
+            ThreadOrchestrator orchestrator = new ThreadOrchestrator(wordlistPath, "http://127.0.0.1:8000/", 1);
+            Metrics.startMetrics();
             orchestrator.startFuzzing();
             orchestrator.awaitCompletion();
         } catch (IOException ie) {

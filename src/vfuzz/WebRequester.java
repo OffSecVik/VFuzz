@@ -21,6 +21,8 @@ import java.util.function.Function;
 
 public class WebRequester {
 
+    private static RateLimiter rateLimiter = new RateLimiter(4000);
+
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     private static int delay = 1000;
@@ -67,13 +69,21 @@ public class WebRequester {
 
 
     public static CompletableFuture<HttpResponse> sendRequestWithRetry(String url, int maxRetries, long delay, TimeUnit unit) {
-        CompletableFuture<HttpResponse> attempt = sendRequest(url);
 
+        Metrics.incrementRequestsCount();
+        if (maxRetries < QueueConsumer.maxRetries) { // TODO this is janky as fuck
+            Metrics.incrementRetriesCount();
+        }
+
+        CompletableFuture<HttpResponse> attempt = sendRequest(url);
+        rateLimiter.awaitToken();
         return attempt.handle((resp, th) -> {
             if (th == null) {
                 // Success case, return the response
+
                 return CompletableFuture.completedFuture(resp);
             } else if (maxRetries > 0) {
+
                 // Retry case, schedule the retry with a delay
                 CompletableFuture<HttpResponse> delayedRetry = new CompletableFuture<>();
                 scheduler.schedule(() ->
@@ -97,6 +107,7 @@ public class WebRequester {
     }
 
     public static CompletableFuture<HttpResponse> sendRequest(String url) {
+
         CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
 
 

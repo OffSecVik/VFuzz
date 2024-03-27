@@ -37,13 +37,15 @@ public class ThreadOrchestrator {
     }
 
     public void startFuzzing() {
-        this.executor = Executors.newFixedThreadPool(THREAD_COUNT);
+        this.executor = Executors.newFixedThreadPool(THREAD_COUNT + 1); // plus one for Terminal Output
+        executor.submit(new TerminalOutput());
         WordlistReader wordlistReader = new WordlistReader(wordlistPath);
         // submitting the initial tasks to the executor
         for (int i = 0; i < THREAD_COUNT; i++) {
             QueueConsumer consumerTask = new QueueConsumer(this, wordlistReader, targetUrl, 0);
             executor.submit(consumerTask);
         }
+
     }
 
     public void awaitCompletion() throws InterruptedException {
