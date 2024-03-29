@@ -8,7 +8,7 @@ public class Hit {
     private static List<Hit> hits = new ArrayList<>();
     private static int hitCounter = 0;
 
-    private final String url;
+    private final String url; // this is the url for which a positive response was found. in VHOST mode, this is the value of the VHOST header.
     private final int statusCode;
     private final int length;
     private boolean printed = false;

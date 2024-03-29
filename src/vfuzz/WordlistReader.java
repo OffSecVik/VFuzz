@@ -1,6 +1,7 @@
 package vfuzz;
 
 import java.io.IOException;
+import java.nio.file.InvalidPathException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.nio.file.Files;
@@ -18,6 +19,8 @@ public class WordlistReader {
                     wordlist = Collections.unmodifiableList(Files.readAllLines(Paths.get(path))); // check if we already have a wordlist to avoid unnecessary file IO
                 } catch (IOException ie) {
                     System.out.println("Wordlist reader failed.");
+                } catch (InvalidPathException ipe) {
+                    System.out.println("Please enter a valid path."); // TODO: shut down program if this is encountered
                 }
             }
         }

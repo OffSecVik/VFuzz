@@ -25,7 +25,7 @@ public class ArgParse {
                 },
                 "Number of threads. Must be a number between 1 and 200.", // Description
                 true, // Optional?
-                "50", // Default Value
+                "1", // Default Value
                 false // isFlag? (e.g. --recursive)
         ));
 

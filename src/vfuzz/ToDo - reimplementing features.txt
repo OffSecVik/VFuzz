@@ -1,6 +1,7 @@
     WebRequester:
 
 Response Parsing!
+Web Request Builder!!
 vhostRebuilder method (rebuilds url to be accepted by HOST header (no scheme, no port)
 urlRebuilder method (rebuilds for VHOST mode)
 
