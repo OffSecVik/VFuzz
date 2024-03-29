@@ -1,6 +1,7 @@
 package vfuzz;
 
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Target {
 
@@ -10,23 +11,34 @@ public class Target {
     private int recursionDepth; // the recursion depth at which this is fuzzed
     private int allocatedThreads;
     private WordlistReader wordlistReader;
+    private final AtomicBoolean scanComplete = new AtomicBoolean(false);
+
+    public boolean isScanComplete() {
+        return scanComplete.get();
+    }
+
+    public static int getActiveTargets() {
+        int activeTargets = 0;
+        for (Target target : targets) {
+            if (!target.isScanComplete()) {
+                activeTargets++;
+            }
+        }
+        return activeTargets;
+    }
 
     Target(String url, int recursionDepth) {
         this.url = url;
         this.recursionDepth = recursionDepth;
         targets.add(this);
     }
-    Target(String url, int recursionDepth, int allocatedThreads, WordlistReader wordlistReader) {
+    Target(String url, int recursionDepth, WordlistReader wordlistReader) {
         this.url = url;
         this.recursionDepth = recursionDepth;
-        this.allocatedThreads = allocatedThreads;
         this.wordlistReader = wordlistReader;
         targets.add(this);
     }
 
-    public static void removeTargetFromList(String url){
-        targets.removeIf(target -> target.getUrl().equals(url));
-    }
 
     public static CopyOnWriteArrayList<Target> getTargets() {
         return targets;
@@ -36,17 +48,10 @@ public class Target {
         return url;
     }
 
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
     public int getRecursionDepth() {
         return recursionDepth;
     }
 
-    public void setRecursionDepth(int recursionDepth) {
-        this.recursionDepth = recursionDepth;
-    }
 
     public int getAllocatedThreads() {
         return allocatedThreads;
@@ -56,11 +61,11 @@ public class Target {
         this.allocatedThreads = allocatedThreads;
     }
 
-    public void incrementAllocatedThreads() {
-        allocatedThreads++;
-    }
-
     public WordlistReader getWordlistReader() {
         return wordlistReader;
+    }
+
+    public boolean setScanComplete() {
+        return scanComplete.compareAndSet(false, true);
     }
 }

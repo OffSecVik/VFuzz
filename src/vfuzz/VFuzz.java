@@ -41,7 +41,7 @@ public class VFuzz {
         String wordlistPath = ArgParse.getWordlistPath();
 
         try {
-            ThreadOrchestrator orchestrator = new ThreadOrchestrator(wordlistPath, threadCount);
+            ThreadOrchestrator orchestrator = new ThreadOrchestrator(wordlistPath, threadCount + 19);
             Metrics.startMetrics();
             orchestrator.startFuzzing();
             orchestrator.awaitCompletion();

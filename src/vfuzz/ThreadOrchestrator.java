@@ -41,12 +41,12 @@ public class ThreadOrchestrator {
         executor.submit(terminalOutput);
 
         WordlistReader wordlistReader = new WordlistReader(wordlistPath);
-        Target initialTarget = new Target(ArgParse.getUrl(), 0, THREAD_COUNT, wordlistReader);
+        Target initialTarget = new Target(ArgParse.getUrl(), 0, wordlistReader);
 
         // submitting the initial tasks to the executor
         List<QueueConsumer> consumersForURL = new ArrayList<>();
         for (int i = 0; i < THREAD_COUNT; i++) {
-            QueueConsumer consumerTask = new QueueConsumer(this, wordlistReader, ArgParse.getUrl(), 0);
+            QueueConsumer consumerTask = new QueueConsumer(this, initialTarget);
             executor.submit(consumerTask);
             consumersForURL.add(consumerTask);
         }
@@ -70,22 +70,48 @@ public class ThreadOrchestrator {
         }));
     }
 
+    private void allocateThreads() {
+        int numberOfTargets = Target.getActiveTargets();
+        int[] allocatedThreads = new int[numberOfTargets];
+        int availableThreads = THREAD_COUNT;
+        int helper = QueueConsumer.isFirstThreadFinished() ? 0 : 1;
+        if (!QueueConsumer.isFirstThreadFinished()) {
+            allocatedThreads[0] = Math.max(THREAD_COUNT / 2, 1); // for our initial target, which gets the chunk of the resources
+            availableThreads -= allocatedThreads[0];
+        }
+        int remainingThreads = availableThreads % (numberOfTargets - helper);
+        // System.out.println("Total threads " + availableThreads + " remaining threads " + remainingThreads);
+        for (int i = helper; i < numberOfTargets; i++) {
+            allocatedThreads[i] = (availableThreads / (numberOfTargets - helper));
+        }
+        int index = 0;
+        while (remainingThreads > 0) {
+            allocatedThreads[(index + helper) % allocatedThreads.length] += 1;
+            remainingThreads--;
+            index++;
+
+        }
+        index = 0;
+        for (Target target : Target.getTargets()) {
+            if (!target.isScanComplete()) {
+                target.setAllocatedThreads(allocatedThreads[index]);
+                index++;
+            }
+        }
+    }
+
     public void initiateRecursion(String newTargetUrl, int currentDepth) {
         if (currentDepth >= recursionDepthLimit) return; // if max recursion depth is hit, don't add target to list
         int newDepth = currentDepth + 1;
-        int allocatedThreads = Math.max((THREAD_COUNT / 2) / (consumerTasks.size()), 1); // calculates
-        if (QueueConsumer.isFirstThreadFinished()) {
-            allocatedThreads = Math.max((THREAD_COUNT) / (consumerTasks.size() + 1), 1);
-        }
 
+        // make new target and equip it with threads
         WordlistReader recursiveReader = new WordlistReader(wordlistPath);
-        Target recursiveTarget = new Target(newTargetUrl, newDepth, allocatedThreads, recursiveReader);
-
+        Target recursiveTarget = new Target(newTargetUrl, newDepth, recursiveReader);
+        allocateThreads();
         List<QueueConsumer> consumersForRecursiveURL = new ArrayList<>();
-        // first make new threads for new target TODO: this calculation can be improved
-        for (int i = 0; i < allocatedThreads; i++) {
-            QueueConsumer recursiveConsumer = new QueueConsumer(this, recursiveReader, newTargetUrl, newDepth);
-            Future<?> future = executor.submit(recursiveConsumer);
+        for (int i = 0; i < recursiveTarget.getAllocatedThreads(); i++) {
+            QueueConsumer recursiveConsumer = new QueueConsumer(this, recursiveTarget);
+            executor.submit(recursiveConsumer);
             consumersForRecursiveURL.add(recursiveConsumer);
         }
         consumerTasks.put(recursiveTarget, consumersForRecursiveURL);
@@ -99,15 +125,14 @@ public class ThreadOrchestrator {
                 //System.out.println("HANDLING INITIAL TARGET " + ArgParse.getUrl());
                 while (consumers.size() > Math.max(THREAD_COUNT / 2, 1)) {
                     QueueConsumer consumer = consumers.remove(consumers.size() - 1); // remove from the end
-                    consumer.cancel(); // attempt to cancel future
+                    consumer.cancel(); // cancel the QueueConsumer
                 }
             } else if (!targetUrl.equals(newTargetUrl)) {
-                while (consumers.size() > allocatedThreads) {
+                while (consumers.size() > target.getAllocatedThreads()) {
                     QueueConsumer consumer = consumers.remove(consumers.size() - 1); // remove from the end
-                    consumer.cancel(); // cancel consumer
+                    consumer.cancel(); // cancel QueueConsumer
                 }
             }
-            target.setAllocatedThreads(consumers.size());
         }
         System.out.println(Color.GREEN + "Initiating recursion: " + Color.RESET);
         printActiveThreadsByTarget();
@@ -117,43 +142,37 @@ public class ThreadOrchestrator {
         CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).join();
     }
 
-    public void removeTargetFromList(String targetUrl) {
-        // removing from consumerTasks
-        for (Target target : new ArrayList<>(consumerTasks.keySet())) {
-            if (target.getUrl().equals(targetUrl)) {
-                List<QueueConsumer> consumers = consumerTasks.get(target);
-                if (consumers != null) {
-                    for (QueueConsumer consumer : consumers) {
-                        consumer.cancel();
-                    }
-                }
-                consumerTasks.remove(target);
-                break;
-            }
-        }
-    }
-
     public void redistributeThreads() { // assuming our original target will finish first, and we can now evenly redistribute threads
-        System.out.println(Color.GREEN + "Redistributing threads:" + Color.RESET);
-        int allocatedThreads = Math.max((THREAD_COUNT) / QueueConsumer.getActiveThreads(), 1); // again get number of threads to allocate to each target
+        allocateThreads();
+        // System.out.println(Color.GREEN + "Redistributing threads:" + Color.RESET);
         for (Map.Entry<Target, List<QueueConsumer>> entry : consumerTasks.entrySet()) {
             Target target = entry.getKey();
+            if (target.isScanComplete()) continue; // find active targets
             List<QueueConsumer> consumers = entry.getValue();
-            while (target.getAllocatedThreads() < allocatedThreads) {
-                target.incrementAllocatedThreads();
-                QueueConsumer fillConsumer = new QueueConsumer(this, target.getWordlistReader(), target.getUrl(), target.getRecursionDepth());
+            int activeConsumers = 0;
+            for (QueueConsumer consumer : consumers) {
+                if (consumer.isRunning()) {
+                    activeConsumers++;
+                }
+            }
+            int threads = 0;
+            for (int i = 0; i < (target.getAllocatedThreads() - activeConsumers); i++) {
+                QueueConsumer fillConsumer = new QueueConsumer(this, target);
                 executor.submit(fillConsumer);
                 consumers.add(fillConsumer);
+                threads++;
             }
+            // System.out.println("Adding " + threads + " threads to " + target.getUrl());
+            // System.out.println("-----------" + target.getUrl() + " now has " + target.getAllocatedThreads() + " threads.");
         }
-        printActiveThreadsByTarget();
+        // printActiveThreadsByTarget();
     }
 
     public void printActiveThreadsByTarget() {
         consumerTasks.forEach((target, consumers) -> {
             int activeCount = (int) consumers.stream().filter(consumer -> consumer.isRunning()).count();
             int inactiveCount = (int) consumers.stream().filter(consumer -> !consumer.isRunning()).count();
-            System.out.println(target.getUrl() + " has " + activeCount + " working and " + inactiveCount + " completed thread(s).");
+            System.out.println(target.getUrl() + (target.isScanComplete() ? "(finished)" :"") + " has " + activeCount + " working threads."); // and " + inactiveCount + " completed thread(s).");
         });
     }
 

@@ -24,16 +24,18 @@ public class QueueConsumer implements Runnable {
     private int recursionDepth = 0;
     private volatile boolean running = true;
     private static boolean firstThreadFinished = false;
+    private Target target;
 
     public static AtomicInteger succesfulReqeusts= new AtomicInteger();
 
 
-    public QueueConsumer(ThreadOrchestrator orchestrator, WordlistReader wordlistReader, String url, int recursionDepth) {
+    public QueueConsumer(ThreadOrchestrator orchestrator, Target target) {
         activeThreads++;
+        this.target = target;
         this.orchestrator = orchestrator;
-        this.wordlistReader = wordlistReader;
-        this.url = url;
-        this.recursionDepth = recursionDepth;
+        this.wordlistReader = target.getWordlistReader();
+        this.url = target.getUrl();
+        this.recursionDepth = target.getRecursionDepth();
     }
 
     @Override
@@ -85,12 +87,12 @@ public class QueueConsumer implements Runnable {
     }
 
     private void reachedEndOfWordlist() {
-        if (ArgParse.getRecursionEnabled()) {
-            orchestrator.redistributeThreads();
-        }
-        activeThreads--;
         running = false;
         firstThreadFinished = true;
+        activeThreads--;
+        if (ArgParse.getRecursionEnabled() && target.setScanComplete()) {
+            orchestrator.redistributeThreads();
+        }
     }
 
     private void sendAndProcessRequest(HttpRequestBase request) {
@@ -98,8 +100,6 @@ public class QueueConsumer implements Runnable {
         orchestrator.addTask(webRequestFuture);
         CompletableFuture<Void> task = webRequestFuture.thenApplyAsync(response -> {
             try {
-                // Here, you process the HTTP response
-
                 succesfulReqeusts.incrementAndGet();
                 //// System.out.println("Succesful requests: " + succesfulReqeusts);
                 parseResponse(response, request); // TODO check second argument
@@ -132,18 +132,19 @@ public class QueueConsumer implements Runnable {
         }
 
         String requestUrl;
-        if (ArgParse.getRequestMode() == RequestMode.VHOST) { // attempt at vhost print formatting.
+        if (ArgParse.getRequestMode() == RequestMode.VHOST) { // setting the requestUrl to the vhost value for simplicity
             requestUrl = request.getHeaders("HOST")[0].getValue(); // simply setting the requestUrl (which never changes in vhost mode) to the header value (which is the interesting field)
         } else {
             requestUrl = request.getURI().toString();
         }
-        // TODO: check for case insensitive double match (compare responses (Hit objects? all these comparisons probably eat CPU?))
+
         // checking for double hit:
-        if (!ArgParse.getRequestMode().equals(RequestMode.VHOST)) { // in VHOST mode every Hit url will be the same TODO do we need this?
-            for (Hit hit : Hit.getHits()) {
-                if (hit.getUrl().equals(requestUrl)) {
-                    return;
-                }
+        for (Hit hit : Hit.getHits()) {
+            if (hit.getUrl().equals(requestUrl)) {
+                return;
+            }
+            if (hit.getUrl().equalsIgnoreCase(requestUrl)) { //TODO make this optional, this ignores case insensitive double hits
+                return; // TODO also consider a dynamic setting that compares similar responses and decides whether to ignore based on the result of the comparison
             }
         }
 
