@@ -10,7 +10,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-public class WebRequestBuilder {
+public class WebRequestBuilder { // TODO: obsolete? reconsider implementation of a WebRequestFactory to increase performance?
 
     public HttpRequestBase request = null;
 

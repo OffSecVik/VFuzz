@@ -22,6 +22,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -206,6 +207,40 @@ public class WebRequester {
             throw new RuntimeException(e);
         }
         return null;
+    }
+
+    public static HttpRequestBase buildRequestFromFile(ParsedHttpRequest parsedRequest, String payload) {
+        try {
+            String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8); // urlencoding, some wordlists have weird payloads
+            parsedRequest.replaceFuzzMarker(encodedPayload); // injecting the payload into the request // TODO: OPTIONAL: could avoid making deep copies of the parsedRequest in QueueConsumer if we found a way to parse for FUZZ AFTER extracting the data from the parsedRequest. This would likely involve making a method in this class right here or checking for FUZZ every time we read data from the request
+            // String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8);
+            HttpRequestBase request = null;
+            String requestUrl = parsedRequest.getUrl();
+            // requestUrl = requestUrl.endsWith("/") ? requestUrl : requestUrl + "/"; // TODO: Take care of duplicate due to backslashes another way, this is a little janky
+
+            // set request method
+            switch (parsedRequest.getMethod().toUpperCase()) {
+                case "GET" -> request = new HttpGet(requestUrl);
+                case "HEAD" -> request = new HttpHead(requestUrl);
+                case "POST" -> {
+                    HttpPost postRequest = new HttpPost();
+                    postRequest.setEntity(new StringEntity(parsedRequest.getBody())); // TODO: check if POST body is preserved, handle content-length dynamically based on payload length
+                    request = postRequest;
+                }
+            }
+
+            // set up headers
+            for (Map.Entry<String, String>entry : parsedRequest.getHeaders().entrySet()) {
+                assert request != null;
+                request.setHeader(entry.getKey(), entry.getValue());
+            }
+
+            return request;
+
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     private static String removeTrailingSlash(String url) {

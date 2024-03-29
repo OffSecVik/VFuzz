@@ -1,11 +1,3 @@
-    WebRequester:
-
-Response Parsing!
-Web Request Builder!!
-vhostRebuilder method (rebuilds url to be accepted by HOST header (no scheme, no port)
-urlRebuilder method (rebuilds for VHOST mode)
-
-
 
     Debug:
 
@@ -15,9 +7,6 @@ Logging???
 
 
     Target:
-
-Is this something we need either? Can this be done more gracefully? Will these objects litter the heap?
-Could be useful for tracking task completion?
 
 
 

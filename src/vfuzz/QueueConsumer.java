@@ -1,9 +1,11 @@
 package vfuzz;
 
+import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.util.EntityUtils;
 
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,46 +32,69 @@ public class QueueConsumer implements Runnable {
 
     @Override
     public void run() {
-        standardMode();
-    }
-
-    public void standardMode() {
-
-        while (running) {
-            String payload = wordlistReader.getNextPayload();
-            // System.out.println("Payload: " + payload);
-            if (payload == null) {
-                break;
-            }
-
-            HttpRequestBase request = WebRequester.buildRequest(url, payload);
-
-            CompletableFuture<HttpResponse> webRequestFuture = WebRequester.sendRequestWithRetry(request, maxRetries, 50, TimeUnit.MILLISECONDS);
-            orchestrator.addTask(webRequestFuture);
-            CompletableFuture<Void> task = webRequestFuture.thenApplyAsync(response -> {
-                try {
-                    // Here, you process the HTTP response
-
-                    succesfulReqeusts.incrementAndGet();
-                    //// System.out.println("Succesful requests: " + succesfulReqeusts);
-                    parseResponse(response, url + payload); // TODO construct requestUrl more gracefully. -> requestBuilding?
-                    //System.out.println("Received response for " + payload);
-                } catch (Exception e) {
-                    //System.err.println("Error processing response for payload " + payload + ": " + e.getMessage());
-                }
-                return response;
-            }, orchestrator.getExecutor()).thenRun(() -> {
-                // This block is executed after processing the response
-                //System.out.println("Completed request with payload " + payload);
-            }).exceptionally(ex -> {
-                // This block handles any exceptions thrown during the request sending or response processing
-                System.err.println("Exception for payload " + payload + ": " + ex.getMessage());
-                return null;
-            });
+        if (!ArgParse.getRequestFileFuzzing()) {
+            standardMode();
+        } else {
+            requestFileMode();
         }
     }
 
-    private void parseResponse(HttpResponse response, String requestUrl) {
+    private void standardMode() {
+        while (running) {
+            String payload = wordlistReader.getNextPayload();
+            if (payload == null) {
+                break;
+            }
+            HttpRequestBase request = WebRequester.buildRequest(url, payload);
+            sendAndProcessRequest(request);
+        }
+    }
+
+    private void requestFileMode() {
+        ParsedHttpRequest rawRequest = null;
+        try {
+            rawRequest = new ParsedHttpRequest().parseHttpRequestFromFile(ArgParse.getRequestFilePath());
+        } catch (IOException e) {
+            System.err.println("There was an error parsing the request from the file:\n" + e.getMessage());
+            return;
+        }
+        while (running) {
+            String payload = wordlistReader.getNextPayload();
+            if (payload == null) {
+                break;
+            }
+            ParsedHttpRequest rawCopy = new ParsedHttpRequest(rawRequest);
+            HttpRequestBase request = WebRequester.buildRequestFromFile(rawCopy, payload);
+            sendAndProcessRequest(request);
+        }
+    }
+
+    private void sendAndProcessRequest(HttpRequestBase request) {
+        CompletableFuture<HttpResponse> webRequestFuture = WebRequester.sendRequestWithRetry(request, maxRetries, 50, TimeUnit.MILLISECONDS);
+        orchestrator.addTask(webRequestFuture);
+        CompletableFuture<Void> task = webRequestFuture.thenApplyAsync(response -> {
+            try {
+                // Here, you process the HTTP response
+
+                succesfulReqeusts.incrementAndGet();
+                //// System.out.println("Succesful requests: " + succesfulReqeusts);
+                parseResponse(response, request); // TODO check second argument
+                //System.out.println("Received response for " + payload);
+            } catch (Exception e) {
+                //System.err.println("Error processing response for payload " + payload + ": " + e.getMessage());
+            }
+            return response;
+        }, orchestrator.getExecutor()).thenRun(() -> {
+            // This block is executed after processing the response
+            //System.out.println("Completed request with payload " + payload);
+        }).exceptionally(ex -> {
+            // This block handles any exceptions thrown during the request sending or response processing
+            System.err.println("Exception for request " + request.getURI().toString() + ": " + ex.getMessage());
+            return null;
+        });
+    }
+
+    private void parseResponse(HttpResponse response, HttpRequestBase request) {
         // checking for the most likely exclusion conditions first to return quickly if the response is not a match. this is done to improve performance.
         // it also means we chain if conditions. not pretty, but performant?
         if (ArgParse.getExcludedStatusCodes().contains(response.getStatusLine().getStatusCode())) {
@@ -80,6 +105,12 @@ public class QueueConsumer implements Runnable {
             return;
         }
 
+        String requestUrl;
+        if (ArgParse.getRequestMode() == RequestMode.VHOST) { // attempt at vhost print formatting.
+            requestUrl = request.getHeaders("HOST")[0].getValue(); // simply setting the requestUrl (which never changes in vhost mode) to the header value (which is the interesting field)
+        } else {
+            requestUrl = request.getURI().toString();
+        }
         // TODO: check for case insensitive double match (compare responses (Hit objects? all these comparisons probably eat CPU?))
         // checking for double hit:
         if (!ArgParse.getRequestMode().equals(RequestMode.VHOST)) { // in VHOST mode every Hit url will be the same TODO do we need this?
