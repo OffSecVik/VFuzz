@@ -112,10 +112,10 @@ public class TerminalOutput implements Runnable {
     public void setRunning(boolean running) {
         this.running = running;
     }
-    /* TODO: reimplement
+
     public void shutdown() {
-        moveCursorDownBegLine(Hit.getHitCount() + getMetricsLines());
+        running = false;
+        // moveCursorDownBegLine(Hit.getHitCount() + getMetricsLines());
     }
 
-     */
 }

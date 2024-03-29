@@ -41,7 +41,7 @@ public class VFuzz {
         String wordlistPath = ArgParse.getWordlistPath();
 
         try {
-            ThreadOrchestrator orchestrator = new ThreadOrchestrator(wordlistPath, "http://127.0.0.1:8000/", threadCount);
+            ThreadOrchestrator orchestrator = new ThreadOrchestrator(wordlistPath, threadCount);
             Metrics.startMetrics();
             orchestrator.startFuzzing();
             orchestrator.awaitCompletion();

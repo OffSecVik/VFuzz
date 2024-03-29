@@ -7,11 +7,15 @@ import org.apache.http.util.EntityUtils;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 // TECHNICALLY there's no more queue but this still iterates over a wordlist.
 public class QueueConsumer implements Runnable {
+
+    private static int activeThreads;
 
     private WordlistReader wordlistReader;
     private String url;
@@ -19,11 +23,13 @@ public class QueueConsumer implements Runnable {
     public static int maxRetries = 20; // TODO: move this somewhere it makes sense, it's just here for metrics
     private int recursionDepth = 0;
     private volatile boolean running = true;
+    private static boolean firstThreadFinished = false;
 
     public static AtomicInteger succesfulReqeusts= new AtomicInteger();
 
 
     public QueueConsumer(ThreadOrchestrator orchestrator, WordlistReader wordlistReader, String url, int recursionDepth) {
+        activeThreads++;
         this.orchestrator = orchestrator;
         this.wordlistReader = wordlistReader;
         this.url = url;
@@ -43,6 +49,7 @@ public class QueueConsumer implements Runnable {
         while (running) {
             String payload = wordlistReader.getNextPayload();
             if (payload == null) {
+                reachedEndOfWordlist();
                 break;
             }
             HttpRequestBase request = WebRequester.buildRequest(url, payload);
@@ -61,12 +68,29 @@ public class QueueConsumer implements Runnable {
         while (running) {
             String payload = wordlistReader.getNextPayload();
             if (payload == null) {
+                reachedEndOfWordlist();
+                /*
+                Target.removeTargetFromList(url); //
+                orchestrator.removeTargetFromList(url);
+                if (ArgParse.getRecursionEnabled()) {
+                    orchestrator.redistributeThreads();
+                }
+                 */
                 break;
             }
             ParsedHttpRequest rawCopy = new ParsedHttpRequest(rawRequest);
             HttpRequestBase request = WebRequester.buildRequestFromFile(rawCopy, payload);
             sendAndProcessRequest(request);
         }
+    }
+
+    private void reachedEndOfWordlist() {
+        if (ArgParse.getRecursionEnabled()) {
+            orchestrator.redistributeThreads();
+        }
+        activeThreads--;
+        running = false;
+        firstThreadFinished = true;
     }
 
     private void sendAndProcessRequest(HttpRequestBase request) {
@@ -88,8 +112,10 @@ public class QueueConsumer implements Runnable {
             // This block is executed after processing the response
             //System.out.println("Completed request with payload " + payload);
         }).exceptionally(ex -> {
-            // This block handles any exceptions thrown during the request sending or response processing
-            System.err.println("Exception for request " + request.getURI().toString() + ": " + ex.getMessage());
+            Throwable rootCause = ex instanceof CompletionException ? ex.getCause() : ex; // checking if we have a wrapped exception for the line below
+            if (!(rootCause instanceof RejectedExecutionException) && orchestrator.isShutdown()) { // this should only occur if we're in the shutdown hook, it's done to prevent terminal clogging
+                System.err.println("Exception for request " + request.getURI().toString() + ": " + ex.getMessage());
+            }
             return null;
         });
     }
@@ -132,7 +158,9 @@ public class QueueConsumer implements Runnable {
         // TODO: make Hit object take a HttpRequest as argument, this way we could retain more information?
         Hit hit = new Hit(requestUrl, response.getStatusLine().getStatusCode(), (int)response.getEntity().getContentLength());
 
-        // TODO: initiate recursion here!
+        if (thisIsRecursiveTarget) {
+            orchestrator.initiateRecursion(requestUrl, recursionDepth);
+        }
     }
 
     private boolean recursionRedundancyCheck(String url) { // TODO rethink this method and why we need it
@@ -146,4 +174,21 @@ public class QueueConsumer implements Runnable {
         }
         return true; // true means passed the check
     }
+
+    public static boolean isFirstThreadFinished() {
+        return firstThreadFinished;
+    }
+
+    public void cancel() {
+        running = false;
+    }
+
+    public boolean isRunning() {
+        return running;
+    }
+
+    public static int getActiveThreads() {
+        return activeThreads;
+    }
+
 }

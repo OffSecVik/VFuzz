@@ -19,6 +19,7 @@ public class Hit {
         this.length = length;
         addHit(this);
         hitCounter++;
+        System.out.println("FOUND: " + url);
     }
 
     private static synchronized void addHit(Hit hit) {
