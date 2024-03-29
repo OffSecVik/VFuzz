@@ -6,6 +6,7 @@ import java.util.concurrent.CompletableFuture;
 public class VFuzz {
     public static void main(String[] args) {
 
+
         String wordlistPath = "C:\\Users\\Vik\\Downloads\\subdomains-top1million-20000.txt\\";
 
 
@@ -20,6 +21,5 @@ public class VFuzz {
             Thread.currentThread().interrupt();
             System.out.println("Execution was interrupted.");
         }
-
     }
 }

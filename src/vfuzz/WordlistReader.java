@@ -14,15 +14,13 @@ public class WordlistReader {
     public WordlistReader(String path) {
         synchronized (WordlistReader.class) { // ensure that only one thread can initialize wordlist at a time
             if (wordlist == null) {
-
                 try {
                     wordlist = Collections.unmodifiableList(Files.readAllLines(Paths.get(path))); // check if we already have a wordlist to avoid unnecessary file IO
                 } catch (IOException ie) {
-                    System.out.println("Wordlist reader took a shit.");
+                    System.out.println("Wordlist reader failed.");
                 }
             }
         }
-
     }
 
     public String getNextPayload() {

@@ -1,0 +1,25 @@
+    WebRequester:
+
+Response Parsing!
+vhostRebuilder method (rebuilds url to be accepted by HOST header (no scheme, no port)
+urlRebuilder method (rebuilds for VHOST mode)
+
+
+
+    Debug:
+
+Is this even something we want?
+Logging???
+
+
+
+    Target:
+
+Is this something we need either? Can this be done more gracefully? Will these objects litter the heap?
+Could be useful for tracking task completion?
+
+
+
+    ParsedHttpRequest:
+
+this f*c!$% request file mode

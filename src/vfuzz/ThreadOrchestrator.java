@@ -26,14 +26,10 @@ public class ThreadOrchestrator {
         tasks.add(task);
     }
 
-
     public ThreadOrchestrator(String wordlistPath, String targetUrl, int threadLimit) throws IOException {
         this.wordlistPath = wordlistPath;
         this.THREAD_COUNT = threadLimit;
         this.targetUrl = targetUrl;
-        // Utilize a cached thread pool for handling asynchronous tasks without a fixed thread limit
-        // Adjust according to your system's capabilities and task characteristics
-
     }
 
     public void startFuzzing() {
@@ -45,17 +41,14 @@ public class ThreadOrchestrator {
             QueueConsumer consumerTask = new QueueConsumer(this, wordlistReader, targetUrl, 0);
             executor.submit(consumerTask);
         }
-
     }
 
     public void awaitCompletion() throws InterruptedException {
         CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).join();
     }
 
-    // Example shutdown method to stop executor service gracefully
+    // simple shutdown method //TODO handle program shutdown (shutdown hook, all tasks finished)
     public void shutdown() {
         executor.shutdown();
     }
-
-    // Include additional methods for recursion, target management, etc., based on your requirements
 }
