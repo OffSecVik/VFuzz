@@ -6,7 +6,6 @@ import org.apache.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -71,25 +70,24 @@ public class ThreadOrchestrator {
     }
 
     private void allocateThreads() {
-        int numberOfTargets = Target.getActiveTargets();
-        int[] allocatedThreads = new int[numberOfTargets];
+        int activeTargets = Target.getActiveTargets();
+        int[] allocatedThreads = new int[activeTargets];
         int availableThreads = THREAD_COUNT;
         int helper = QueueConsumer.isFirstThreadFinished() ? 0 : 1;
         if (!QueueConsumer.isFirstThreadFinished()) {
             allocatedThreads[0] = Math.max(THREAD_COUNT / 2, 1); // for our initial target, which gets the chunk of the resources
             availableThreads -= allocatedThreads[0];
         }
-        int remainingThreads = availableThreads % (numberOfTargets - helper);
-        // System.out.println("Total threads " + availableThreads + " remaining threads " + remainingThreads);
-        for (int i = helper; i < numberOfTargets; i++) {
-            allocatedThreads[i] = (availableThreads / (numberOfTargets - helper));
+        int extraThreads = availableThreads % (activeTargets - helper);
+        // System.out.println("Total threads " + availableThreads + " remaining threads " + extraThreads);
+        for (int i = helper; i < activeTargets; i++) {
+            allocatedThreads[i] = (availableThreads / (activeTargets - helper));
         }
         int index = 0;
-        while (remainingThreads > 0) {
+        while (extraThreads > 0) {
             allocatedThreads[(index + helper) % allocatedThreads.length] += 1;
-            remainingThreads--;
+            extraThreads--;
             index++;
-
         }
         index = 0;
         for (Target target : Target.getTargets()) {

@@ -52,9 +52,7 @@ public class TerminalOutput implements Runnable {
      */
 
     public void updateMetrics() {
-
         // eraseToEOL();
-
         System.out.println("Requests per Second: " + (int)Metrics.getRequestsPerSecond());
         System.out.println("Retries per Second: " + (int)Metrics.getRetriesPerSecond());
         System.out.println("\tfailure rate: " + String.format("%.3f", Metrics.getFailureRate()*100) + "%\t\tretry rate: " + String.format("%.3f", Metrics.getRetryRate()*100) + "%"); // print the rates in percent
@@ -62,13 +60,11 @@ public class TerminalOutput implements Runnable {
 		System.out.println("Retries per Second: " + Metrics.getRetriesPerSecond());
 		System.out.println("Failed Requests per Second: " + Metrics.getFailedRequestsPerSecond());
 		 */
-
     }
 
     public void updatePayload() {
         eraseToEOL();
         System.out.println("Now fuzzing " + Metrics.getCurrentRequest());
-
     }
 
     /* // TODO: reimplement
@@ -78,12 +74,7 @@ public class TerminalOutput implements Runnable {
         }
         return 0;
     }
-
      */
-
-    public void updateDynamicRateLimiter() {
-
-    }
 
     private void clearScreen() {
         System.out.print("\033[J2");

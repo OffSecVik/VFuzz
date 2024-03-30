@@ -13,7 +13,7 @@ public class VFuzz {
 
         configManager.processArguments(args);
 
-        //configManager.verifyRequiredArguments(); // TODO: Fix verifyRequiredArguments
+        // configManager.verifyRequiredArguments(); // TODO: Fix verifyRequiredArguments
         // configManager.applyDefaultValues(); // TODO: method is unnecessary.
 
         configManager.setConfigValue("rateLimit", "5"); // TODO: Find a solution for this case

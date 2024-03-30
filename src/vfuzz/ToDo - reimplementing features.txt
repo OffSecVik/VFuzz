@@ -3,13 +3,3 @@
 
 Is this even something we want?
 Logging???
-
-
-
-    Target:
-
-
-
-    ParsedHttpRequest:
-
-this f*c!$% request file mode

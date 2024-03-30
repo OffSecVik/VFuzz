@@ -7,8 +7,8 @@ public class Target {
 
     private static CopyOnWriteArrayList<Target> targets = new CopyOnWriteArrayList<>();
 
-    private String url; // the url to fuzz
-    private int recursionDepth; // the recursion depth at which this is fuzzed
+    private final String url; // the url to fuzz
+    private final int recursionDepth; // the recursion depth at which this is fuzzed
     private int allocatedThreads;
     private WordlistReader wordlistReader;
     private final AtomicBoolean scanComplete = new AtomicBoolean(false);
@@ -27,11 +27,6 @@ public class Target {
         return activeTargets;
     }
 
-    Target(String url, int recursionDepth) {
-        this.url = url;
-        this.recursionDepth = recursionDepth;
-        targets.add(this);
-    }
     Target(String url, int recursionDepth, WordlistReader wordlistReader) {
         this.url = url;
         this.recursionDepth = recursionDepth;
@@ -51,7 +46,6 @@ public class Target {
     public int getRecursionDepth() {
         return recursionDepth;
     }
-
 
     public int getAllocatedThreads() {
         return allocatedThreads;

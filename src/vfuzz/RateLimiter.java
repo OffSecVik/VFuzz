@@ -8,11 +8,6 @@ public class RateLimiter {
     private long lastRefillTimestamp;
     private boolean enabled = true; // TODO: don't forget you enabled this by default!
 
-
-    public RateLimiter() {
-        maxTokens = 0;
-    }
-
     public RateLimiter(int refillRatePerSecond) {
         this.maxTokens = refillRatePerSecond;
         this.refillRatePerSecond = refillRatePerSecond;
@@ -40,7 +35,6 @@ public class RateLimiter {
         return false;
     }
 
-
     private void refill() {
         long now = System.currentTimeMillis();
         long elapsedTime = now - lastRefillTimestamp;
@@ -50,7 +44,6 @@ public class RateLimiter {
             lastRefillTimestamp = now; // updates
         }
     }
-
 
     public void awaitToken() {
         if (enabled && maxTokens > 0) {
