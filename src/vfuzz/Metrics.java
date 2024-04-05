@@ -13,6 +13,7 @@ public class Metrics {
     private static final AtomicLong requestCount = new AtomicLong(0);
     private static final AtomicLong retriesCount = new AtomicLong(0);
     private static final AtomicLong failedRequestsCount = new AtomicLong(0);
+    private static final AtomicLong successfulRequestCount = new AtomicLong(0);
     private static String currentRequest;
     private static double failureRate = 0;
     private static double retryRate = 0;
@@ -20,6 +21,7 @@ public class Metrics {
     private static double requestsPerSecond[] = new double[1000 / (int)updateInterval]; // calculating actual RPS through this
     private static double retriesPerSecond[] = new double[1000 / (int)updateInterval]; // calculating actual RPS through thisprivate static double
     private static double failedRequestsPerSecond[] = new double[1000 / (int)updateInterval];
+    private static double succesfulRequestsPerSecond[] = new double[1000 / (int)updateInterval];
     private static int timesUpdated = 0;
 
 
@@ -40,6 +42,7 @@ public class Metrics {
     private static void updateAll() {
 
         updateRequestsPerSecond();
+        updateSuccessfulRequestsPerSecond();
         updateRetriesPerSecond();
         updateFailedRequestsPerSecond();
         updateDynamicRateLimiter();
@@ -65,7 +68,6 @@ public class Metrics {
             retryRate = 0;
         }
 
-
         /*
         // dynamic logic for failure and retries:
         if (failureRate > 0.1 || retryRate > 0.2) { // throttle conditions: 10% of requests fail OR 20% of requests are retries
@@ -77,6 +79,11 @@ public class Metrics {
         }
         */
 
+    }
+
+    private static void updateSuccessfulRequestsPerSecond() {
+        succesfulRequestsPerSecond[timesUpdated % (1000 / (int)updateInterval)] = successfulRequestCount.get();
+        successfulRequestCount.set(0);
     }
 
     private static void updateRequestsPerSecond() {
@@ -100,6 +107,10 @@ public class Metrics {
         requestCount.incrementAndGet();
     }
 
+    public static void incrementSuccessfulRequestsCount() {
+        successfulRequestCount.incrementAndGet();
+    }
+
     public static void incrementRetriesCount() {
         retriesCount.incrementAndGet();
     }
@@ -110,8 +121,11 @@ public class Metrics {
 
 
     public static double getRequestsPerSecond() {
-        // updateRequestsPerSecond();
         return Arrays.stream(requestsPerSecond).sum();
+    }
+
+    public static double getSuccessfulRequestsPerSecond() {
+        return Arrays.stream(succesfulRequestsPerSecond).sum();
     }
 
     public static double getRetriesPerSecond() {

@@ -21,7 +21,7 @@ public class VFuzz {
         System.out.println(Color.BLUE + "Thread Count: " + ArgParse.getThreadCount());
         System.out.println("Wordlist Path: " + ArgParse.getWordlistPath());
         System.out.println("URL: " + ArgParse.getUrl());
-        System.out.println("Excluded Status Codes: " + ArgParse.getExcludedStatusCodes());
+        System.out.println("Excluded Status Codes: " + ArgParse.getExcludedStatusCodes().toString());
         System.out.println("Excluded Lengths: " + ArgParse.getExcludedLength());
         System.out.println("Request Mode: " + ArgParse.getRequestMode());
         System.out.println("Request Method: " + ArgParse.getRequestMethod());

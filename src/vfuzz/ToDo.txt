@@ -2,8 +2,6 @@
 
 > have --exclude-length exclude ranges of lengths (e.g. 200-450)
 
-> allow ranges in status codes
-
 -> Decide on Threshold Values (Rate Limit - 4000? Seems arbitrary?)
 
 > implement CPU and RAM metrics

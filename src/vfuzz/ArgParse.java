@@ -1,9 +1,7 @@
 package vfuzz;
 
 import java.io.File;
-import java.util.HashSet;
-import java.util.EnumSet;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -53,7 +51,7 @@ public class ArgParse {
                 false
         ));
 
-
+        /*
         configManager.registerArgument(new CommandLineArgument(
                 "--excludeStatusCodes", "-e", "excludedStatusCodes",
                 (cm, value) -> {
@@ -80,6 +78,45 @@ public class ArgParse {
                 false
         ));
 
+         */
+
+        configManager.registerArgument(new CommandLineArgument(
+                "--excludeStatusCodes", "-e", "excludedStatusCodes",
+                (cm, value) -> {
+                    String[] parts = value.split(",");
+                    List<String> validCodesAndRanges = new ArrayList<>();
+                    for (String part : parts) {
+                        // in case a range was provided
+                        if (part.matches("^\\d+-\\d+$")) {
+                            String[] bounds = part.split("-");
+                            int lowerBound = Math.min(Integer.parseInt(bounds[0].trim()), Integer.parseInt(bounds[1].trim()));
+                            int upperBound = Math.max(Integer.parseInt(bounds[0].trim()), Integer.parseInt(bounds[1].trim()));
+                            validCodesAndRanges.add(lowerBound + "-" + upperBound);
+                        } else if (part.matches("^\\d+$")) {
+                            // in case a single status code was provided
+                            validCodesAndRanges.add(part.trim());
+                        } else {
+                            System.err.println("Error: Invalid status code format '" + part + "' (expected formats: single code, multiple codes, single range, or multiple ranges).");
+                        }
+                    }
+
+                    if (!validCodesAndRanges.isEmpty()) {
+                        cm.setConfigValue("excludedStatusCodes", String.join(",", validCodesAndRanges));
+                    }
+                },
+                value -> {
+                    try {
+                        return value.matches("^\\d+(\\-\\d+)?(,\\d+(\\-\\d+)?)*$");
+                    } catch (Exception e) {
+                        return false;
+                    }
+                },
+                "List of HTTP status codes or ranges to exclude, separated by commas. For example: 404,405-410,505-560. Each code or range must be valid.",
+                true,
+                "404",
+                false
+        ));
+
         configManager.registerArgument(new CommandLineArgument(
                 "--excludeLength", "-l", "excludeLength",
                 (cm, value) -> {
@@ -99,7 +136,7 @@ public class ArgParse {
                     }
                 },
                 value -> value.matches("^[0-9]+(,[0-9]+)*$"),
-                "List of content lengths to exclude, separated by commas. Each length must be a valid integer.",
+                "List of content lengths or length ranges to exclude, separated by commas. Each length must be a valid integer.",
                 true,
                 null,
                 false
@@ -301,14 +338,14 @@ public class ArgParse {
         return configManager.getConfigValue("url");
     }
 
-    public static Set<Integer> getExcludedStatusCodes() {
+    public static Set<Range> getExcludedStatusCodes() {
         String codes = configManager.getConfigValue("excludedStatusCodes");
         if (codes == null || codes.trim().isEmpty()) {
             return new HashSet<>(); // Return an empty set if no value has been set
         }
         return Stream.of(codes.split(","))
                 .map(String::trim)
-                .map(Integer::parseInt)
+                .map(Range::parseToRange)
                 .collect(Collectors.toSet());
     }
 

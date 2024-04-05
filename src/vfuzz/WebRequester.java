@@ -87,7 +87,7 @@ public class WebRequester {
         return attempt.handle((resp, th) -> {
             if (th == null) {
                 // Success case, return the response
-
+                Metrics.incrementSuccessfulRequestsCount();
                 return CompletableFuture.completedFuture(resp);
             } else if (maxRetries > 0) {
 

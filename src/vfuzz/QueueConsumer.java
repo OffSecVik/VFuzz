@@ -23,7 +23,7 @@ public class QueueConsumer implements Runnable {
     private static boolean firstThreadFinished = false;
     private Target target;
 
-    public static AtomicInteger succesfulReqeusts= new AtomicInteger();
+    public static AtomicInteger succesfulReqeusts= new AtomicInteger(); // tracking TOTAL successful requests
 
 
     public QueueConsumer(ThreadOrchestrator orchestrator, Target target) {
@@ -120,8 +120,11 @@ public class QueueConsumer implements Runnable {
     private void parseResponse(HttpResponse response, HttpRequestBase request) {
         // checking for the most likely exclusion conditions first to return quickly if the response is not a match. this is done to improve performance.
         // it also means we chain if conditions. not pretty, but performant?
-        if (ArgParse.getExcludedStatusCodes().contains(response.getStatusLine().getStatusCode())) {
-            return;
+        int responseCode = response.getStatusLine().getStatusCode();
+        for (Range range : ArgParse.getExcludedStatusCodes()) {
+            if (range.contains(responseCode)) {
+                return;
+            }
         }
 
         if (ArgParse.getExcludedLength().contains((int)response.getEntity().getContentLength())) {
