@@ -127,8 +127,11 @@ public class QueueConsumer implements Runnable {
             }
         }
 
-        if (ArgParse.getExcludedLength().contains((int)response.getEntity().getContentLength())) {
-            return;
+        int responseContentLength = (int)response.getEntity().getContentLength();
+        for (Range range : ArgParse.getExcludedLength()) {
+            if (range.contains(responseContentLength)) {
+                return;
+            }
         }
 
         String requestUrl;

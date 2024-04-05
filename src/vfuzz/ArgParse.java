@@ -121,21 +121,32 @@ public class ArgParse {
                 "--excludeLength", "-l", "excludeLength",
                 (cm, value) -> {
                     String[] lengths = value.split(",");
-                    StringBuilder validLengths = new StringBuilder();
+                    List<String> validLengthsAndRanges = new ArrayList<>();
                     for (String length : lengths) {
-                        try {
-                            Integer parsedLength = Integer.parseInt(length.trim());
-                            if (!validLengths.isEmpty()) validLengths.append(",");
-                            validLengths.append(parsedLength);
-                        } catch (NumberFormatException e) {
-                            System.err.println("Error: Invalid length format '" + length + "'. Each length must be a valid integer.");
+                        // in case a range was provided
+                        if (length.matches("^\\d+-\\d+$")) {
+                            String[] bounds = length.split("-");
+                            int lowerBound = Math.min(Integer.parseInt(bounds[0].trim()), Integer.parseInt(bounds[1].trim()));
+                            int upperBound = Math.max(Integer.parseInt(bounds[0].trim()), Integer.parseInt(bounds[1].trim()));
+                            validLengthsAndRanges.add(lowerBound + "-" + upperBound);
+                        } else if (length.matches("^\\d+$")) {
+                            // in case a single length was provided
+                            validLengthsAndRanges.add(length.trim());
+                        } else {
+                            System.err.println("Error: Invalid length format '" + length + "' (expected formats: single length, multiple lengths, single range, or multiple ranges).");
                         }
                     }
-                    if (!validLengths.isEmpty()) {
-                        cm.setConfigValue("excludeLength", validLengths.toString());
+                    if (!validLengthsAndRanges.isEmpty()) {
+                        cm.setConfigValue("excludeLength", String.join(",", validLengthsAndRanges));
                     }
                 },
-                value -> value.matches("^[0-9]+(,[0-9]+)*$"),
+                value -> {
+                    try {
+                        return value.matches("^\\d+(\\-\\d+)?(,\\d+(\\-\\d+)?)*$");
+                    } catch (Exception e) {
+                        return false;
+                    }
+                },
                 "List of content lengths or length ranges to exclude, separated by commas. Each length must be a valid integer.",
                 true,
                 null,
@@ -349,14 +360,14 @@ public class ArgParse {
                 .collect(Collectors.toSet());
     }
 
-    public static Set<Integer> getExcludedLength() {
+    public static Set<Range> getExcludedLength() {
         String lengths = configManager.getConfigValue("excludeLength");
         if (lengths == null || lengths.trim().isEmpty()) {
             return new HashSet<>(); // Return an empty set if no value has been set
         }
         return Stream.of(lengths.split(","))
                 .map(String::trim)
-                .map(Integer::parseInt)
+                .map(Range::parseToRange)
                 .collect(Collectors.toSet());
     }
 
