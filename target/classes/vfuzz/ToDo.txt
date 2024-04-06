@@ -1,5 +1,7 @@
 	NEXT STEPS
 
+> fix subdomain mode!
+
 > FIX Headers in ArgParse (currently completely skips ConfigManager and simply adds headers to a static HashSet as a workaround)
 
 -> Decide on Threshold Values (Rate Limit - 4000? Seems arbitrary?)

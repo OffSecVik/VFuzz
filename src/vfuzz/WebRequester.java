@@ -174,8 +174,8 @@ public class WebRequester {
                 }
                 case VHOST -> {
                     // String rebuiltUrl = urlRebuilder(requestUrl, payload);
-                    String vhostUrl = vhostRebuilder(requestUrl, payload);
                     request.setURI(new URI(requestUrl));
+                    String vhostUrl = vhostRebuilder(requestUrl, payload);
                     request.setHeader("Host", vhostUrl);
                     // System.out.println(request.getHeaders("Host").toString());
                 }
