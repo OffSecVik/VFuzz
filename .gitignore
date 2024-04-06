@@ -26,3 +26,9 @@ replay_pid*
 # wordlists for testing
 src/vfuzz/directory-list-2.3-big.txt
 src/vfuzz/mywordlist.txt
+
+# IntelliJ IDEA specific files
+.idea/
+
+# Compiled output directory
+out/
