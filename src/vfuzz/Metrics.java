@@ -10,21 +10,18 @@ public class Metrics {
     private static ScheduledExecutorService executor = null;
 
     // request metrics variables
-    private static final AtomicLong producerCount = new AtomicLong(0); // ALL the count variables reset to 0 each second
     private static final AtomicLong requestCount = new AtomicLong(0);
     private static final AtomicLong retriesCount = new AtomicLong(0);
     private static final AtomicLong failedRequestsCount = new AtomicLong(0);
-    private static double producedPerSecond = 0.0;
-
-
+    private static final AtomicLong successfulRequestCount = new AtomicLong(0);
     private static String currentRequest;
-
     private static double failureRate = 0;
     private static double retryRate = 0;
     private static long updateInterval = 100; // time in milliseconds, this is how often the thread updates its metrics
     private static double requestsPerSecond[] = new double[1000 / (int)updateInterval]; // calculating actual RPS through this
     private static double retriesPerSecond[] = new double[1000 / (int)updateInterval]; // calculating actual RPS through thisprivate static double
     private static double failedRequestsPerSecond[] = new double[1000 / (int)updateInterval];
+    private static double succesfulRequestsPerSecond[] = new double[1000 / (int)updateInterval];
     private static int timesUpdated = 0;
 
 
@@ -44,13 +41,20 @@ public class Metrics {
 
     private static void updateAll() {
 
-        updateProducedPerSecond();
         updateRequestsPerSecond();
+        updateSuccessfulRequestsPerSecond();
         updateRetriesPerSecond();
         updateFailedRequestsPerSecond();
-
         updateDynamicRateLimiter();
+        updateShutdown();
         timesUpdated++;
+    }
+
+    private static void updateShutdown() {
+        if (Target.getActiveTargets() == 0 && getRequestsPerSecond() == 0) {
+            // TODO shutdown everything from this condition.
+            // TODO find better solution for shutdown?
+        }
     }
 
     private static void updateDynamicRateLimiter() {
@@ -63,7 +67,6 @@ public class Metrics {
         } else {
             retryRate = 0;
         }
-
 
         /*
         // dynamic logic for failure and retries:
@@ -78,15 +81,16 @@ public class Metrics {
 
     }
 
+    private static void updateSuccessfulRequestsPerSecond() {
+        succesfulRequestsPerSecond[timesUpdated % (1000 / (int)updateInterval)] = successfulRequestCount.get();
+        successfulRequestCount.set(0);
+    }
+
     private static void updateRequestsPerSecond() {
         requestsPerSecond[timesUpdated % (1000 / (int)updateInterval)] = requestCount.get(); // places Requests/updateInterval in the array
         requestCount.set(0); // reset count for next interval
     }
 
-    private static void updateProducedPerSecond() {
-        producedPerSecond = producerCount.get();
-        producerCount.set(0);
-    }
 
     private static void updateRetriesPerSecond() {
         retriesPerSecond[timesUpdated % (1000 / (int)updateInterval)] = retriesCount.get();
@@ -103,6 +107,10 @@ public class Metrics {
         requestCount.incrementAndGet();
     }
 
+    public static void incrementSuccessfulRequestsCount() {
+        successfulRequestCount.incrementAndGet();
+    }
+
     public static void incrementRetriesCount() {
         retriesCount.incrementAndGet();
     }
@@ -111,13 +119,13 @@ public class Metrics {
         failedRequestsCount.incrementAndGet();
     }
 
-    public static void incrementProducerCount() {
-        producerCount.incrementAndGet();
-    }
 
     public static double getRequestsPerSecond() {
-        // updateRequestsPerSecond();
         return Arrays.stream(requestsPerSecond).sum();
+    }
+
+    public static double getSuccessfulRequestsPerSecond() {
+        return Arrays.stream(succesfulRequestsPerSecond).sum();
     }
 
     public static double getRetriesPerSecond() {
@@ -126,10 +134,6 @@ public class Metrics {
 
     public static double getFailedRequestsPerSecond() {
         return Arrays.stream(failedRequestsPerSecond).sum();
-    }
-
-    public static double getProducedPerSecond() {
-        return producedPerSecond;
     }
 
     public static void setCurrentRequest(String request) {
