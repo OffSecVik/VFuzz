@@ -322,6 +322,19 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
+                "-d", "--post-data", "postRequestData",
+                (cm, value) -> {
+                    cm.setConfigValue("postRequestData", value);
+                    cm.setConfigValue("requestMethod", "POST"); // using any kind of POST data sets the request method to POST
+                },
+                value -> true,
+                "Sets data to be used in POST request.",
+                true,
+                "",
+                false
+        ));
+
+        configManager.registerArgument(new CommandLineArgument(
                 "--fuzz-marker", "", "fuzzMarker",
                 (cm, value) -> cm.setConfigValue("fuzzMarker", value),
                 value -> !value.trim().isEmpty(),
@@ -425,5 +438,9 @@ public class ArgParse {
 
     public static String getFuzzMarker() {
         return configManager.getConfigValue("fuzzMarker");
+    }
+
+    public static String getPostData() {
+        return configManager.getConfigValue("postRequestData");
     }
 }

@@ -1,0 +1,29 @@
+	NEXT STEPS
+
+> FIX Headers in ArgParse (currently completely skips ConfigManager and simply adds headers to a static HashSet as a workaround)
+
+-> Decide on Threshold Values (Rate Limit - 4000? Seems arbitrary?)
+
+> implement CPU and RAM metrics
+> FUZZ mode where we can specify something like http://admin.mysite.com/FUZZ/login.php
+-> FUZZ mode AND FILE mode both use the fuzzMarker
+
+> Print Class for pretty output and progress bar
+
+> File Extension Fuzzing
+
+> TEST FILE MODE (I know it will be buggy)
+
+> Flags:
+	-H (add Header) -> have to be able to add large number of headers! - //TODO TEST IT
+	-d (send post data, automatically sets RequestMode to POST) (CONFLICT CHECK)
+	-a --user-agent (User-Agent) (CONFLICT CHECK with --random-agent)
+	--random-agent (set random user agent)
+	-C Cookie
+	-r (read request from file) // TODO TEST IT
+
+
+
+
+
+

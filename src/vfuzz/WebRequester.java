@@ -156,7 +156,7 @@ public class WebRequester {
                 case HEAD -> request = new HttpHead(requestUrl);
                 case POST -> {
                     HttpPost postRequest = new HttpPost();
-                    postRequest.setEntity(new StringEntity("my post data")); // TODO: Variable
+                    postRequest.setEntity(new StringEntity(ArgParse.getPostData()));
                     request = postRequest;
                 }
             }
@@ -201,7 +201,7 @@ public class WebRequester {
         } catch (IllegalArgumentException e) {
             System.err.println("Invalid URI: " + e.getMessage());
         } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e); // TODO: Find out what that shit does
+            throw new RuntimeException(e);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
