@@ -305,9 +305,6 @@ public class ArgParse {
                 false
         ));
 
-
-        Set<String> headers = new HashSet<>();
-
         configManager.registerArgument(new CommandLineArgument(
                 "-H", "", "headers",
                 (cm, value) -> {
@@ -407,9 +404,15 @@ public class ArgParse {
         return configManager.getConfigValue("userAgent");
     }
 
+    private static Set<String> headers = new HashSet<>();
+
     public static Set<String> getHeaders() {
+        return headers;
+        /*
         String headers = configManager.getConfigValue("headers");
         return headers == null ? Set.of() : Stream.of(headers.split(",\\s*")).collect(Collectors.toSet());
+
+         */
     }
 
     public static boolean getRequestFileFuzzing() {

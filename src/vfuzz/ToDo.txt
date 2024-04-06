@@ -1,6 +1,6 @@
 	NEXT STEPS
 
-> have --exclude-length exclude ranges of lengths (e.g. 200-450)
+> FIX Headers in ArgParse (currently completely skips ConfigManager and simply adds headers to a static HashSet as a workaround)
 
 -> Decide on Threshold Values (Rate Limit - 4000? Seems arbitrary?)
 

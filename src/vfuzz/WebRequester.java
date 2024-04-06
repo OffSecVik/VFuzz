@@ -222,7 +222,7 @@ public class WebRequester {
                 case "GET" -> request = new HttpGet(requestUrl);
                 case "HEAD" -> request = new HttpHead(requestUrl);
                 case "POST" -> {
-                    HttpPost postRequest = new HttpPost();
+                    HttpPost postRequest = new HttpPost(requestUrl);
                     postRequest.setEntity(new StringEntity(parsedRequest.getBody())); // TODO: check if POST body is preserved, handle content-length dynamically based on payload length
                     request = postRequest;
                 }
