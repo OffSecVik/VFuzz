@@ -9,6 +9,7 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.conn.ConnectionKeepAliveStrategy;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.LaxRedirectStrategy;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
 import org.apache.http.impl.nio.conn.PoolingNHttpClientConnectionManager;
@@ -71,6 +72,7 @@ public class WebRequester {
                 .setDefaultRequestConfig(requestConfig)
                 .setConnectionManager(connManager)
                 .setKeepAliveStrategy(keepAliveStrategy)
+                .setRedirectStrategy(new LaxRedirectStrategy())
                 .build();
         client.start();
     } // here we initialize the HttpAsyncClient and set its settings.
