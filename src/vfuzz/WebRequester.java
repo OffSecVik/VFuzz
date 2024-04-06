@@ -163,10 +163,14 @@ public class WebRequester {
 
             // load the payload depending on Mode
             switch (ArgParse.getRequestMode()) {
-                case STANDARD -> request.setURI(new URI(requestUrl += payload));
+                case STANDARD -> request.setURI(new URI(requestUrl + payload));
                 case SUBDOMAIN -> {
+
                     String rebuiltUrl = urlRebuilder(requestUrl, payload);
+                    String vhostUrl = vhostRebuilder(requestUrl, payload);
                     request.setURI(new URI(rebuiltUrl));
+                    request.setHeader("Host", vhostUrl);
+
                 }
                 case VHOST -> {
                     // String rebuiltUrl = urlRebuilder(requestUrl, payload);
@@ -174,6 +178,9 @@ public class WebRequester {
                     request.setURI(new URI(requestUrl));
                     request.setHeader("Host", vhostUrl);
                     // System.out.println(request.getHeaders("Host").toString());
+                }
+                case FUZZ -> {
+                    request.setURI(new URI(requestUrl.replaceFirst(ArgParse.getFuzzMarker(), payload)));
                 }
             }
 

@@ -163,7 +163,7 @@ public class ArgParse {
                 "Activates the virtual host fuzzing mode.",
                 true,
                 null,
-                false
+                true
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -173,7 +173,17 @@ public class ArgParse {
                 "Activates the subdomain fuzzing mode.",
                 true,
                 null,
-                false
+                true
+        ));
+
+        configManager.registerArgument(new CommandLineArgument(
+                "--fuzz", "", "requestMode",
+                (cm, value) -> cm.setConfigValue("requestMode", RequestMode.FUZZ.name()),
+                value -> true,
+                "Activates the FUZZ-marker fuzzing mode.",
+                true,
+                null,
+                true
         ));
 
 
@@ -324,13 +334,14 @@ public class ArgParse {
         configManager.registerArgument(new CommandLineArgument(
                 "-d", "--post-data", "postRequestData",
                 (cm, value) -> {
+                    System.out.println("SETTING TO POST");
                     cm.setConfigValue("postRequestData", value);
                     cm.setConfigValue("requestMethod", "POST"); // using any kind of POST data sets the request method to POST
                 },
                 value -> true,
                 "Sets data to be used in POST request.",
                 true,
-                "",
+                null,
                 false
         ));
 

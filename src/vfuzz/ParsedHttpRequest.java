@@ -11,19 +11,14 @@ import java.util.HashMap;
 import java.util.stream.Collectors;
 
 public class ParsedHttpRequest {
-    private static String fuzzMarker = "FUZZ";
     private String method;
     private String url;
     private Map<String, String> headers = new HashMap<>();
     private String body;
 
-    private static void updateFuzzMarker() {
-        fuzzMarker = ArgParse.getFuzzMarker();
+    ParsedHttpRequest() {
     }
 
-    ParsedHttpRequest() {
-        updateFuzzMarker();
-    }
     ParsedHttpRequest(ParsedHttpRequest that) { // copy constructor - this will be called very very often
         method = that.method;
         url = that.url;
@@ -65,7 +60,7 @@ public class ParsedHttpRequest {
     }
 
     public void replaceFuzzMarker(String payload) {
-
+        String fuzzMarker = ArgParse.getFuzzMarker();
         // check and replace in URL
         if(this.url.contains(fuzzMarker)) {
             this.url = this.url.replace(fuzzMarker, payload);

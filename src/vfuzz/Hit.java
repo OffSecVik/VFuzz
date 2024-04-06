@@ -32,8 +32,8 @@ public class Hit {
         for (int i = 0; i < 50 - url.length(); i++) { // make this adapt to terminal size - is there a standard?
             whiteSpace += " ";
         }
-        // String isVhost = (ArgParse.getRequestMode() == RequestMode.VHOST) ? " vhost" : ""; // String gymnastics for vhost mode // TODO: reimplement
-        String isVhost = "";
+        String isVhost = (ArgParse.getRequestMode() == RequestMode.VHOST) ? " vhost" : ""; // String gymnastics for vhost mode
+
         return "Found" + isVhost + ": " + url + whiteSpace + "(Status Code " + statusCode + ")" + "\t" + "(Length: " + length + ")";
     }
 
