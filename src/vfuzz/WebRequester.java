@@ -1,6 +1,8 @@
 package vfuzz;
 
 import org.apache.http.HttpResponse;
+import org.apache.http.ProtocolException;
+import org.apache.http.ProtocolVersion;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
@@ -15,8 +17,11 @@ import org.apache.http.impl.nio.client.HttpAsyncClients;
 import org.apache.http.impl.nio.conn.PoolingNHttpClientConnectionManager;
 import org.apache.http.impl.nio.reactor.DefaultConnectingIOReactor;
 import org.apache.http.impl.nio.reactor.IOReactorConfig;
+import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.nio.reactor.ConnectingIOReactor;
 import org.apache.http.nio.reactor.IOReactorException;
+import org.apache.http.protocol.HTTP;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -28,6 +33,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class WebRequester {
 
@@ -125,7 +132,32 @@ public class WebRequester {
 
             @Override
             public void failed(Exception ex) {
-                // System.out.println("Exception " + ex);
+                Throwable cause = ex.getCause();
+                if (cause == null) {
+                    cause = ex;
+                }
+                if (cause instanceof ProtocolException) {
+                    if (cause.getMessage().contains("Unexpected response:")) {
+
+                        // extracting the Http StatusLine object from the exception message
+                        Pattern pattern = Pattern.compile("(\\S+?)/(\\d)\\.(\\d) (\\d{3})");
+                        Matcher matcher = pattern.matcher(cause.getMessage());
+
+                        if (matcher.find()) {
+                            String protocol = matcher.group(1);
+                            int protocolVersionMajor = Integer.parseInt(matcher.group(2));
+                            int protocolVersionMinor = Integer.parseInt(matcher.group(3));
+                            int statusCode = Integer.parseInt(matcher.group(4));
+                            ProtocolVersion protocolVersion = new ProtocolVersion(protocol, protocolVersionMajor, protocolVersionMinor);
+
+                            // making the response object and returning it
+                            HttpResponse response = new BasicHttpResponse(protocolVersion, statusCode, null);
+                            response.setEntity(new StringEntity("", HTTP.UTF_8));
+                            responseFuture.complete(response);
+                        }
+
+                    }
+                }
                 responseFuture.completeExceptionally(ex);
             }
 

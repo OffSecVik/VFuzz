@@ -121,7 +121,6 @@ public class QueueConsumer implements Runnable {
         // checking for the most likely exclusion conditions first to return quickly if the response is not a match. this is done to improve performance.
         // it also means we chain if conditions. not pretty, but performant?
 
-        // System.out.println("Parsing a " + response.getStatusLine().getStatusCode() + " response.");
 
         int responseCode = response.getStatusLine().getStatusCode();
         for (Range range : ArgParse.getExcludedStatusCodes()) {
@@ -129,7 +128,6 @@ public class QueueConsumer implements Runnable {
                 return;
             }
         }
-
 
 
         int responseContentLength = (int)response.getEntity().getContentLength();
@@ -165,6 +163,7 @@ public class QueueConsumer implements Runnable {
         }
 
         // TODO: make Hit object take a HttpRequest as argument, this way we could retain more information?
+
         new Hit(requestUrl, response.getStatusLine().getStatusCode(), (int)response.getEntity().getContentLength());
 
         if (thisIsRecursiveTarget) {
