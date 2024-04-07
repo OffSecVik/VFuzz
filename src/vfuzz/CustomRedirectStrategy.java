@@ -10,6 +10,9 @@ import org.apache.http.protocol.HttpContext;
 public class CustomRedirectStrategy extends DefaultRedirectStrategy {
     @Override
     public boolean isRedirected(HttpRequest request, HttpResponse response, HttpContext context) throws ProtocolException {
+        if (!ArgParse.getFollowRedirects()) {
+            return false;
+        }
         boolean isRedirect = super.isRedirected(request, response, context);
         if (isRedirect && response.getFirstHeader("Location") == null) {
             return false;

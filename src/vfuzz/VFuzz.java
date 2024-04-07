@@ -16,7 +16,7 @@ public class VFuzz {
         // configManager.verifyRequiredArguments(); // TODO: Fix verifyRequiredArguments
         // configManager.applyDefaultValues(); // TODO: method is unnecessary.
 
-        configManager.setConfigValue("rateLimit", "5"); // TODO: Find a solution for this case
+        // configManager.setConfigValue("rateLimit", "5"); // TODO: Find a solution for this case
 
         System.out.println(Color.BLUE + "Thread Count: " + ArgParse.getThreadCount());
         System.out.println("Wordlist Path: " + ArgParse.getWordlistPath());
@@ -26,6 +26,7 @@ public class VFuzz {
         System.out.println("Request Mode: " + ArgParse.getRequestMode());
         System.out.println("Request Method: " + ArgParse.getRequestMethod());
         System.out.println("Max Retries: " + ArgParse.getMaxRetries());
+        System.out.println("Follow redirects: " + ArgParse.getFollowRedirects());
         System.out.println("Rate Limit: " + ArgParse.getRateLimit());
         System.out.println("Rate Limiter Enabled: " + ArgParse.getRateLimiterEnabled());
         System.out.println("Metrics Enabled: " + ArgParse.getMetricsEnabled());

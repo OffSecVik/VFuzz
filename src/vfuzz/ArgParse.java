@@ -236,7 +236,6 @@ public class ArgParse {
                 (cm, value) -> {
                     try {
                         int rateLimit = Integer.parseInt(value);
-
                         cm.setConfigValue("rateLimit", String.valueOf(rateLimit));
                         cm.setConfigValue("rateLimiterEnabled", value);
                     } catch (NumberFormatException e) {
@@ -253,8 +252,8 @@ public class ArgParse {
                 },
                 "Sets the maximum number of requests per second. This value must be a positive integer.",
                 true,
-                "false",
-                true
+                "4000",
+                false
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -353,6 +352,16 @@ public class ArgParse {
                 true,
                 "FUZZ",
                 false
+        ));
+
+        configManager.registerArgument(new CommandLineArgument(
+                "--follow-redirects", "", "followRedirects",
+                (cm, value) -> cm.setConfigValue("followRedirects", value),
+                value -> true,
+                "Makes the fuzzer follow redirects.",
+                true,
+                "false",
+                true
         ));
     }
 
@@ -453,5 +462,9 @@ public class ArgParse {
 
     public static String getPostData() {
         return configManager.getConfigValue("postRequestData");
+    }
+
+    public static boolean getFollowRedirects() {
+        return Boolean.parseBoolean(configManager.getConfigValue("followRedirects"));
     }
 }
