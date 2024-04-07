@@ -1,14 +1,14 @@
 	NEXT STEPS
 
-> fix subdomain mode!
+> follow redirect flag?
+
+> fix subdomain mode! do we even need it? find out if it is truly the same as VHOST fuzzing!
 
 > FIX Headers in ArgParse (currently completely skips ConfigManager and simply adds headers to a static HashSet as a workaround)
 
 -> Decide on Threshold Values (Rate Limit - 4000? Seems arbitrary?)
 
 > implement CPU and RAM metrics
-> FUZZ mode where we can specify something like http://admin.mysite.com/FUZZ/login.php
--> FUZZ mode AND FILE mode both use the fuzzMarker
 
 > Print Class for pretty output and progress bar
 

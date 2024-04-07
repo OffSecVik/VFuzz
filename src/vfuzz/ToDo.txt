@@ -9,8 +9,6 @@
 -> Decide on Threshold Values (Rate Limit - 4000? Seems arbitrary?)
 
 > implement CPU and RAM metrics
-> FUZZ mode where we can specify something like http://admin.mysite.com/FUZZ/login.php
--> FUZZ mode AND FILE mode both use the fuzzMarker
 
 > Print Class for pretty output and progress bar
 

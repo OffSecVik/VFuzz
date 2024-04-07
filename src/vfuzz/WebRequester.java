@@ -35,8 +35,6 @@ public class WebRequester {
 
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-    private static int delay = 1000;
-
     private static final CloseableHttpAsyncClient client;
 
     static {
@@ -72,7 +70,7 @@ public class WebRequester {
                 .setDefaultRequestConfig(requestConfig)
                 .setConnectionManager(connManager)
                 .setKeepAliveStrategy(keepAliveStrategy)
-                .setRedirectStrategy(new LaxRedirectStrategy())
+                .setRedirectStrategy(new CustomRedirectStrategy())
                 .build();
         client.start();
     } // here we initialize the HttpAsyncClient and set its settings.
@@ -88,11 +86,11 @@ public class WebRequester {
         rateLimiter.awaitToken();
         return attempt.handle((resp, th) -> {
             if (th == null) {
+
                 // Success case, return the response
                 Metrics.incrementSuccessfulRequestsCount();
                 return CompletableFuture.completedFuture(resp);
             } else if (maxRetries > 0) {
-
                 // Retry case, schedule the retry with a delay
                 CompletableFuture<HttpResponse> delayedRetry = new CompletableFuture<>();
                 scheduler.schedule(() ->
@@ -127,6 +125,7 @@ public class WebRequester {
 
             @Override
             public void failed(Exception ex) {
+                // System.out.println("Exception " + ex);
                 responseFuture.completeExceptionally(ex);
             }
 
