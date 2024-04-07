@@ -1,6 +1,7 @@
 package vfuzz;
 
 import java.io.IOException;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 
 public class VFuzz {
@@ -26,12 +27,13 @@ public class VFuzz {
         System.out.println("Request Mode: " + ArgParse.getRequestMode());
         System.out.println("Request Method: " + ArgParse.getRequestMethod());
         System.out.println("Max Retries: " + ArgParse.getMaxRetries());
-        System.out.println("Follow redirects: " + ArgParse.getFollowRedirects());
         System.out.println("Rate Limit: " + ArgParse.getRateLimit());
         System.out.println("Rate Limiter Enabled: " + ArgParse.getRateLimiterEnabled());
         System.out.println("Metrics Enabled: " + ArgParse.getMetricsEnabled());
         System.out.println("Debug Enabled: " + ArgParse.getDebugEnabled());
         System.out.println("Recursion Enabled: " + ArgParse.getRecursionEnabled());
+        System.out.println("Follow redirects: " + ArgParse.getFollowRedirects());
+        System.out.println("Random Agent: " + ArgParse.getRandomAgent());
         System.out.println("User Agent: " + ArgParse.getUserAgent());
         System.out.println("Headers: " + ArgParse.getHeaders());
         System.out.println("Request File Fuzzing: " + ArgParse.getRequestFileFuzzing());

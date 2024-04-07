@@ -1,5 +1,0 @@
-
-    Debug:
-
-Is this even something we want?
-Logging???

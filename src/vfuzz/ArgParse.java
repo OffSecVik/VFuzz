@@ -292,8 +292,11 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "--user-agent", "", "userAgent",
-                (cm, value) -> cm.setConfigValue("userAgent", value),
+                "--user-agent", "-A", "userAgent",
+                (cm, value) ->{
+
+                    headers.add("User-Agent: " + value);
+                },
                 value -> !value.trim().isEmpty(),
                 "Sets the user agent for requests. Example: --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"",
                 true,
@@ -359,6 +362,16 @@ public class ArgParse {
                 (cm, value) -> cm.setConfigValue("followRedirects", value),
                 value -> true,
                 "Makes the fuzzer follow redirects.",
+                true,
+                "false",
+                true
+        ));
+
+        configManager.registerArgument(new CommandLineArgument(
+                "--random-agent","","randomAgent",
+                (cm, value) -> cm.setConfigValue("randomAgent", value),
+                value -> true,
+                "Enables randomization of User-Agent header.",
                 true,
                 "false",
                 true
@@ -466,5 +479,9 @@ public class ArgParse {
 
     public static boolean getFollowRedirects() {
         return Boolean.parseBoolean(configManager.getConfigValue("followRedirects"));
+    }
+
+    public static boolean getRandomAgent() {
+        return Boolean.parseBoolean(configManager.getConfigValue("randomAgent"));
     }
 }

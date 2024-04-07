@@ -236,6 +236,10 @@ public class WebRequester {
                 }
             }
 
+            if (ArgParse.getRandomAgent()) {
+                request.setHeader("User-Agent", RandomAgent.get());
+            }
+
             return request;
 
         } catch (IllegalArgumentException e) {
@@ -268,10 +272,14 @@ public class WebRequester {
                 }
             }
 
+
             // set up headers
             for (Map.Entry<String, String>entry : parsedRequest.getHeaders().entrySet()) {
-                assert request != null;
                 request.setHeader(entry.getKey(), entry.getValue());
+            }
+
+            if (ArgParse.getRandomAgent()) {
+                request.setHeader("User-Agent", RandomAgent.get());
             }
 
             return request;
