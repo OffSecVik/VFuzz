@@ -334,6 +334,23 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
+                "-C", "--cookie", "cookies",
+                (cm, value) -> {
+                    if (cm.getConfigValue("cookies") == null) {
+                        cm.setConfigValue("cookies", value);
+                    } else {
+                        String newCookie = (cm.getConfigValue("cookies") + "; " + value);
+                        cm.setConfigValue("cookies", newCookie);
+                    }
+                },
+                value -> true,
+                "Sets custom cookies for the requests. Can be used multiple times for multiple cookies. Example: -C \"username=JohnDoe\"",
+                true,
+                null,
+                false
+        ));
+
+        configManager.registerArgument(new CommandLineArgument(
                 "-d", "--post-data", "postRequestData",
                 (cm, value) -> {
                     System.out.println("SETTING TO POST");
@@ -448,6 +465,11 @@ public class ArgParse {
 
     public static String getUserAgent() {
         return configManager.getConfigValue("userAgent");
+    }
+
+
+    public static String getCookies() {
+        return configManager.getConfigValue("cookies");
     }
 
     private static Set<String> headers = new HashSet<>();

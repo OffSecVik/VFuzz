@@ -11,14 +11,3 @@
 > Print Class for pretty output and progress bar
 
 > File Extension Fuzzing
-
-> TEST FILE MODE (I know it will be buggy)
-
-> Flags:
-	-C Cookie
-
-
-
-
-
-

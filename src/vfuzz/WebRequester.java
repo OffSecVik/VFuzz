@@ -236,6 +236,10 @@ public class WebRequester {
                 }
             }
 
+            if (ArgParse.getCookies() != null) {
+                request.setHeader("Cookie", ArgParse.getCookies());
+            }
+
             if (ArgParse.getRandomAgent()) {
                 request.setHeader("User-Agent", RandomAgent.get());
             }

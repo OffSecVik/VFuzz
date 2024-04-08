@@ -36,6 +36,7 @@ public class VFuzz {
         System.out.println("Random Agent: " + ArgParse.getRandomAgent());
         System.out.println("User Agent: " + ArgParse.getUserAgent());
         System.out.println("Headers: " + ArgParse.getHeaders());
+        System.out.println("Cookies: " + ArgParse.getCookies());
         System.out.println("Request File Fuzzing: " + ArgParse.getRequestFileFuzzing());
         System.out.println("Request File Path: " + ArgParse.getRequestFilePath());
         System.out.println("Fuzz Marker: " + ArgParse.getFuzzMarker() + Color.RESET);

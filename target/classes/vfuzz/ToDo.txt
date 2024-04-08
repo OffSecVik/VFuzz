@@ -1,8 +1,6 @@
 	NEXT STEPS
 
-> follow redirect flag?
-
-> fix subdomain mode! do we even need it? find out if it is truly the same as VHOST fuzzing!
+> Consider if we want compatibility between FileRequest mode and -H flag (and other flags) and if not, determine how to handle the user specifying both
 
 > FIX Headers in ArgParse (currently completely skips ConfigManager and simply adds headers to a static HashSet as a workaround)
 
@@ -17,8 +15,6 @@
 > TEST FILE MODE (I know it will be buggy)
 
 > Flags:
-	-a --user-agent (User-Agent) (CONFLICT CHECK with --random-agent)
-	--random-agent (set random user agent)
 	-C Cookie
 
 
