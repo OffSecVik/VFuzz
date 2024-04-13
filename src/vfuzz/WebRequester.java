@@ -38,7 +38,7 @@ import java.util.regex.Pattern;
 
 public class WebRequester {
 
-    private static RateLimiter rateLimiter = new RateLimiter(4000);
+    private static RateLimiter rateLimiter = new RateLimiter(40000);
 
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
@@ -160,13 +160,11 @@ public class WebRequester {
                 }
                 responseFuture.completeExceptionally(ex);
             }
-
             @Override
             public void cancelled() {
                 responseFuture.cancel(true);
             }
         });
-
         return responseFuture;
     }
 
@@ -175,8 +173,10 @@ public class WebRequester {
             String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8);
             HttpRequestBase request = null;
 
-            // for now every url gets a slash
-            requestUrl = requestUrl.endsWith("/") ? requestUrl : requestUrl + "/";
+            // for now every url gets a slash except if we're in FUZZ mode
+            if (ArgParse.getRequestMode() != RequestMode.FUZZ) {
+                requestUrl = requestUrl.endsWith("/") ? requestUrl : requestUrl + "/";
+            }
 
             if (!payload.equals(encodedPayload)) {
                 payload = encodedPayload;
@@ -253,6 +253,7 @@ public class WebRequester {
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
+
         return null;
     }
 
