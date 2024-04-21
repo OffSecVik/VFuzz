@@ -1,4 +1,4 @@
-package vfuzz;
+package vfuzz.network;
 
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
@@ -6,11 +6,13 @@ import org.apache.http.ProtocolException;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.DefaultRedirectStrategy;
 import org.apache.http.protocol.HttpContext;
+import vfuzz.config.ConfigAccessor;
+import vfuzz.core.ArgParse;
 
 public class CustomRedirectStrategy extends DefaultRedirectStrategy {
     @Override
     public boolean isRedirected(HttpRequest request, HttpResponse response, HttpContext context) throws ProtocolException {
-        if (!ArgParse.getFollowRedirects()) {
+        if (!ConfigAccessor.getConfigValue("followRedirects", Boolean.class)) {
             return false;
         }
         boolean isRedirect = super.isRedirected(request, response, context);

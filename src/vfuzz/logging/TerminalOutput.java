@@ -1,4 +1,4 @@
-package vfuzz;
+package vfuzz.logging;
 
 public class TerminalOutput implements Runnable {
 

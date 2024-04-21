@@ -1,4 +1,4 @@
-package vfuzz;
+package vfuzz.network;
 
 public class RateLimiter {
 

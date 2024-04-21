@@ -1,7 +1,12 @@
-package vfuzz;
+package vfuzz.core;
 
 import java.io.IOException;
 import org.apache.http.HttpResponse;
+import vfuzz.config.ConfigAccessor;
+import vfuzz.operations.Target;
+import vfuzz.logging.TerminalOutput;
+import vfuzz.network.RequestMode;
+import vfuzz.logging.Color;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,8 +21,7 @@ public class ThreadOrchestrator {
     private final List<CompletableFuture<HttpResponse>> tasks = new CopyOnWriteArrayList<>();
     private ExecutorService executor;
     private final int THREAD_COUNT;
-    private int recursionDepthLimit = 5;
-    private ConcurrentHashMap<Target, List<QueueConsumer>> consumerTasks = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Target, List<QueueConsumer>> consumerTasks = new ConcurrentHashMap<>();
 
     public ExecutorService getExecutor() {
         return executor;
@@ -33,40 +37,45 @@ public class ThreadOrchestrator {
     }
 
     public void startFuzzing() {
+        try {
+            this.executor = Executors.newFixedThreadPool(THREAD_COUNT + 11); // plus one for Terminal Output
 
-        this.executor = Executors.newFixedThreadPool(THREAD_COUNT + 11); // plus one for Terminal Output
+            TerminalOutput terminalOutput = new TerminalOutput();
+            executor.submit(terminalOutput);
 
-        TerminalOutput terminalOutput = new TerminalOutput();
-        executor.submit(terminalOutput);
+            WordlistReader wordlistReader = new WordlistReader(wordlistPath);
+            Target initialTarget = new Target(ConfigAccessor.getConfigValue("url", String.class), 0, wordlistReader);
 
-        WordlistReader wordlistReader = new WordlistReader(wordlistPath);
-        Target initialTarget = new Target(ArgParse.getUrl(), 0, wordlistReader);
-
-        // submitting the initial tasks to the executor
-        List<QueueConsumer> consumersForURL = new ArrayList<>();
-        for (int i = 0; i < THREAD_COUNT; i++) {
-            QueueConsumer consumerTask = new QueueConsumer(this, initialTarget);
-            executor.submit(consumerTask);
-            consumersForURL.add(consumerTask);
-        }
-
-        // making the Target object
-        consumerTasks.put(initialTarget, consumersForURL);
-
-        // Shutdown hook
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            terminalOutput.shutdown();
-            terminalOutput.setRunning(false);
-            executor.shutdown();
-            try {
-                if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
-                    executor.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            // submitting the initial tasks to the executor
+            List<QueueConsumer> consumersForURL = new ArrayList<>();
+            for (int i = 0; i < THREAD_COUNT; i++) {
+                QueueConsumer consumerTask = new QueueConsumer(this, initialTarget);
+                executor.submit(consumerTask);
+                consumersForURL.add(consumerTask);
             }
-            System.out.println("Goodbye");
-        }));
+
+            // making the Target object
+            consumerTasks.put(initialTarget, consumersForURL);
+
+            // Shutdown hook
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                terminalOutput.shutdown();
+                terminalOutput.setRunning(false);
+                executor.shutdown();
+                try {
+                    if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                        executor.shutdownNow();
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("Goodbye");
+            }));
+
+        } catch (RuntimeException e) {
+            System.err.println("Failed to start fuzzing due to an error: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private void allocateThreads() {
@@ -99,10 +108,11 @@ public class ThreadOrchestrator {
     }
 
     public void initiateRecursion(String newTargetUrl, int currentDepth) {
+        int recursionDepthLimit = 5;
         if (currentDepth >= recursionDepthLimit) return; // if max recursion depth is hit, don't add target to list
         int newDepth = currentDepth + 1;
 
-        if (ArgParse.getRequestMode() == RequestMode.FUZZ) {
+        if (ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.FUZZ) {
             newTargetUrl += "/FUZZ";
         }
 
@@ -123,7 +133,7 @@ public class ThreadOrchestrator {
             Target target = entry.getKey();
             String targetUrl = target.getUrl();
             List<QueueConsumer> consumers = entry.getValue();
-            if (targetUrl.equals(ArgParse.getUrl())) { // handle our initial target, it gets the chunk of the resources
+            if (targetUrl.equals(ConfigAccessor.getConfigValue("url", String.class))) { // handle our initial target, it gets the chunk of the resources
                 //System.out.println("HANDLING INITIAL TARGET " + ArgParse.getUrl());
                 while (consumers.size() > Math.max(THREAD_COUNT / 2, 1)) {
                     QueueConsumer consumer = consumers.remove(consumers.size() - 1); // remove from the end
@@ -157,12 +167,10 @@ public class ThreadOrchestrator {
                     activeConsumers++;
                 }
             }
-            int threads = 0;
             for (int i = 0; i < (target.getAllocatedThreads() - activeConsumers); i++) {
                 QueueConsumer fillConsumer = new QueueConsumer(this, target);
                 executor.submit(fillConsumer);
                 consumers.add(fillConsumer);
-                threads++;
             }
             // System.out.println("Adding " + threads + " threads to " + target.getUrl());
             // System.out.println("-----------" + target.getUrl() + " now has " + target.getAllocatedThreads() + " threads.");
@@ -172,8 +180,8 @@ public class ThreadOrchestrator {
 
     public void printActiveThreadsByTarget() {
         consumerTasks.forEach((target, consumers) -> {
-            int activeCount = (int) consumers.stream().filter(consumer -> consumer.isRunning()).count();
-            int inactiveCount = (int) consumers.stream().filter(consumer -> !consumer.isRunning()).count();
+            int activeCount = (int) consumers.stream().filter(QueueConsumer::isRunning).count();
+//            int inactiveCount = (int) consumers.stream().filter(consumer -> !consumer.isRunning()).count();
             System.out.println(target.getUrl() + (target.isScanComplete() ? "(finished)" :"") + " has " + activeCount + " working threads."); // and " + inactiveCount + " completed thread(s).");
         });
     }

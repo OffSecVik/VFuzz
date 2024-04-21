@@ -1,4 +1,4 @@
-package vfuzz;
+package vfuzz.operations;
 
 import java.util.List;
 import java.util.ArrayList;

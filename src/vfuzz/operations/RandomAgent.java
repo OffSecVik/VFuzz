@@ -1,4 +1,4 @@
-package vfuzz;
+package vfuzz.operations;
 
 import java.io.BufferedReader;
 import java.io.InputStream;

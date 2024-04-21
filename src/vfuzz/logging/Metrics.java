@@ -1,4 +1,6 @@
-package vfuzz;
+package vfuzz.logging;
+
+import vfuzz.operations.Target;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
@@ -17,11 +19,11 @@ public class Metrics {
     private static String currentRequest;
     private static double failureRate = 0;
     private static double retryRate = 0;
-    private static long updateInterval = 100; // time in milliseconds, this is how often the thread updates its metrics
-    private static double requestsPerSecond[] = new double[1000 / (int)updateInterval]; // calculating actual RPS through this
-    private static double retriesPerSecond[] = new double[1000 / (int)updateInterval]; // calculating actual RPS through thisprivate static double
-    private static double failedRequestsPerSecond[] = new double[1000 / (int)updateInterval];
-    private static double succesfulRequestsPerSecond[] = new double[1000 / (int)updateInterval];
+    private static final long updateInterval = 100; // time in milliseconds, this is how often the thread updates its metrics
+    private static final double[] requestsPerSecond = new double[1000 / (int)updateInterval]; // calculating actual RPS through this
+    private static final double[] retriesPerSecond = new double[1000 / (int)updateInterval]; // calculating actual RPS through this private static double
+    private static final double[] failedRequestsPerSecond = new double[1000 / (int)updateInterval];
+    private static final double[] succesfulRequestsPerSecond = new double[1000 / (int)updateInterval];
     private static int timesUpdated = 0;
 
 

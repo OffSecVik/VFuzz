@@ -1,4 +1,4 @@
-package vfuzz;
+package vfuzz.network;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.ProtocolException;
@@ -11,7 +11,6 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.conn.ConnectionKeepAliveStrategy;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.LaxRedirectStrategy;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
 import org.apache.http.impl.nio.conn.PoolingNHttpClientConnectionManager;
@@ -21,6 +20,11 @@ import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.nio.reactor.ConnectingIOReactor;
 import org.apache.http.nio.reactor.IOReactorException;
 import org.apache.http.protocol.HTTP;
+import vfuzz.config.ConfigAccessor;
+import vfuzz.core.ArgParse;
+import vfuzz.core.QueueConsumer;
+import vfuzz.logging.Metrics;
+import vfuzz.operations.RandomAgent;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -174,7 +178,7 @@ public class WebRequester {
             HttpRequestBase request = null;
 
             // for now every url gets a slash except if we're in FUZZ mode
-            if (ArgParse.getRequestMode() != RequestMode.FUZZ) {
+            if (ConfigAccessor.getConfigValue("requestMode", RequestMode.class) != RequestMode.FUZZ) {
                 requestUrl = requestUrl.endsWith("/") ? requestUrl : requestUrl + "/";
             }
 
@@ -184,18 +188,18 @@ public class WebRequester {
             }
 
             // initialize request here and set HTTP Method
-            switch (ArgParse.getRequestMethod()) {
+            switch (ConfigAccessor.getConfigValue("requestMethod", RequestMethod.class)) {
                 case GET -> request = new HttpGet(requestUrl);
                 case HEAD -> request = new HttpHead(requestUrl);
                 case POST -> {
                     HttpPost postRequest = new HttpPost();
-                    postRequest.setEntity(new StringEntity(ArgParse.getPostData()));
+                    postRequest.setEntity(new StringEntity(ConfigAccessor.getConfigValue("postRequestData", String.class)));
                     request = postRequest;
                 }
             }
 
             // load the payload depending on Mode
-            switch (ArgParse.getRequestMode()) {
+            switch (ConfigAccessor.getConfigValue("requestMode", RequestMode.class)) {
                 case STANDARD -> request.setURI(new URI(requestUrl + payload));
                 case SUBDOMAIN -> {
 
@@ -213,13 +217,13 @@ public class WebRequester {
                     // System.out.println(request.getHeaders("Host").toString());
                 }
                 case FUZZ -> {
-                    request.setURI(new URI(requestUrl.replaceFirst(ArgParse.getFuzzMarker(), payload)));
+                    request.setURI(new URI(requestUrl.replaceFirst(ConfigAccessor.getConfigValue("fuzzMarker", String.class), payload)));
                 }
             }
 
             // set up User-Agent
-            if (ArgParse.getUserAgent() != null) {
-                request.setHeader("User-Agent", ArgParse.getUserAgent());
+            if (ConfigAccessor.getConfigValue("userAgent", String.class) != null) {
+                request.setHeader("User-Agent", ConfigAccessor.getConfigValue("userAgent", String.class));
             }
 
             // set up Headers
@@ -236,11 +240,11 @@ public class WebRequester {
                 }
             }
 
-            if (ArgParse.getCookies() != null) {
-                request.setHeader("Cookie", ArgParse.getCookies());
+            if (ConfigAccessor.getConfigValue("cookies", String.class) != null) {
+                request.setHeader("Cookie", ConfigAccessor.getConfigValue("cookies", String.class));
             }
 
-            if (ArgParse.getRandomAgent()) {
+            if (ConfigAccessor.getConfigValue("randomAgent", Boolean.class)) {
                 request.setHeader("User-Agent", RandomAgent.get());
             }
 
@@ -283,7 +287,7 @@ public class WebRequester {
                 request.setHeader(entry.getKey(), entry.getValue());
             }
 
-            if (ArgParse.getRandomAgent()) {
+            if (ConfigAccessor.getConfigValue("randomAgent", Boolean.class)) {
                 request.setHeader("User-Agent", RandomAgent.get());
             }
 

@@ -1,4 +1,4 @@
-package vfuzz;
+package vfuzz.operations;
 
 public class Range {
     private final int start;

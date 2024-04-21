@@ -1,4 +1,7 @@
-package vfuzz;
+package vfuzz.network;
+
+import vfuzz.config.ConfigAccessor;
+import vfuzz.core.ArgParse;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -16,10 +19,10 @@ public class ParsedHttpRequest {
     private Map<String, String> headers = new HashMap<>();
     private String body;
 
-    ParsedHttpRequest() {
+    public ParsedHttpRequest() {
     }
 
-    ParsedHttpRequest(ParsedHttpRequest that) { // copy constructor - this will be called very very often
+    public ParsedHttpRequest(ParsedHttpRequest that) { // copy constructor - this will be called very very often
         method = that.method;
         url = that.url;
         headers = that.headers; // TODO: Ensure that this actually makes a deep copy of the original headers Map
@@ -60,7 +63,7 @@ public class ParsedHttpRequest {
     }
 
     public void replaceFuzzMarker(String payload) {
-        String fuzzMarker = ArgParse.getFuzzMarker();
+        String fuzzMarker = ConfigAccessor.getConfigValue("fuzzMarker", String.class);
         // check and replace in URL
         if(this.url.contains(fuzzMarker)) {
             this.url = this.url.replace(fuzzMarker, payload);

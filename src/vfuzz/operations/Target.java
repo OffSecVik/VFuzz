@@ -1,4 +1,6 @@
-package vfuzz;
+package vfuzz.operations;
+
+import vfuzz.core.WordlistReader;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -27,7 +29,7 @@ public class Target {
         return activeTargets;
     }
 
-    Target(String url, int recursionDepth, WordlistReader wordlistReader) {
+    public Target(String url, int recursionDepth, WordlistReader wordlistReader) {
         this.url = url;
         this.recursionDepth = recursionDepth;
         this.wordlistReader = wordlistReader;

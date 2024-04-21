@@ -1,4 +1,6 @@
-package vfuzz;
+package vfuzz.core;
+
+import vfuzz.config.ConfigManager;
 
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
