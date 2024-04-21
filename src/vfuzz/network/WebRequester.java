@@ -90,7 +90,7 @@ public class WebRequester {
     public static CompletableFuture<HttpResponse> sendRequestWithRetry(HttpRequestBase request, int maxRetries, long delay, TimeUnit unit) { // TODO decide whether to pass the delay as argument or have it as a static variable / ConfigManager setting
 
         Metrics.incrementRequestsCount();
-        if (maxRetries < QueueConsumer.maxRetries) { // TODO this is janky as fuck
+        if (maxRetries < QueueConsumer.MAX_RETRIES) { // TODO this is janky as fuck
             Metrics.incrementRetriesCount();
         }
 

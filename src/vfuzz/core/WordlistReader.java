@@ -33,4 +33,8 @@ public class WordlistReader {
         int index = currentIndex.getAndIncrement();
         return index < wordlist.size() ? wordlist.get(index) : null;
     }
+
+    public boolean hasMorePayloads() {
+        return currentIndex.get() < wordlist.size();
+    }
 }

@@ -25,7 +25,7 @@ public class QueueConsumer implements Runnable {
     private final WordlistReader wordlistReader;
     private final String url;
     private final ThreadOrchestrator orchestrator;
-    public static final int maxRetries = 20; // TODO: move this somewhere it makes sense, it's just here for metrics
+    public static final int MAX_RETRIES = 20; // TODO: move this somewhere it makes sense, it's just here for metrics
     private final int recursionDepth;
     private volatile boolean running = true;
     private static boolean firstThreadFinished = false;
@@ -102,7 +102,7 @@ public class QueueConsumer implements Runnable {
     }
 
     private void sendAndProcessRequest(HttpRequestBase request) {
-        CompletableFuture<HttpResponse> webRequestFuture = WebRequester.sendRequestWithRetry(request, maxRetries, 50, TimeUnit.MILLISECONDS);
+        CompletableFuture<HttpResponse> webRequestFuture = WebRequester.sendRequestWithRetry(request, MAX_RETRIES, 50, TimeUnit.MILLISECONDS);
         orchestrator.addTask(webRequestFuture);
         CompletableFuture<Void> task = webRequestFuture.thenApplyAsync(response -> {
             try {

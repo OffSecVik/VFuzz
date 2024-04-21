@@ -339,6 +339,8 @@ public class ArgParse {
         ));
     }
 
+    //TODO: Remove this garbage lol, find a way to use the ConfigAccessor for this.
+
     private static final ConfigManager configManager = ConfigManager.getInstance();
 
     public static Set<Range> getExcludedStatusCodes() {

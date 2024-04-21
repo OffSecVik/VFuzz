@@ -9,7 +9,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class Metrics {
-    private static ScheduledExecutorService executor = null;
+    public static ScheduledExecutorService executor = null;
 
     // request metrics variables
     private static final AtomicLong requestCount = new AtomicLong(0);
