@@ -31,7 +31,7 @@ public class ThreadOrchestrator {
         tasks.add(task);
     }
 
-    public ThreadOrchestrator(String wordlistPath, int threadLimit) throws IOException {
+    public ThreadOrchestrator(String wordlistPath, int threadLimit) {
         this.wordlistPath = wordlistPath;
         this.THREAD_COUNT = threadLimit;
     }
@@ -150,7 +150,7 @@ public class ThreadOrchestrator {
         printActiveThreadsByTarget();
     }
 
-    public void awaitCompletion() throws InterruptedException {
+    public void awaitCompletion() {
         CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).join();
     }
 

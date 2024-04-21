@@ -37,13 +37,8 @@ public class ConfigAccessor {
             } else if (type == Long.class) {
                 return (T) Long.valueOf(value);
             } else if (type == Set.class) {
-                // Angenommen, es handelt sich um eine Set von Ranges, Parsen der CSV
-                return (T) Arrays.stream(value.split(","))
-                        .map(String::trim)
-                        .map(Range::parseToRange) // Stellt sicher, dass Range eine statische Methode parseToRange hat
-                        .collect(Collectors.toSet());
+                return (T) parseRangeSet(value);
             } else if (type.isEnum()) {
-                // Verwendung von Enum.valueOf, um den Enum-Wert zu bekommen
                 return (T) Enum.valueOf((Class<Enum>) type, value.toUpperCase());
             } else if (type == String.class) {
                 return (T) value;
@@ -53,5 +48,13 @@ public class ConfigAccessor {
             System.err.println("Failed to convert '" + value + "' to " + type.getSimpleName() + ": " + e.getMessage());
             return null;
         }
+    }
+
+    // A helper method to parse String into a Set of Range objects, properly typed.
+    private static Set<Range> parseRangeSet(String csv) {
+        return Arrays.stream(csv.split(","))
+                .map(String::trim)
+                .map(Range::parseToRange)
+                .collect(Collectors.toSet());
     }
 }

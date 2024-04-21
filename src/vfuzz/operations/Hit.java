@@ -3,14 +3,13 @@ package vfuzz.operations;
 import java.util.List;
 import java.util.ArrayList;
 
-public class Hit {
+/**
+ * @param url this is the url for which a positive response was found. in VHOST mode, this is the value of the VHOST header.
+ */
+public record Hit(String url, int statusCode, int length) {
 
     private static List<Hit> hits = new ArrayList<>();
     private static int hitCounter = 0;
-
-    private final String url; // this is the url for which a positive response was found. in VHOST mode, this is the value of the VHOST header.
-    private final int statusCode;
-    private final int length;
 
     public Hit(String url, int statusCode, int length) {
         this.url = url;
@@ -36,18 +35,6 @@ public class Hit {
 
     public static List<Hit> getHits() {
         return hits;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public int getStatusCode() {
-        return statusCode;
-    }
-
-    public int getLength() {
-        return length;
     }
 
     public static int getHitCount() {

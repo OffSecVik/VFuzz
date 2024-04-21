@@ -1,7 +1,6 @@
 package vfuzz.network;
 
 import vfuzz.config.ConfigAccessor;
-import vfuzz.core.ArgParse;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

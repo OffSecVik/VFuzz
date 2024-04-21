@@ -52,6 +52,7 @@ public class Metrics {
         timesUpdated++;
     }
 
+    @SuppressWarnings("StatementWithEmptyBody")
     private static void updateShutdown() {
         if (Target.getActiveTargets() == 0 && getRequestsPerSecond() == 0) {
             // TODO shutdown everything from this condition.

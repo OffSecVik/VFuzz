@@ -26,16 +26,9 @@ public class VFuzz {
         int threadCount = ConfigAccessor.getConfigValue("threadCount", Integer.class);
         String wordlistPath = ConfigAccessor.getConfigValue("wordlistPath", String.class);
 
-        try {
-            ThreadOrchestrator orchestrator = new ThreadOrchestrator(wordlistPath, threadCount + 19);
-            Metrics.startMetrics();
-            orchestrator.startFuzzing();
-            orchestrator.awaitCompletion();
-        } catch (IOException ie) {
-            System.out.println("orchestartor took shit.");
-        }  catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            System.out.println("Execution was interrupted.");
-        }
+        ThreadOrchestrator orchestrator = new ThreadOrchestrator(wordlistPath, threadCount + 19);
+        Metrics.startMetrics();
+        orchestrator.startFuzzing();
+        orchestrator.awaitCompletion();
     }
 }

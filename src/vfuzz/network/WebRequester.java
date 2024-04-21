@@ -32,6 +32,7 @@ import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -284,11 +285,11 @@ public class WebRequester {
 
             // set up headers
             for (Map.Entry<String, String>entry : parsedRequest.getHeaders().entrySet()) {
-                request.setHeader(entry.getKey(), entry.getValue());
+                Objects.requireNonNull(request).setHeader(entry.getKey(), entry.getValue());
             }
 
             if (ConfigAccessor.getConfigValue("randomAgent", Boolean.class)) {
-                request.setHeader("User-Agent", RandomAgent.get());
+                Objects.requireNonNull(request).setHeader("User-Agent", RandomAgent.get());
             }
 
             return request;

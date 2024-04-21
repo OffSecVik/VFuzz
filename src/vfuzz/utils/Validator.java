@@ -3,21 +3,23 @@ package vfuzz.utils;
 import java.io.File;
 
 public class Validator {
-    /**
-     * Checks if the given string can be parsed as an integer.
-     * This method is useful for validating user input before converting it to an integer.
-     *
-     * @param value The string to validate.
-     * @return {@code true} if the string can be parsed as an integer, {@code false} otherwise.
-     */
-    public static boolean isInteger(String value) {
-        try {
-            Integer.parseInt(value);
-            return true;
-        } catch (NumberFormatException e) {
-            return false;
-        }
-    }
+// --Commented out by Inspection START (21.04.2024 16:31):
+//    /**
+//     * Checks if the given string can be parsed as an integer.
+//     * This method is useful for validating user input before converting it to an integer.
+//     *
+//     * @param value The string to validate.
+//     * @return {@code true} if the string can be parsed as an integer, {@code false} otherwise.
+//     */
+//    public static boolean isInteger(String value) {
+//        try {
+//            Integer.parseInt(value);
+//            return true;
+//        } catch (NumberFormatException e) {
+//            return false;
+//        }
+//    }
+// --Commented out by Inspection STOP (21.04.2024 16:31)
 
     /**
      * Checks if the given string represents an integer within a specified range.

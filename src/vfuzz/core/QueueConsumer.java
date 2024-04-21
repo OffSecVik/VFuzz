@@ -154,10 +154,10 @@ public class QueueConsumer implements Runnable {
 
         // checking for double hit:
         for (Hit hit : Hit.getHits()) {
-            if (hit.getUrl().equals(requestUrl)) {
+            if (hit.url().equals(requestUrl)) {
                 return;
             }
-            if (hit.getUrl().equalsIgnoreCase(requestUrl)) { //TODO make this optional, this ignores case insensitive double hits
+            if (hit.url().equalsIgnoreCase(requestUrl)) { //TODO make this optional, this ignores case insensitive double hits
                 return; // TODO also consider a dynamic setting that compares similar responses and decides whether to ignore based on the result of the comparison
             }
         }
@@ -184,7 +184,7 @@ public class QueueConsumer implements Runnable {
             return false;
         }
         for (Hit hit : Hit.getHits()) {
-            if (hit.getUrl().equals(url + "/") || (hit.getUrl() + "/").equals(url)) {
+            if (hit.url().equals(url + "/") || (hit.url() + "/").equals(url)) {
                 return false;
             }
         }

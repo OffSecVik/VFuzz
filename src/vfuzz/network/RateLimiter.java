@@ -45,6 +45,7 @@ public class RateLimiter {
         }
     }
 
+    @SuppressWarnings("BusyWait")
     public void awaitToken() {
         if (enabled && maxTokens > 0) {
             while (!tokenAvailable()) {

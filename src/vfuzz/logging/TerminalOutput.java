@@ -22,6 +22,7 @@ public class TerminalOutput implements Runnable {
 			returnCursorToTop();
 			*/
             try {
+                //noinspection BusyWait
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
                 running = false;

@@ -7,7 +7,6 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.DefaultRedirectStrategy;
 import org.apache.http.protocol.HttpContext;
 import vfuzz.config.ConfigAccessor;
-import vfuzz.core.ArgParse;
 
 public class CustomRedirectStrategy extends DefaultRedirectStrategy {
     @Override
