@@ -7,12 +7,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Target {
 
-    private static CopyOnWriteArrayList<Target> targets = new CopyOnWriteArrayList<>();
+    private static final CopyOnWriteArrayList<Target> targets = new CopyOnWriteArrayList<>();
 
     private final String url; // the url to fuzz
     private final int recursionDepth; // the recursion depth at which this is fuzzed
     private int allocatedThreads;
-    private WordlistReader wordlistReader;
+    private final WordlistReader wordlistReader;
     private final AtomicBoolean scanComplete = new AtomicBoolean(false);
 
     public boolean isScanComplete() {

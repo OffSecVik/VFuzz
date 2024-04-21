@@ -8,6 +8,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.conn.ConnectionKeepAliveStrategy;
 import org.apache.http.entity.StringEntity;
@@ -19,7 +20,6 @@ import org.apache.http.impl.nio.reactor.IOReactorConfig;
 import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.nio.reactor.ConnectingIOReactor;
 import org.apache.http.nio.reactor.IOReactorException;
-import org.apache.http.protocol.HTTP;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.core.ArgParse;
 import vfuzz.core.QueueConsumer;
@@ -43,7 +43,7 @@ import java.util.regex.Pattern;
 
 public class WebRequester {
 
-    private static RateLimiter rateLimiter = new RateLimiter(40000);
+    private static final RateLimiter rateLimiter = new RateLimiter(40000);
 
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
@@ -126,10 +126,9 @@ public class WebRequester {
     }
 
     public static CompletableFuture<HttpResponse> sendRequest(HttpRequestBase request) {
-
         CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
 
-        client.execute(request, new FutureCallback<HttpResponse>() {
+        client.execute(request, HttpClientContext.create(), new FutureCallback<>() {
             @Override
             public void completed(HttpResponse response) {
                 responseFuture.complete(response);
@@ -143,28 +142,31 @@ public class WebRequester {
                 }
                 if (cause instanceof ProtocolException) {
                     if (cause.getMessage().contains("Unexpected response:")) {
-
-                        // extracting the Http StatusLine object from the exception message
+                        // Extracting the Http StatusLine object from the exception message
                         Pattern pattern = Pattern.compile("(\\S+?)/(\\d)\\.(\\d) (\\d{3})");
                         Matcher matcher = pattern.matcher(cause.getMessage());
-
                         if (matcher.find()) {
-                            String protocol = matcher.group(1);
-                            int protocolVersionMajor = Integer.parseInt(matcher.group(2));
-                            int protocolVersionMinor = Integer.parseInt(matcher.group(3));
-                            int statusCode = Integer.parseInt(matcher.group(4));
-                            ProtocolVersion protocolVersion = new ProtocolVersion(protocol, protocolVersionMajor, protocolVersionMinor);
-
-                            // making the response object and returning it
-                            HttpResponse response = new BasicHttpResponse(protocolVersion, statusCode, null);
-                            response.setEntity(new StringEntity("", HTTP.UTF_8));
+                            HttpResponse response = getHttpResponse(matcher);
                             responseFuture.complete(response);
                         }
-
                     }
                 }
                 responseFuture.completeExceptionally(ex);
             }
+
+            private static HttpResponse getHttpResponse(Matcher matcher) {
+                String protocol = matcher.group(1);
+                int protocolVersionMajor = Integer.parseInt(matcher.group(2));
+                int protocolVersionMinor = Integer.parseInt(matcher.group(3));
+                int statusCode = Integer.parseInt(matcher.group(4));
+                ProtocolVersion protocolVersion = new ProtocolVersion(protocol, protocolVersionMajor, protocolVersionMinor);
+
+                // Making the response object and returning it
+                HttpResponse response = new BasicHttpResponse(protocolVersion, statusCode, null);
+                response.setEntity(new StringEntity("", StandardCharsets.UTF_8));
+                return response;
+            }
+
             @Override
             public void cancelled() {
                 responseFuture.cancel(true);
@@ -217,9 +219,7 @@ public class WebRequester {
                     request.setHeader("Host", vhostUrl);
                     // System.out.println(request.getHeaders("Host").toString());
                 }
-                case FUZZ -> {
-                    request.setURI(new URI(requestUrl.replaceFirst(ConfigAccessor.getConfigValue("fuzzMarker", String.class), payload)));
-                }
+                case FUZZ -> request.setURI(new URI(requestUrl.replaceFirst(ConfigAccessor.getConfigValue("fuzzMarker", String.class), payload)));
             }
 
             // set up User-Agent
@@ -253,9 +253,7 @@ public class WebRequester {
 
         } catch (IllegalArgumentException e) {
             System.err.println("Invalid URI: " + e.getMessage());
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        } catch (URISyntaxException e) {
+        } catch (UnsupportedEncodingException | URISyntaxException e) {
             throw new RuntimeException(e);
         }
 

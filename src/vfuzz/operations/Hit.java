@@ -8,7 +8,7 @@ import java.util.ArrayList;
  */
 public record Hit(String url, int statusCode, int length) {
 
-    private static List<Hit> hits = new ArrayList<>();
+    private static final List<Hit> hits = new ArrayList<>();
     private static int hitCounter = 0;
 
     public Hit(String url, int statusCode, int length) {
@@ -37,6 +37,7 @@ public record Hit(String url, int statusCode, int length) {
         return hits;
     }
 
+    @SuppressWarnings("unused")
     public static int getHitCount() {
         return hitCounter;
     }

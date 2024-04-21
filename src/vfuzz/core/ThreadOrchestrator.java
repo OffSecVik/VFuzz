@@ -1,6 +1,5 @@
 package vfuzz.core;
 
-import java.io.IOException;
 import org.apache.http.HttpResponse;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.operations.Target;
@@ -67,6 +66,7 @@ public class ThreadOrchestrator {
                         executor.shutdownNow();
                     }
                 } catch (InterruptedException e) {
+                    //noinspection CallToPrintStackTrace
                     e.printStackTrace();
                 }
                 System.out.println("Goodbye");
@@ -74,6 +74,7 @@ public class ThreadOrchestrator {
 
         } catch (RuntimeException e) {
             System.err.println("Failed to start fuzzing due to an error: " + e.getMessage());
+            //noinspection CallToPrintStackTrace
             e.printStackTrace();
         }
     }

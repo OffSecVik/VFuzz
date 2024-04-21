@@ -39,6 +39,7 @@ public class ConfigAccessor {
             } else if (type == Set.class) {
                 return (T) parseRangeSet(value);
             } else if (type.isEnum()) {
+                //noinspection rawtypes
                 return (T) Enum.valueOf((Class<Enum>) type, value.toUpperCase());
             } else if (type == String.class) {
                 return (T) value;

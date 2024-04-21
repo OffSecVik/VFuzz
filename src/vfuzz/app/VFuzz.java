@@ -7,8 +7,6 @@ import vfuzz.core.ArgParse;
 import vfuzz.core.ThreadOrchestrator;
 import vfuzz.logging.Metrics;
 
-import java.io.IOException;
-
 public class VFuzz {
     public static void main(String[] args) {
 

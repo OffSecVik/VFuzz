@@ -40,6 +40,7 @@ public class CommandLineArgument {
         return configName;
     }
 
+    @SuppressWarnings("unused")
     public String getDescription() { //TODO: --help
         return description;
     }
@@ -48,6 +49,7 @@ public class CommandLineArgument {
         return isOptional;
     }
 
+    @SuppressWarnings("unused")
     public String getDefaultValue() {
         return defaultValue;
     }

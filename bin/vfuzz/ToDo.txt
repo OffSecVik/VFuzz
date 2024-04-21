@@ -9,7 +9,7 @@
 
 	OTHER
 
-> url variable in WebRequester.buildRequest(url, payload) method is unneccessary?
+> url variable in WebRequester.buildRequest(url, payload) method is unnecessary?
 
 
 	TESTING

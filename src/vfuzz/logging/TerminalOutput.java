@@ -1,10 +1,12 @@
 package vfuzz.logging;
 
+@SuppressWarnings("CommentedOutCode")
 public class TerminalOutput implements Runnable {
 
 
     private volatile boolean running = true;
 
+    @SuppressWarnings("CommentedOutCode")
     @Override
     public void run() {
         while (running) {

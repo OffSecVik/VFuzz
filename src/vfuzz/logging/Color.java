@@ -1,5 +1,6 @@
 package vfuzz.logging;
 
+@SuppressWarnings("unused")
 public class Color {
     // Reset
     public static final String RESET = "\033[0m";

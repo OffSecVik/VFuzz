@@ -54,6 +54,7 @@ public class ArgParse {
                     for (String part : parts) {
                         // in case a range was provided
                         if (part.matches("^\\d+-\\d+$")) {
+                            //noinspection DuplicatedCode
                             String[] bounds = part.split("-");
                             int lowerBound = Math.min(Integer.parseInt(bounds[0].trim()), Integer.parseInt(bounds[1].trim()));
                             int upperBound = Math.max(Integer.parseInt(bounds[0].trim()), Integer.parseInt(bounds[1].trim()));
@@ -85,6 +86,7 @@ public class ArgParse {
                     for (String length : lengths) {
                         // in case a range was provided
                         if (length.matches("^\\d+-\\d+$")) {
+                            //noinspection DuplicatedCode
                             String[] bounds = length.split("-");
                             int lowerBound = Math.min(Integer.parseInt(bounds[0].trim()), Integer.parseInt(bounds[1].trim()));
                             int upperBound = Math.max(Integer.parseInt(bounds[0].trim()), Integer.parseInt(bounds[1].trim()));

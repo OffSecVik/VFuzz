@@ -23,7 +23,7 @@ public class Metrics {
     private static final double[] requestsPerSecond = new double[1000 / (int)updateInterval]; // calculating actual RPS through this
     private static final double[] retriesPerSecond = new double[1000 / (int)updateInterval]; // calculating actual RPS through this private static double
     private static final double[] failedRequestsPerSecond = new double[1000 / (int)updateInterval];
-    private static final double[] succesfulRequestsPerSecond = new double[1000 / (int)updateInterval];
+    private static final double[] successfulRequestsPerSecond = new double[1000 / (int)updateInterval];
     private static int timesUpdated = 0;
 
 
@@ -60,6 +60,7 @@ public class Metrics {
         }
     }
 
+    @SuppressWarnings("CommentedOutCode")
     private static void updateDynamicRateLimiter() {
         double requestsPerSecond = getRequestsPerSecond();
         double failedRequestsPerSecond = getFailedRequestsPerSecond(); // making new variables here because I was worried the class variables would change values amidst operation of this method
@@ -85,7 +86,7 @@ public class Metrics {
     }
 
     private static void updateSuccessfulRequestsPerSecond() {
-        succesfulRequestsPerSecond[timesUpdated % (1000 / (int)updateInterval)] = successfulRequestCount.get();
+        successfulRequestsPerSecond[timesUpdated % (1000 / (int)updateInterval)] = successfulRequestCount.get();
         successfulRequestCount.set(0);
     }
 
@@ -128,7 +129,7 @@ public class Metrics {
     }
 
     public static double getSuccessfulRequestsPerSecond() {
-        return Arrays.stream(succesfulRequestsPerSecond).sum();
+        return Arrays.stream(successfulRequestsPerSecond).sum();
     }
 
     public static double getRetriesPerSecond() {

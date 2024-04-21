@@ -82,6 +82,7 @@ public class ConfigManager {
         return configValues.get(key);
     }
 
+    @SuppressWarnings("unused")
     public void verifyRequiredArguments() {
         if (arguments.values().stream().anyMatch(arg -> !arg.isOptional() && !providedArgs.contains(arg.getName()) && !providedArgs.contains(arg.getAlias()))) {
             System.err.println("Missing required arguments. Exiting.");
@@ -89,10 +90,12 @@ public class ConfigManager {
         }
     }
 
+    @SuppressWarnings("unused")
     public boolean isArgumentRegistered(String argName) {
         return arguments.containsKey(argName);
     }
 
+    @SuppressWarnings("unused")
     public void unregisterArgument(String argName) {
         CommandLineArgument arg = arguments.remove(argName);
         if (arg != null && !arg.getAlias().isEmpty()) {
@@ -100,10 +103,12 @@ public class ConfigManager {
         }
     }
 
+    @SuppressWarnings("unused")
     public void clearConfigValues() {
         configValues.clear();
     }
 
+    @SuppressWarnings("unused")
     public Set<String> getRegisteredArgumentNames() {
         return arguments.keySet();
     }

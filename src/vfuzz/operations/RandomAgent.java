@@ -11,8 +11,8 @@ import java.util.Random;
 public class RandomAgent {
 
 
-    static Random random = new Random();
-    static List<String> lines = new ArrayList<>();
+    static final Random random = new Random();
+    static final List<String> lines = new ArrayList<>();
 
     static {
         InputStream inputStream = RandomAgent.class.getResourceAsStream("RandomAgents.txt");

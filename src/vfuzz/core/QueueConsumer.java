@@ -25,13 +25,13 @@ public class QueueConsumer implements Runnable {
     private final WordlistReader wordlistReader;
     private final String url;
     private final ThreadOrchestrator orchestrator;
-    public static int maxRetries = 20; // TODO: move this somewhere it makes sense, it's just here for metrics
+    public static final int maxRetries = 20; // TODO: move this somewhere it makes sense, it's just here for metrics
     private final int recursionDepth;
     private volatile boolean running = true;
     private static boolean firstThreadFinished = false;
     private final Target target;
 
-    public static AtomicInteger succesfulReqeusts= new AtomicInteger(); // tracking TOTAL successful requests
+    public static final AtomicInteger successfulRequests = new AtomicInteger(); // tracking TOTAL successful requests
 
 
     public QueueConsumer(ThreadOrchestrator orchestrator, Target target) {
@@ -64,6 +64,7 @@ public class QueueConsumer implements Runnable {
         }
     }
 
+    @SuppressWarnings("CommentedOutCode")
     private void requestFileMode() {
         ParsedHttpRequest rawRequest;
         try {
@@ -105,7 +106,7 @@ public class QueueConsumer implements Runnable {
         orchestrator.addTask(webRequestFuture);
         CompletableFuture<Void> task = webRequestFuture.thenApplyAsync(response -> {
             try {
-                succesfulReqeusts.incrementAndGet();
+                successfulRequests.incrementAndGet();
                 //// System.out.println("Successful requests: " + successfulRequests);
                 parseResponse(response, request); // TODO check second argument
                 //System.out.println("Received response for " + payload);
