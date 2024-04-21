@@ -102,7 +102,7 @@ public class QueueConsumer implements Runnable {
                 parseResponse(response, request); // TODO check second argument
                 //System.out.println("Received response for " + payload);
             } catch (Exception e) {
-                //System.err.println("Error processing response for payload " + payload + ": " + e.getMessage());
+                // System.err.println("Error processing response for " + response.getStatusLine().getStatusCode() + " response: " + e.getMessage());
             }
             return response;
         }, orchestrator.getExecutor()).thenRun(() -> {
@@ -120,12 +120,15 @@ public class QueueConsumer implements Runnable {
     private void parseResponse(HttpResponse response, HttpRequestBase request) {
         // checking for the most likely exclusion conditions first to return quickly if the response is not a match. this is done to improve performance.
         // it also means we chain if conditions. not pretty, but performant?
+
+
         int responseCode = response.getStatusLine().getStatusCode();
         for (Range range : ArgParse.getExcludedStatusCodes()) {
             if (range.contains(responseCode)) {
                 return;
             }
         }
+
 
         int responseContentLength = (int)response.getEntity().getContentLength();
         for (Range range : ArgParse.getExcludedLength()) {
@@ -160,6 +163,7 @@ public class QueueConsumer implements Runnable {
         }
 
         // TODO: make Hit object take a HttpRequest as argument, this way we could retain more information?
+
         new Hit(requestUrl, response.getStatusLine().getStatusCode(), (int)response.getEntity().getContentLength());
 
         if (thisIsRecursiveTarget) {

@@ -208,6 +208,8 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
+
+
                 "--max-retries", "", "maxRetries",
                 (cm, value) -> {
                     try {
@@ -236,7 +238,6 @@ public class ArgParse {
                 (cm, value) -> {
                     try {
                         int rateLimit = Integer.parseInt(value);
-
                         cm.setConfigValue("rateLimit", String.valueOf(rateLimit));
                         cm.setConfigValue("rateLimiterEnabled", value);
                     } catch (NumberFormatException e) {
@@ -253,8 +254,8 @@ public class ArgParse {
                 },
                 "Sets the maximum number of requests per second. This value must be a positive integer.",
                 true,
-                "false",
-                true
+                "4000",
+                false
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -293,8 +294,11 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "--user-agent", "", "userAgent",
-                (cm, value) -> cm.setConfigValue("userAgent", value),
+                "--user-agent", "-A", "userAgent",
+                (cm, value) ->{
+
+                    headers.add("User-Agent: " + value);
+                },
                 value -> !value.trim().isEmpty(),
                 "Sets the user agent for requests. Example: --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"",
                 true,
@@ -332,6 +336,23 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
+                "-C", "--cookie", "cookies",
+                (cm, value) -> {
+                    if (cm.getConfigValue("cookies") == null) {
+                        cm.setConfigValue("cookies", value);
+                    } else {
+                        String newCookie = (cm.getConfigValue("cookies") + "; " + value);
+                        cm.setConfigValue("cookies", newCookie);
+                    }
+                },
+                value -> true,
+                "Sets custom cookies for the requests. Can be used multiple times for multiple cookies. Example: -C \"username=JohnDoe\"",
+                true,
+                null,
+                false
+        ));
+
+        configManager.registerArgument(new CommandLineArgument(
                 "-d", "--post-data", "postRequestData",
                 (cm, value) -> {
                     System.out.println("SETTING TO POST");
@@ -353,6 +374,26 @@ public class ArgParse {
                 true,
                 "FUZZ",
                 false
+        ));
+
+        configManager.registerArgument(new CommandLineArgument(
+                "--follow-redirects", "", "followRedirects",
+                (cm, value) -> cm.setConfigValue("followRedirects", value),
+                value -> true,
+                "Makes the fuzzer follow redirects.",
+                true,
+                "false",
+                true
+        ));
+
+        configManager.registerArgument(new CommandLineArgument(
+                "--random-agent","","randomAgent",
+                (cm, value) -> cm.setConfigValue("randomAgent", value),
+                value -> true,
+                "Enables randomization of User-Agent header.",
+                true,
+                "false",
+                true
         ));
     }
 
@@ -428,6 +469,11 @@ public class ArgParse {
         return configManager.getConfigValue("userAgent");
     }
 
+
+    public static String getCookies() {
+        return configManager.getConfigValue("cookies");
+    }
+
     private static Set<String> headers = new HashSet<>();
 
     public static Set<String> getHeaders() {
@@ -453,5 +499,13 @@ public class ArgParse {
 
     public static String getPostData() {
         return configManager.getConfigValue("postRequestData");
+    }
+
+    public static boolean getFollowRedirects() {
+        return Boolean.parseBoolean(configManager.getConfigValue("followRedirects"));
+    }
+
+    public static boolean getRandomAgent() {
+        return Boolean.parseBoolean(configManager.getConfigValue("randomAgent"));
     }
 }

@@ -1,6 +1,7 @@
 package vfuzz;
 
 import java.io.IOException;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 
 public class VFuzz {
@@ -16,7 +17,7 @@ public class VFuzz {
         // configManager.verifyRequiredArguments(); // TODO: Fix verifyRequiredArguments
         // configManager.applyDefaultValues(); // TODO: method is unnecessary.
 
-        configManager.setConfigValue("rateLimit", "5"); // TODO: Find a solution for this case
+        // configManager.setConfigValue("rateLimit", "5"); // TODO: Find a solution for this case
 
         System.out.println(Color.BLUE + "Thread Count: " + ArgParse.getThreadCount());
         System.out.println("Wordlist Path: " + ArgParse.getWordlistPath());
@@ -31,8 +32,11 @@ public class VFuzz {
         System.out.println("Metrics Enabled: " + ArgParse.getMetricsEnabled());
         System.out.println("Debug Enabled: " + ArgParse.getDebugEnabled());
         System.out.println("Recursion Enabled: " + ArgParse.getRecursionEnabled());
+        System.out.println("Follow redirects: " + ArgParse.getFollowRedirects());
+        System.out.println("Random Agent: " + ArgParse.getRandomAgent());
         System.out.println("User Agent: " + ArgParse.getUserAgent());
         System.out.println("Headers: " + ArgParse.getHeaders());
+        System.out.println("Cookies: " + ArgParse.getCookies());
         System.out.println("Request File Fuzzing: " + ArgParse.getRequestFileFuzzing());
         System.out.println("Request File Path: " + ArgParse.getRequestFilePath());
         System.out.println("Fuzz Marker: " + ArgParse.getFuzzMarker() + Color.RESET);

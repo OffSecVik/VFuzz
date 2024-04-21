@@ -102,6 +102,10 @@ public class ThreadOrchestrator {
         if (currentDepth >= recursionDepthLimit) return; // if max recursion depth is hit, don't add target to list
         int newDepth = currentDepth + 1;
 
+        if (ArgParse.getRequestMode() == RequestMode.FUZZ) {
+            newTargetUrl += "/FUZZ";
+        }
+
         // make new target and equip it with threads
         WordlistReader recursiveReader = new WordlistReader(wordlistPath);
         Target recursiveTarget = new Target(newTargetUrl, newDepth, recursiveReader);

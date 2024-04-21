@@ -1,6 +1,8 @@
 package vfuzz;
 
 import org.apache.http.HttpResponse;
+import org.apache.http.ProtocolException;
+import org.apache.http.ProtocolVersion;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
@@ -9,13 +11,17 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.conn.ConnectionKeepAliveStrategy;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.LaxRedirectStrategy;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
 import org.apache.http.impl.nio.conn.PoolingNHttpClientConnectionManager;
 import org.apache.http.impl.nio.reactor.DefaultConnectingIOReactor;
 import org.apache.http.impl.nio.reactor.IOReactorConfig;
+import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.nio.reactor.ConnectingIOReactor;
 import org.apache.http.nio.reactor.IOReactorException;
+import org.apache.http.protocol.HTTP;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -27,14 +33,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class WebRequester {
 
-    private static RateLimiter rateLimiter = new RateLimiter(4000);
+    private static RateLimiter rateLimiter = new RateLimiter(40000);
 
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-
-    private static int delay = 1000;
 
     private static final CloseableHttpAsyncClient client;
 
@@ -71,6 +77,7 @@ public class WebRequester {
                 .setDefaultRequestConfig(requestConfig)
                 .setConnectionManager(connManager)
                 .setKeepAliveStrategy(keepAliveStrategy)
+                .setRedirectStrategy(new CustomRedirectStrategy())
                 .build();
         client.start();
     } // here we initialize the HttpAsyncClient and set its settings.
@@ -86,11 +93,11 @@ public class WebRequester {
         rateLimiter.awaitToken();
         return attempt.handle((resp, th) -> {
             if (th == null) {
+
                 // Success case, return the response
                 Metrics.incrementSuccessfulRequestsCount();
                 return CompletableFuture.completedFuture(resp);
             } else if (maxRetries > 0) {
-
                 // Retry case, schedule the retry with a delay
                 CompletableFuture<HttpResponse> delayedRetry = new CompletableFuture<>();
                 scheduler.schedule(() ->
@@ -125,15 +132,39 @@ public class WebRequester {
 
             @Override
             public void failed(Exception ex) {
+                Throwable cause = ex.getCause();
+                if (cause == null) {
+                    cause = ex;
+                }
+                if (cause instanceof ProtocolException) {
+                    if (cause.getMessage().contains("Unexpected response:")) {
+
+                        // extracting the Http StatusLine object from the exception message
+                        Pattern pattern = Pattern.compile("(\\S+?)/(\\d)\\.(\\d) (\\d{3})");
+                        Matcher matcher = pattern.matcher(cause.getMessage());
+
+                        if (matcher.find()) {
+                            String protocol = matcher.group(1);
+                            int protocolVersionMajor = Integer.parseInt(matcher.group(2));
+                            int protocolVersionMinor = Integer.parseInt(matcher.group(3));
+                            int statusCode = Integer.parseInt(matcher.group(4));
+                            ProtocolVersion protocolVersion = new ProtocolVersion(protocol, protocolVersionMajor, protocolVersionMinor);
+
+                            // making the response object and returning it
+                            HttpResponse response = new BasicHttpResponse(protocolVersion, statusCode, null);
+                            response.setEntity(new StringEntity("", HTTP.UTF_8));
+                            responseFuture.complete(response);
+                        }
+
+                    }
+                }
                 responseFuture.completeExceptionally(ex);
             }
-
             @Override
             public void cancelled() {
                 responseFuture.cancel(true);
             }
         });
-
         return responseFuture;
     }
 
@@ -142,8 +173,10 @@ public class WebRequester {
             String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8);
             HttpRequestBase request = null;
 
-            // for now every url gets a slash
-            requestUrl = requestUrl.endsWith("/") ? requestUrl : requestUrl + "/";
+            // for now every url gets a slash except if we're in FUZZ mode
+            if (ArgParse.getRequestMode() != RequestMode.FUZZ) {
+                requestUrl = requestUrl.endsWith("/") ? requestUrl : requestUrl + "/";
+            }
 
             if (!payload.equals(encodedPayload)) {
                 payload = encodedPayload;
@@ -203,6 +236,14 @@ public class WebRequester {
                 }
             }
 
+            if (ArgParse.getCookies() != null) {
+                request.setHeader("Cookie", ArgParse.getCookies());
+            }
+
+            if (ArgParse.getRandomAgent()) {
+                request.setHeader("User-Agent", RandomAgent.get());
+            }
+
             return request;
 
         } catch (IllegalArgumentException e) {
@@ -212,6 +253,7 @@ public class WebRequester {
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
+
         return null;
     }
 
@@ -235,10 +277,14 @@ public class WebRequester {
                 }
             }
 
+
             // set up headers
             for (Map.Entry<String, String>entry : parsedRequest.getHeaders().entrySet()) {
-                assert request != null;
                 request.setHeader(entry.getKey(), entry.getValue());
+            }
+
+            if (ArgParse.getRandomAgent()) {
+                request.setHeader("User-Agent", RandomAgent.get());
             }
 
             return request;
