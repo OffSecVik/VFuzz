@@ -5,7 +5,6 @@ import org.apache.http.ProtocolException;
 import org.apache.http.ProtocolVersion;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.conn.ConnectionKeepAliveStrategy;
 import org.apache.http.entity.StringEntity;
@@ -30,7 +29,7 @@ import java.util.regex.Pattern;
 
 public class WebRequester {
 
-    private static final RateLimiter rateLimiter = new RateLimiter(4000);
+    private static final RateLimiter rateLimiter = new RateLimiter(5000);
 
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 

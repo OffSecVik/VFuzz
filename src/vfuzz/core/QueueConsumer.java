@@ -111,13 +111,11 @@ public class QueueConsumer implements Runnable {
     }
 
     private void sendAndProcessRequest(HttpRequestBase request) {
-        CompletableFuture<HttpResponse> webRequestFuture = WebRequester.sendRequestWithRetry(request, MAX_RETRIES, 50, TimeUnit.MILLISECONDS);
-        webRequestFuture.thenApplyAsync(response -> {
+        WebRequester.sendRequestWithRetry(request, MAX_RETRIES, 50, TimeUnit.MILLISECONDS)
+                .thenApplyAsync(response -> {
             try {
                 successfulRequests.incrementAndGet();
-                //// System.out.println("Successful requests: " + successfulRequests);
                 parseResponse(response, request); // TODO check second argument
-                //System.out.println("Received response for " + payload);
             } catch (Exception e) {
                 // System.err.println("Error processing response for " + response.getStatusLine().getStatusCode() + " response: " + e.getMessage());
             }
