@@ -7,8 +7,8 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.StringEntity;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.core.ArgParse;
+import vfuzz.network.strategy.*;
 import vfuzz.operations.RandomAgent;
-
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -20,85 +20,84 @@ import java.util.Objects;
 
 public class WebRequestFactory {
 
+    public static RequestModeStrategy requestModeStrategy;
+
+    private boolean setRandomAgent;
+
+    static {
+        switch (ConfigAccessor.getConfigValue("requestMode", RequestMode.class)) {
+            case STANDARD -> requestModeStrategy = new RequestModeStrategyStandard();
+            case FUZZ -> requestModeStrategy = new RequestModeStrategyFuzz();
+            case VHOST -> requestModeStrategy = new RequestModeStrategyVhost();
+            case SUBDOMAIN -> requestModeStrategy = new RequestModeStrategySubdomain();
+        }
+    }
+
+    public WebRequestFactory() {
+        buildPrototypeRequest();
+        setRandomAgent = ConfigAccessor.getConfigValue("randomAgent", Boolean.class);
+    }
+
+    private HttpRequestBase prototypeRequest;
+
+    public void buildPrototypeRequest() {
+        // initialize request here and set HTTP Method
+        switch (ConfigAccessor.getConfigValue("requestMethod", RequestMethod.class)) {
+            case GET -> prototypeRequest = new HttpGet();
+            case HEAD -> prototypeRequest = new HttpHead();
+            case POST -> {
+                HttpPost postRequest = new HttpPost();
+                try {
+                    postRequest.setEntity(new StringEntity(ConfigAccessor.getConfigValue("postRequestData", String.class)));
+                } catch (UnsupportedEncodingException e) {
+                    throw new RuntimeException(e);
+                }
+                prototypeRequest = postRequest;
+            }
+        }
+
+        // set up Headers
+        if (!ArgParse.getHeaders().isEmpty()) {
+            for (String header : ArgParse.getHeaders()) {
+                String[] parts = header.split(":", 2); // split at the first colon
+                if (parts.length == 2) {
+                    prototypeRequest.setHeader(parts[0].trim(), parts[1].trim());
+                } else {
+                    System.err.println("Invalid header format while building request: " + header);
+                }
+            }
+        }
+
+        // set up User-Agent
+        if (ConfigAccessor.getConfigValue("userAgent", String.class) != null) {
+            prototypeRequest.setHeader("User-Agent", ConfigAccessor.getConfigValue("userAgent", String.class));
+        }
+
+        // set up cookies
+        if (ConfigAccessor.getConfigValue("cookies", String.class) != null) {
+            prototypeRequest.setHeader("Cookie", ConfigAccessor.getConfigValue("cookies", String.class));
+        }
+    }
+
     public HttpRequestBase buildRequest(String requestUrl, String payload) {
         try {
             String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8);
-            HttpRequestBase request = null;
-
-            // for now every url gets a slash except if we're in FUZZ mode
-            if (ConfigAccessor.getConfigValue("requestMode", RequestMode.class) != RequestMode.FUZZ) {
-                requestUrl = requestUrl.endsWith("/") ? requestUrl : requestUrl + "/";
-            }
 
             if (!payload.equals(encodedPayload)) {
                 payload = encodedPayload;
-                // System.out.println("Encoded \"" + payload + " to \"" + encodedPayload); // debug prints
             }
 
-            // initialize request here and set HTTP Method
-            switch (ConfigAccessor.getConfigValue("requestMethod", RequestMethod.class)) {
-                case GET -> request = new HttpGet(requestUrl);
-                case HEAD -> request = new HttpHead(requestUrl);
-                case POST -> {
-                    HttpPost postRequest = new HttpPost();
-                    postRequest.setEntity(new StringEntity(ConfigAccessor.getConfigValue("postRequestData", String.class)));
-                    request = postRequest;
-                }
+            requestModeStrategy.modifyRequest(prototypeRequest, requestUrl, payload);
+
+            if (setRandomAgent) {
+                prototypeRequest.setHeader("User-Agent", RandomAgent.get());
             }
 
-            // load the payload depending on Mode
-            switch (ConfigAccessor.getConfigValue("requestMode", RequestMode.class)) {
-                case STANDARD -> request.setURI(new URI(requestUrl + payload));
-                case SUBDOMAIN -> {
-
-                    String rebuiltUrl = urlRebuilder(requestUrl, payload);
-                    String vhostUrl = vhostRebuilder(requestUrl, payload);
-                    request.setURI(new URI(rebuiltUrl));
-                    request.setHeader("Host", vhostUrl);
-
-                }
-                case VHOST -> {
-                    // String rebuiltUrl = urlRebuilder(requestUrl, payload);
-                    request.setURI(new URI(requestUrl));
-                    String vhostUrl = vhostRebuilder(requestUrl, payload);
-                    request.setHeader("Host", vhostUrl);
-                    // System.out.println(request.getHeaders("Host").toString());
-                }
-                case FUZZ -> request.setURI(new URI(requestUrl.replaceFirst(ConfigAccessor.getConfigValue("fuzzMarker", String.class), payload)));
-            }
-
-            // set up User-Agent
-            if (ConfigAccessor.getConfigValue("userAgent", String.class) != null) {
-                request.setHeader("User-Agent", ConfigAccessor.getConfigValue("userAgent", String.class));
-            }
-
-            // set up Headers
-            if (!ArgParse.getHeaders().isEmpty()) {
-                for (String header : ArgParse.getHeaders()) {
-                    String[] parts = header.split(":", 2); // split at the first colon
-                    if (parts.length == 2) {
-                        String headerName = parts[0].trim();
-                        String headerValue = parts[1].trim();
-                        request.setHeader(headerName, headerValue);
-                    } else {
-                        System.err.println("Invalid header format while building request: " + header);
-                    }
-                }
-            }
-
-            if (ConfigAccessor.getConfigValue("cookies", String.class) != null) {
-                request.setHeader("Cookie", ConfigAccessor.getConfigValue("cookies", String.class));
-            }
-
-            if (ConfigAccessor.getConfigValue("randomAgent", Boolean.class)) {
-                request.setHeader("User-Agent", RandomAgent.get());
-            }
-
-            return request;
+            return prototypeRequest;
 
         } catch (IllegalArgumentException e) {
             System.err.println("Invalid URI: " + e.getMessage());
-        } catch (UnsupportedEncodingException | URISyntaxException e) {
+        } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
 
@@ -142,24 +141,7 @@ public class WebRequestFactory {
 
     }
 
-    private static String urlRebuilder(String url, String payload) { // rebuilds URL for VHOST and SUBDOMAIN mode
-        String httpPrefix = url.startsWith("https://") ? "https://" : "http://"; // selects which scheme the url starts with.
-        String urlWithoutScheme = url.substring(httpPrefix.length()); // gets everything except the scheme
-        String urlWithoutWww = urlWithoutScheme.startsWith("www") ? urlWithoutScheme.substring(4) : urlWithoutScheme; // cuts "www." if present in the url
-        return httpPrefix + payload + "." + urlWithoutWww; // test this
-    }
 
-    private static String vhostRebuilder(String url, String payload) {
-        String httpPrefix = url.startsWith("https://") ? "https://" : "http://"; // selects which scheme the url starts with.
-        String urlWithoutScheme = url.substring(httpPrefix.length()); // gets everything except the scheme
-        String urlWithoutWww = urlWithoutScheme.startsWith("www") ? urlWithoutScheme.substring(4) : urlWithoutScheme; // cuts "www." if present in the url
-        return payload + "." + removeTrailingSlash(urlWithoutWww); // test this
-    }
 
-    private static String removeTrailingSlash(String url) {
-        if (url != null && url.endsWith("/")) {
-            return url.substring(0, url.length() - 1);
-        }
-        return url;
-    }
+
 }

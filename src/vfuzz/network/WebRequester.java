@@ -86,8 +86,8 @@ public class WebRequester {
             Metrics.incrementRetriesCount();
         }
 
-        CompletableFuture<HttpResponse> attempt = sendRequest(request);
         rateLimiter.awaitToken();
+        CompletableFuture<HttpResponse> attempt = sendRequest(request);
         return attempt.handle((resp, th) -> {
             if (th == null) {
 
