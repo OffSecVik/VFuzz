@@ -11,10 +11,8 @@ import vfuzz.operations.Range;
 import vfuzz.operations.Target;
 
 import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
+import java.util.Set;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 // TECHNICALLY there's no more queue but this still iterates over a wordlist.
@@ -25,11 +23,17 @@ public class QueueConsumer implements Runnable {
     private final WordlistReader wordlistReader;
     private final String url;
     private final ThreadOrchestrator orchestrator;
+    private final ExecutorService executor;
     public static final int MAX_RETRIES = 20; // TODO: move this somewhere it makes sense, it's just here for metrics
-    private final int recursionDepth;
     private volatile boolean running = true;
     private static boolean firstThreadFinished = false;
     private final Target target;
+    private final int recursionDepth;
+    private final boolean recursionEnabled;
+    private final Set<Range> excludedStatusCodes;
+    private final Set<Range> excludedLength;
+    private final boolean vhostMode;
+    private final String baseTargetUrl;
 
     public static final AtomicInteger successfulRequests = new AtomicInteger(); // tracking TOTAL successful requests
 
@@ -38,9 +42,16 @@ public class QueueConsumer implements Runnable {
         activeThreads++;
         this.target = target;
         this.orchestrator = orchestrator;
+        this.executor = orchestrator.getExecutor();
         this.wordlistReader = target.getWordlistReader();
         this.url = target.getUrl();
+        this.recursionEnabled = ConfigAccessor.getConfigValue("recursionEnabled", Boolean.class);
         this.recursionDepth = target.getRecursionDepth();
+        this.excludedStatusCodes = ArgParse.getExcludedStatusCodes();
+        this.excludedLength = ArgParse.getExcludedLength();
+
+        this.vhostMode = ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.VHOST;
+        this.baseTargetUrl = ConfigAccessor.getConfigValue("url", String.class) + "/";
     }
 
     @Override
@@ -64,29 +75,23 @@ public class QueueConsumer implements Runnable {
         }
     }
 
-    @SuppressWarnings("CommentedOutCode")
     private void requestFileMode() {
-        ParsedHttpRequest rawRequest;
+        ParsedHttpRequest prototypeRequest;
+        String payload;
         try {
-            rawRequest = new ParsedHttpRequest().parseHttpRequestFromFile(ConfigAccessor.getConfigValue("requestFilePath", String.class));
+            prototypeRequest = new ParsedHttpRequest().parseHttpRequestFromFile(ConfigAccessor.getConfigValue("requestFilePath", String.class));
         } catch (IOException e) {
             System.err.println("There was an error parsing the request from the file:\n" + e.getMessage());
             return;
         }
         while (running) {
-            String payload = wordlistReader.getNextPayload();
+            payload = wordlistReader.getNextPayload();
             if (payload == null) {
                 reachedEndOfWordlist();
-                /*
-                Target.removeTargetFromList(url); //
-                orchestrator.removeTargetFromList(url);
-                if (ConfigAccessor.getConfigValue("recursionEnabled", Boolean.class)) {
-                    orchestrator.redistributeThreads();
-                }
-                 */
                 break;
             }
-            ParsedHttpRequest rawCopy = new ParsedHttpRequest(rawRequest);
+
+            ParsedHttpRequest rawCopy = new ParsedHttpRequest(prototypeRequest);
             HttpRequestBase request = WebRequester.buildRequestFromFile(rawCopy, payload);
             sendAndProcessRequest(request);
         }
@@ -103,8 +108,7 @@ public class QueueConsumer implements Runnable {
 
     private void sendAndProcessRequest(HttpRequestBase request) {
         CompletableFuture<HttpResponse> webRequestFuture = WebRequester.sendRequestWithRetry(request, MAX_RETRIES, 50, TimeUnit.MILLISECONDS);
-        orchestrator.addTask(webRequestFuture);
-        CompletableFuture<Void> task = webRequestFuture.thenApplyAsync(response -> {
+        webRequestFuture.thenApplyAsync(response -> {
             try {
                 successfulRequests.incrementAndGet();
                 //// System.out.println("Successful requests: " + successfulRequests);
@@ -114,40 +118,30 @@ public class QueueConsumer implements Runnable {
                 // System.err.println("Error processing response for " + response.getStatusLine().getStatusCode() + " response: " + e.getMessage());
             }
             return response;
-        }, orchestrator.getExecutor()).thenRun(() -> {
-            // This block is executed after processing the response
-            //System.out.println("Completed request with payload " + payload);
-        }).exceptionally(ex -> {
-            Throwable rootCause = ex instanceof CompletionException ? ex.getCause() : ex; // checking if we have a wrapped exception for the line below
-            if (!(rootCause instanceof RejectedExecutionException) && orchestrator.isShutdown()) { // this should only occur if we're in the shutdown hook, it's done to prevent terminal clogging
-                System.err.println("Exception for request " + request.getURI().toString() + ": " + ex.getMessage());
-            }
-            return null;
-        });
+        }, executor)
+        .exceptionally(ex -> null);
     }
 
     private void parseResponse(HttpResponse response, HttpRequestBase request) {
         // checking for the most likely exclusion conditions first to return quickly if the response is not a match. this is done to improve performance.
         // it also means we chain if conditions. not pretty, but performant?
 
-
         int responseCode = response.getStatusLine().getStatusCode();
-        for (Range range : ArgParse.getExcludedStatusCodes()) {
+        for (Range range : excludedStatusCodes) {
             if (range.contains(responseCode)) {
                 return;
             }
         }
 
-
         int responseContentLength = (int)response.getEntity().getContentLength();
-        for (Range range : ArgParse.getExcludedLength()) {
+        for (Range range : excludedLength) {
             if (range.contains(responseContentLength)) {
                 return;
             }
         }
 
         String requestUrl;
-        if (ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.VHOST) { // setting the requestUrl to the vhost value for simplicity
+        if (vhostMode) { // setting the requestUrl to the vhost value for simplicity
             requestUrl = request.getHeaders("HOST")[0].getValue(); // simply setting the requestUrl (which never changes in vhost mode) to the header value (which is the interesting field)
         } else {
             requestUrl = request.getURI().toString();
@@ -165,7 +159,7 @@ public class QueueConsumer implements Runnable {
 
         // preparing this target for recursion:
         boolean thisIsRecursiveTarget = false;
-        if (ConfigAccessor.getConfigValue("recursionEnabled", Boolean.class)) { // checking for a redundant hit which would make recursion fork every time it's encountered, e.g. "google.com" and "google.com/" (the trailing slash!)
+        if (recursionEnabled) { // checking for a redundant hit which would make recursion fork every time it's encountered, e.g. "google.com" and "google.com/" (the trailing slash!)
             if (recursionRedundancyCheck(requestUrl)) {
                 thisIsRecursiveTarget = true;
             }
@@ -181,7 +175,7 @@ public class QueueConsumer implements Runnable {
     }
 
     private boolean recursionRedundancyCheck(String url) { // TODO rethink this method and why we need it
-        if (url.equals(ConfigAccessor.getConfigValue("url", String.class) + "/")) { // this does fix the initial forking
+        if (url.equals(baseTargetUrl)) { // this does fix the initial forking
             return false;
         }
         for (Hit hit : Hit.getHits()) {

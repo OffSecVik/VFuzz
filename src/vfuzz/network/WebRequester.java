@@ -280,7 +280,6 @@ public class WebRequester {
                 }
             }
 
-
             // set up headers
             for (Map.Entry<String, String>entry : parsedRequest.getHeaders().entrySet()) {
                 Objects.requireNonNull(request).setHeader(entry.getKey(), entry.getValue());

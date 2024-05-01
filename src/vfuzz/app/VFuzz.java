@@ -25,8 +25,9 @@ public class VFuzz {
         String wordlistPath = ConfigAccessor.getConfigValue("wordlistPath", String.class);
 
         ThreadOrchestrator orchestrator = new ThreadOrchestrator(wordlistPath, threadCount + 19);
+
         Metrics.startMetrics();
+
         orchestrator.startFuzzing();
-        orchestrator.awaitCompletion();
     }
 }

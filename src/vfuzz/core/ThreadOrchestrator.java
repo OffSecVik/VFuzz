@@ -1,6 +1,5 @@
 package vfuzz.core;
 
-import org.apache.http.HttpResponse;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.operations.Target;
 import vfuzz.logging.TerminalOutput;
@@ -11,28 +10,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class ThreadOrchestrator {
 
     private final String wordlistPath;
-    private final AtomicInteger activeTasks = new AtomicInteger(0);
-    private final List<CompletableFuture<HttpResponse>> tasks = new CopyOnWriteArrayList<>();
     private ExecutorService executor;
     private final int THREAD_COUNT;
     private final ConcurrentHashMap<Target, List<QueueConsumer>> consumerTasks = new ConcurrentHashMap<>();
 
-    public ExecutorService getExecutor() {
-        return executor;
-    }
-
-    public void addTask(CompletableFuture<HttpResponse> task) {
-        tasks.add(task);
-    }
-
     public ThreadOrchestrator(String wordlistPath, int threadLimit) {
         this.wordlistPath = wordlistPath;
         this.THREAD_COUNT = threadLimit;
+    }
+
+    public ExecutorService getExecutor() {
+        return executor;
     }
 
     public void startFuzzing() {
@@ -151,9 +143,6 @@ public class ThreadOrchestrator {
         printActiveThreadsByTarget();
     }
 
-    public void awaitCompletion() {
-        CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).join();
-    }
 
     public void redistributeThreads() { // assuming our original target will finish first, and we can now evenly redistribute threads
         allocateThreads();
