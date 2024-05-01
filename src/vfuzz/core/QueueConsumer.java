@@ -35,9 +35,6 @@ public class QueueConsumer implements Runnable {
     private final Set<Range> excludedLength;
     private final boolean vhostMode;
     private final String baseTargetUrl;
-
-    public static final AtomicInteger successfulRequests = new AtomicInteger(); // tracking TOTAL successful requests
-
     private final WebRequestFactory webRequestFactory;
 
     public QueueConsumer(ThreadOrchestrator orchestrator, Target target) {
@@ -114,8 +111,7 @@ public class QueueConsumer implements Runnable {
         WebRequester.sendRequestWithRetry(request, MAX_RETRIES, 50, TimeUnit.MILLISECONDS)
                 .thenApplyAsync(response -> {
             try {
-                successfulRequests.incrementAndGet();
-                parseResponse(response, request); // TODO check second argument
+                parseResponse(response, request);
             } catch (Exception e) {
                 // System.err.println("Error processing response for " + response.getStatusLine().getStatusCode() + " response: " + e.getMessage());
             }

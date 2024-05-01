@@ -6,6 +6,7 @@ import vfuzz.config.ConfigManager;
 import vfuzz.core.ArgParse;
 import vfuzz.core.ThreadOrchestrator;
 import vfuzz.logging.Metrics;
+import vfuzz.network.WebRequester;
 
 public class VFuzz {
     public static void main(String[] args) {
@@ -25,6 +26,8 @@ public class VFuzz {
         String wordlistPath = ConfigAccessor.getConfigValue("wordlistPath", String.class);
 
         ThreadOrchestrator orchestrator = new ThreadOrchestrator(wordlistPath, threadCount + 19);
+
+        WebRequester.initialize(); // NOP method to activate the static initializer of WebRequester. Done to better read the performance profiler output.
 
         Metrics.startMetrics();
 

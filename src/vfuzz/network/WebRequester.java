@@ -16,6 +16,7 @@ import org.apache.http.impl.nio.reactor.IOReactorConfig;
 import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.nio.reactor.ConnectingIOReactor;
 import org.apache.http.nio.reactor.IOReactorException;
+import vfuzz.config.ConfigAccessor;
 import vfuzz.core.QueueConsumer;
 import vfuzz.logging.Metrics;
 import java.nio.charset.StandardCharsets;
@@ -29,13 +30,17 @@ import java.util.regex.Pattern;
 
 public class WebRequester {
 
-    private static final RateLimiter rateLimiter = new RateLimiter(5000);
+    private static final RateLimiter rateLimiter;
 
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     private static final CloseableHttpAsyncClient client;
 
+    public static void initialize() {}
+
     static {
+        rateLimiter = new RateLimiter(ConfigAccessor.getConfigValue("rateLimit", Integer.class));
+
         System.setProperty("networkaddress.cache.ttl", "60");
         System.setProperty("networkaddress.cache.negative.ttl", "10");
 
