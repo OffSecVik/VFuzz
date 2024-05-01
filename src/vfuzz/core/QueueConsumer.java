@@ -5,6 +5,7 @@ import org.apache.http.client.methods.HttpRequestBase;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.network.ParsedHttpRequest;
 import vfuzz.network.RequestMode;
+import vfuzz.network.WebRequestFactory;
 import vfuzz.network.WebRequester;
 import vfuzz.operations.Hit;
 import vfuzz.operations.Range;
@@ -37,6 +38,7 @@ public class QueueConsumer implements Runnable {
 
     public static final AtomicInteger successfulRequests = new AtomicInteger(); // tracking TOTAL successful requests
 
+    private final WebRequestFactory webRequestFactory;
 
     public QueueConsumer(ThreadOrchestrator orchestrator, Target target) {
         activeThreads++;
@@ -52,6 +54,8 @@ public class QueueConsumer implements Runnable {
 
         this.vhostMode = ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.VHOST;
         this.baseTargetUrl = ConfigAccessor.getConfigValue("url", String.class) + "/";
+
+        this.webRequestFactory = new WebRequestFactory();
     }
 
     @Override
@@ -70,7 +74,7 @@ public class QueueConsumer implements Runnable {
                 reachedEndOfWordlist();
                 break;
             }
-            HttpRequestBase request = WebRequester.buildRequest(url, payload);
+            HttpRequestBase request = webRequestFactory.buildRequest(url, payload);
             sendAndProcessRequest(request);
         }
     }
@@ -92,7 +96,7 @@ public class QueueConsumer implements Runnable {
             }
 
             ParsedHttpRequest rawCopy = new ParsedHttpRequest(prototypeRequest);
-            HttpRequestBase request = WebRequester.buildRequestFromFile(rawCopy, payload);
+            HttpRequestBase request = webRequestFactory.buildRequestFromFile(rawCopy, payload);
             sendAndProcessRequest(request);
         }
     }
