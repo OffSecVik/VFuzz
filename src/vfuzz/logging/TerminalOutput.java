@@ -58,7 +58,7 @@ public class TerminalOutput implements Runnable {
 
     public void updateMetrics() {
         System.out.println("---------------------------------------------------------");
-        System.out.println("Rate Limit: " + WebRequester.getRateLimiter().getRateLimit());
+        System.out.println("Rate Limit: " + WebRequester.getRateLimiter().getRateLimitPerSecond());
         System.out.println("Attempted Requests per Second: \t\t" + (int)Metrics.getRequestsPerSecond());
         System.out.println("Successful requests per Second: \t" + (int)Metrics.getSuccessfulRequestsPerSecond());
         System.out.println("Retries per Second: \t\t\t\t" + (int)Metrics.getRetriesPerSecond());
