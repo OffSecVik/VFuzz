@@ -73,10 +73,6 @@ public class Metrics {
             retryRate = 0;
         }
 
-
-
-
-
         /*
         // dynamic logic for failure and retries:
         if (failureRate > 0.1 || retryRate > 0.2) { // throttle conditions: 10% of requests fail OR 20% of requests are retries

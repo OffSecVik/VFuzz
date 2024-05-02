@@ -59,9 +59,9 @@ public class TerminalOutput implements Runnable {
     public void updateMetrics() {
         System.out.println("---------------------------------------------------------");
         System.out.println("Rate Limit: " + WebRequester.getRateLimiter().getRateLimit());
-        System.out.println("Attempted Requests per Second: " + (int)Metrics.getRequestsPerSecond());
-        System.out.println("Successful requests per Second: " + (int)Metrics.getSuccessfulRequestsPerSecond());
-        System.out.println("Retries per Second: " + (int)Metrics.getRetriesPerSecond());
+        System.out.println("Attempted Requests per Second: \t\t" + (int)Metrics.getRequestsPerSecond());
+        System.out.println("Successful requests per Second: \t" + (int)Metrics.getSuccessfulRequestsPerSecond());
+        System.out.println("Retries per Second: \t\t\t\t" + (int)Metrics.getRetriesPerSecond());
         System.out.println("\tfailure rate: " + String.format("%.3f", Metrics.getFailureRate()*100) + "%\t\tretry rate: " + String.format("%.3f", Metrics.getRetryRate()*100) + "%"); // print the rates in percent
         System.out.println();
     }

@@ -84,6 +84,7 @@ public class ThreadOrchestrator {
         // System.out.println("Total threads " + availableThreads + " remaining threads " + extraThreads);
         for (int i = helper; i < activeTargets; i++) {
             allocatedThreads[i] = (availableThreads / (activeTargets - helper));
+            // allocatedThreads[i] = Math.max((availableThreads / (activeTargets - helper)), 1); // this is the implementation for non-conservative recursive fuzzing where each new target gets one baseline thread
         }
         int index = 0;
         while (extraThreads > 0) {

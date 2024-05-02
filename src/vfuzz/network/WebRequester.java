@@ -18,7 +18,10 @@ import org.apache.http.nio.reactor.ConnectingIOReactor;
 import org.apache.http.nio.reactor.IOReactorException;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.logging.Metrics;
+
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -34,6 +37,8 @@ public class WebRequester {
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     private static final CloseableHttpAsyncClient client;
+
+    private static final Random random = new Random();
 
     public static void initialize() {}
 
@@ -58,7 +63,7 @@ public class WebRequester {
 
         PoolingNHttpClientConnectionManager connManager = new PoolingNHttpClientConnectionManager(ioReactor);
         connManager.setMaxTotal(10000);
-        connManager.setDefaultMaxPerRoute(200);
+        connManager.setDefaultMaxPerRoute(2000);
         ConnectionKeepAliveStrategy keepAliveStrategy = (response, context) -> {
             return 5 * 1000; // keep alive for 5 seconds
         };
@@ -80,23 +85,20 @@ public class WebRequester {
 
     public static CompletableFuture<HttpResponse> sendRequestWithRetry(HttpRequestBase request, int maxRetries, long delay, TimeUnit unit) { // TODO decide whether to pass the delay as argument or have it as a static variable / ConfigManager setting
         rateLimiter.awaitToken();
+        CompletableFuture<HttpResponse> attemptedRequest = sendRequest(request);
 
-        CompletableFuture<HttpResponse> attempt = sendRequest(request);
-
-        return attempt.handle((resp, th) -> {
+        return attemptedRequest.handle((resp, th) -> {
             Metrics.incrementRequestsCount();
             if (th == null) {
                 // Success case, return the response
                 Metrics.incrementSuccessfulRequestsCount();
-                //WebRequester.getRateLimiter().setRateLimit(WebRequester.getRateLimiter().getRateLimit() + 1);
                 return CompletableFuture.completedFuture(resp);
             } else if (maxRetries > 0) {
-                //WebRequester.getRateLimiter().setRateLimit(Math.max(1000, WebRequester.getRateLimiter().getRateLimit() - 1));
                 // Retry case, schedule the retry with a delay
                 Metrics.incrementRetriesCount();
                 CompletableFuture<HttpResponse> delayedRetry = new CompletableFuture<>();
                 scheduler.schedule(() ->
-                                sendRequestWithRetry(request, maxRetries - 1, 250, unit).whenComplete((retryResp, retryTh) -> {
+                                sendRequestWithRetry(request, maxRetries - 1, random.nextInt((int) delay), unit).whenComplete((retryResp, retryTh) -> {
                                     if (retryTh == null) {
                                         delayedRetry.complete(retryResp);
                                     } else {
@@ -152,6 +154,47 @@ public class WebRequester {
         return responseFuture;
     }
 
+    public static CompletableFuture<HttpResponse> sendRequestWithJitter(HttpRequestBase request) {
+        CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+
+        CompletableFuture.delayedExecutor(random.nextInt(500), TimeUnit.MILLISECONDS)
+                .execute(() -> {
+                    client.execute(request, new FutureCallback<>() {
+                        @Override
+                        public void completed(HttpResponse response) {
+                            responseFuture.complete(response);
+                        }
+
+                        @Override
+                        public void failed(Exception ex) {
+                            Throwable cause = ex.getCause();
+                            if (cause == null) {
+                                cause = ex;
+                            }
+                            if (cause instanceof ProtocolException) {
+                                if (cause.getMessage().contains("Unexpected response:")) {
+                                    // Extracting the Http StatusLine object from the exception message
+                                    Pattern pattern = Pattern.compile("(\\S+?)/(\\d)\\.(\\d) (\\d{3})");
+                                    Matcher matcher = pattern.matcher(cause.getMessage());
+                                    if (matcher.find()) {
+                                        HttpResponse response = getHttpResponse(matcher);
+                                        responseFuture.complete(response);
+                                        return;
+                                    }
+                                }
+                            }
+                            responseFuture.completeExceptionally(ex);
+                        }
+                        @Override
+                        public void cancelled() {
+                            responseFuture.cancel(true);
+                        }
+                    });
+                });
+
+        return responseFuture;
+    }
+
     private static HttpResponse getHttpResponse(Matcher matcher) {
         String protocol = matcher.group(1);
         int protocolVersionMajor = Integer.parseInt(matcher.group(2));
@@ -167,5 +210,9 @@ public class WebRequester {
 
     public static RateLimiter getRateLimiter() {
         return rateLimiter;
+    }
+
+    public static void setRateLimit(int i) {
+        rateLimiter.setRateLimit(i);
     }
 }

@@ -24,7 +24,7 @@ public class VFuzz {
         int threadCount = ConfigAccessor.getConfigValue("threadCount", Integer.class);
         String wordlistPath = ConfigAccessor.getConfigValue("wordlistPath", String.class);
 
-        ThreadOrchestrator orchestrator = new ThreadOrchestrator(wordlistPath, threadCount + 19);
+        ThreadOrchestrator orchestrator = new ThreadOrchestrator(wordlistPath, threadCount);
 
         WebRequester.initialize(); // NOP method to activate the static initializer of WebRequester. Done to better read the performance profiler output.
 

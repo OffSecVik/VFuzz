@@ -1,5 +1,8 @@
 	NEXT STEPS
 
+> Currently with a single thread and recursive mode, new recursive targets receive 0 threads.
+    Rethink if this conservative approach is favorable over giving each new target 1 new thread, independent of the specified thread count by the user.
+
 > Consider if we want compatibility between FileRequest mode and -H flag (and other flags) and if not, determine how to handle the user specifying both
 
 > FIX Headers in ArgParse (currently completely skips ConfigManager and simply adds headers to a static HashSet as a workaround)

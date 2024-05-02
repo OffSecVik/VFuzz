@@ -11,7 +11,7 @@ public class RateLimiter {
     public RateLimiter(int refillRatePerSecond) {
         this.maxTokens = refillRatePerSecond;
         this.refillRatePerSecond = refillRatePerSecond;
-        this.availableTokens = maxTokens;
+        this.availableTokens = 0;
         this.lastRefillTimestamp = System.currentTimeMillis();
     }
 

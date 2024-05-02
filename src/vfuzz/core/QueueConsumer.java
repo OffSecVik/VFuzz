@@ -119,7 +119,7 @@ public class QueueConsumer implements Runnable {
     }
 
     private void sendAndProcessRequest(HttpRequestBase request) {
-        WebRequester.sendRequestWithRetry(request, MAX_RETRIES, 100, TimeUnit.MILLISECONDS)
+        WebRequester.sendRequestWithRetry(request, MAX_RETRIES, 250, TimeUnit.MILLISECONDS)
                 .thenApplyAsync(response -> {
             try {
                 parseResponse(response, request);
@@ -157,8 +157,6 @@ public class QueueConsumer implements Runnable {
         if (isExcluded(requestUrl)) {
             return;
         }
-
-
 
         // checking for double hit:
         for (Hit hit : Hit.getHits()) {
