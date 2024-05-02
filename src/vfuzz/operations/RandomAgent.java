@@ -31,8 +31,7 @@ public class RandomAgent {
         }
     }
 
-
-        public static String get() {
-            return lines.get(random.nextInt(lines.size()));
-        }
+    public static String get() {
+        return lines.get(random.nextInt(lines.size()));
+    }
 }

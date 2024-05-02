@@ -12,6 +12,9 @@ import vfuzz.operations.Range;
 import vfuzz.operations.Target;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
 
@@ -35,6 +38,7 @@ public class QueueConsumer implements Runnable {
     private final boolean vhostMode;
     private final String baseTargetUrl;
     private final WebRequestFactory webRequestFactory;
+    private final List<String> excludedResults;
 
     public QueueConsumer(ThreadOrchestrator orchestrator, Target target) {
         activeThreads++;
@@ -47,6 +51,14 @@ public class QueueConsumer implements Runnable {
         this.recursionDepth = target.getRecursionDepth();
         this.excludedStatusCodes = ArgParse.getExcludedStatusCodes();
         this.excludedLength = ArgParse.getExcludedLength();
+
+        String excludedResults = ConfigAccessor.getConfigValue("excludedResults", String.class);
+        if (excludedResults != null) {
+            this.excludedResults = Arrays.stream((excludedResults).split(",")).toList();
+        } else {
+            this.excludedResults = null;
+        }
+
 
         this.vhostMode = ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.VHOST;
         this.baseTargetUrl = ConfigAccessor.getConfigValue("url", String.class) + "/";
@@ -142,6 +154,12 @@ public class QueueConsumer implements Runnable {
             requestUrl = request.getURI().toString();
         }
 
+        if (isExcluded(requestUrl)) {
+            return;
+        }
+
+
+
         // checking for double hit:
         for (Hit hit : Hit.getHits()) {
             if (hit.url().equals(requestUrl)) {
@@ -169,6 +187,21 @@ public class QueueConsumer implements Runnable {
             }
         }
         return true; // we have a new and unique target!
+    }
+
+    private boolean isExcluded(String url) {
+        if (excludedResults == null) {
+            return false;
+        }
+        int lastSlashIndex = url.lastIndexOf('/');
+        String subdomain = url.substring(lastSlashIndex + 1);
+        for (String result : excludedResults) {
+            if (result.equals(subdomain)) {
+                System.out.println("Excluded " + subdomain + " successfully!");
+                return true;
+            }
+        }
+        return false;
     }
 
     public static boolean isFirstThreadFinished() {

@@ -47,6 +47,16 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
+                "--excludeResult", "-E", "excludedResults",
+                (cm, value) -> cm.setConfigValue("excludedResults", value),
+                value -> true,
+                "Results to exclude from being shown and used in recursive mode.",
+                true,
+                null,
+                false
+        ));
+
+        configManager.registerArgument(new CommandLineArgument(
                 "--excludeStatusCodes", "-e", "excludedStatusCodes",
                 (cm, value) -> {
                     String[] parts = value.split(",");
@@ -164,8 +174,6 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-
-
                 "--max-retries", "", "maxRetries",
                 (cm, value) -> {
                     try {
