@@ -19,7 +19,6 @@ import org.apache.http.nio.reactor.IOReactorException;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.logging.Metrics;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
@@ -80,38 +79,38 @@ public class WebRequester {
                 .setRedirectStrategy(new CustomRedirectStrategy())
                 .build();
         client.start();
-    } // here we initialize the HttpAsyncClient and set its settings.
+    }
 
 
     public static CompletableFuture<HttpResponse> sendRequestWithRetry(HttpRequestBase request, int maxRetries, long delay, TimeUnit unit) { // TODO decide whether to pass the delay as argument or have it as a static variable / ConfigManager setting
         rateLimiter.awaitToken();
         CompletableFuture<HttpResponse> attemptedRequest = sendRequest(request);
 
-        return attemptedRequest.handle((resp, th) -> {
+        return attemptedRequest.handle((response, throwable) -> {
             Metrics.incrementRequestsCount();
-            if (th == null) {
-                // Success case, return the response
+
+            if (throwable == null) { // Success case, return the response
                 Metrics.incrementSuccessfulRequestsCount();
-                return CompletableFuture.completedFuture(resp);
-            } else if (maxRetries > 0) {
-                // Retry case, schedule the retry with a delay
+                return CompletableFuture.completedFuture(response);
+
+            } else if (maxRetries > 0) { // Retry case, schedule the retry with a delay
                 Metrics.incrementRetriesCount();
                 CompletableFuture<HttpResponse> delayedRetry = new CompletableFuture<>();
-                scheduler.schedule(() ->
-                                sendRequestWithRetry(request, maxRetries - 1, random.nextInt((int) delay), unit).whenComplete((retryResp, retryTh) -> {
-                                    if (retryTh == null) {
-                                        delayedRetry.complete(retryResp);
+                scheduler.schedule(() -> sendRequestWithRetry(request, maxRetries - 1, random.nextInt((int) delay), unit)
+                                        .whenComplete((retryResponse, retryThrowable) -> {
+                                    if (retryThrowable == null) {
+                                        delayedRetry.complete(retryResponse);
                                     } else {
-                                        delayedRetry.completeExceptionally(retryTh);
+                                        delayedRetry.completeExceptionally(retryThrowable);
                                     }
                                 }),
                         delay, unit
                 );
                 return delayedRetry;
-            } else {
-                // Failure case, no retries left
+
+            } else { // Failure case, no retries left
                 CompletableFuture<HttpResponse> failed = new CompletableFuture<>();
-                failed.completeExceptionally(th);
+                failed.completeExceptionally(throwable);
                 return failed;
             }
         }).thenCompose(Function.identity());
@@ -120,6 +119,22 @@ public class WebRequester {
     public static CompletableFuture<HttpResponse> sendRequest(HttpRequestBase request) {
         CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
 
+        executeRequest(request, responseFuture);
+        return responseFuture;
+    }
+
+    public static CompletableFuture<HttpResponse> sendRequestWithJitter(HttpRequestBase request) {
+        CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+
+        CompletableFuture.delayedExecutor(random.nextInt(500), TimeUnit.MILLISECONDS)
+                .execute(() -> {
+                    executeRequest(request, responseFuture);
+                });
+
+        return responseFuture;
+    }
+
+    private static void executeRequest(HttpRequestBase request, CompletableFuture<HttpResponse> responseFuture) {
         client.execute(request, new FutureCallback<>() {
             @Override
             public void completed(HttpResponse response) {
@@ -138,7 +153,7 @@ public class WebRequester {
                         Pattern pattern = Pattern.compile("(\\S+?)/(\\d)\\.(\\d) (\\d{3})");
                         Matcher matcher = pattern.matcher(cause.getMessage());
                         if (matcher.find()) {
-                            HttpResponse response = getHttpResponse(matcher);
+                            HttpResponse response = createHttpResponseFromException(matcher);
                             responseFuture.complete(response);
                             return;
                         }
@@ -151,58 +166,15 @@ public class WebRequester {
                 responseFuture.cancel(true);
             }
         });
-        return responseFuture;
     }
 
-    public static CompletableFuture<HttpResponse> sendRequestWithJitter(HttpRequestBase request) {
-        CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-
-        CompletableFuture.delayedExecutor(random.nextInt(500), TimeUnit.MILLISECONDS)
-                .execute(() -> {
-                    client.execute(request, new FutureCallback<>() {
-                        @Override
-                        public void completed(HttpResponse response) {
-                            responseFuture.complete(response);
-                        }
-
-                        @Override
-                        public void failed(Exception ex) {
-                            Throwable cause = ex.getCause();
-                            if (cause == null) {
-                                cause = ex;
-                            }
-                            if (cause instanceof ProtocolException) {
-                                if (cause.getMessage().contains("Unexpected response:")) {
-                                    // Extracting the Http StatusLine object from the exception message
-                                    Pattern pattern = Pattern.compile("(\\S+?)/(\\d)\\.(\\d) (\\d{3})");
-                                    Matcher matcher = pattern.matcher(cause.getMessage());
-                                    if (matcher.find()) {
-                                        HttpResponse response = getHttpResponse(matcher);
-                                        responseFuture.complete(response);
-                                        return;
-                                    }
-                                }
-                            }
-                            responseFuture.completeExceptionally(ex);
-                        }
-                        @Override
-                        public void cancelled() {
-                            responseFuture.cancel(true);
-                        }
-                    });
-                });
-
-        return responseFuture;
-    }
-
-    private static HttpResponse getHttpResponse(Matcher matcher) {
+    private static HttpResponse createHttpResponseFromException(Matcher matcher) {
         String protocol = matcher.group(1);
         int protocolVersionMajor = Integer.parseInt(matcher.group(2));
         int protocolVersionMinor = Integer.parseInt(matcher.group(3));
         int statusCode = Integer.parseInt(matcher.group(4));
         ProtocolVersion protocolVersion = new ProtocolVersion(protocol, protocolVersionMajor, protocolVersionMinor);
 
-        // Making the response object and returning it
         HttpResponse response = new BasicHttpResponse(protocolVersion, statusCode, null);
         response.setEntity(new StringEntity("", StandardCharsets.UTF_8));
         return response;
