@@ -1,6 +1,6 @@
-package vfuzz.network;
+package vfuzz.network.ratelimiter;
 
-public class RateLimiter {
+public class RateLimiterTokenBucket {
 
     private int maxTokens;
     private int refillRatePerSecond;
@@ -8,7 +8,7 @@ public class RateLimiter {
     private long lastRefillTimestamp;
     private boolean enabled = true; // TODO: don't forget you enabled this by default!
 
-    public RateLimiter(int refillRatePerSecond) {
+    public RateLimiterTokenBucket(int refillRatePerSecond) {
         this.maxTokens = refillRatePerSecond;
         this.refillRatePerSecond = refillRatePerSecond;
         this.availableTokens = 0;
