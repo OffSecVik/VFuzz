@@ -17,8 +17,7 @@ public class VFuzz {
         ArgParse.registerArguments();
 
         configManager.processArguments(args);
-
-        // configManager.verifyRequiredArguments(); // TODO: Fix verifyRequiredArguments
+        configManager.verifyRequiredArguments(); // TODO: Check if work!
 
         ConfigurationPrinter.printConfiguration();
 
