@@ -14,7 +14,6 @@ import vfuzz.operations.Target;
 import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 // TECHNICALLY there's no more queue but this still iterates over a wordlist.
 public class QueueConsumer implements Runnable {
@@ -108,7 +107,7 @@ public class QueueConsumer implements Runnable {
     }
 
     private void sendAndProcessRequest(HttpRequestBase request) {
-        WebRequester.sendRequestWithRetry(request, MAX_RETRIES, 50, TimeUnit.MILLISECONDS)
+        WebRequester.sendRequestWithRetry(request, MAX_RETRIES, 100, TimeUnit.MILLISECONDS)
                 .thenApplyAsync(response -> {
             try {
                 parseResponse(response, request);
@@ -121,8 +120,6 @@ public class QueueConsumer implements Runnable {
     }
 
     private void parseResponse(HttpResponse response, HttpRequestBase request) {
-        // checking for the most likely exclusion conditions first to return quickly if the response is not a match. this is done to improve performance.
-        // it also means we chain if conditions. not pretty, but performant?
 
         int responseCode = response.getStatusLine().getStatusCode();
         for (Range range : excludedStatusCodes) {
@@ -155,33 +152,23 @@ public class QueueConsumer implements Runnable {
             }
         }
 
-        // preparing this target for recursion:
-        boolean thisIsRecursiveTarget = false;
-        if (recursionEnabled) { // checking for a redundant hit which would make recursion fork every time it's encountered, e.g. "google.com" and "google.com/" (the trailing slash!)
-            if (recursionRedundancyCheck(requestUrl)) {
-                thisIsRecursiveTarget = true;
-            }
-        }
-
-        // TODO: make Hit object take a HttpRequest as argument, this way we could retain more information?
-
-        new Hit(requestUrl, response.getStatusLine().getStatusCode(), (int)response.getEntity().getContentLength());
-
-        if (thisIsRecursiveTarget) {
+        new Hit(requestUrl, responseCode, responseContentLength); // Idea: make Hit object take a HttpRequest as argument, this way we could retain more information?
+        System.out.println("Hit for " + request + " : " + responseCode);
+        if (recursionEnabled && isRecursiveTarget(requestUrl)) {
             orchestrator.initiateRecursion(requestUrl, recursionDepth);
         }
     }
 
-    private boolean recursionRedundancyCheck(String url) { // TODO rethink this method and why we need it
+    private boolean isRecursiveTarget(String url) { // TODO rethink this method and why we need it
         if (url.equals(baseTargetUrl)) { // this does fix the initial forking
             return false;
         }
-        for (Hit hit : Hit.getHits()) {
+        for (Hit hit : Hit.getHits()) { // checking for a redundant hit which would make recursion fork every time it's encountered, e.g. "google.com" and "google.com/" (the trailing slash!)
             if (hit.url().equals(url + "/") || (hit.url() + "/").equals(url)) {
                 return false;
             }
         }
-        return true; // true means passed the check
+        return true; // we have a new and unique target!
     }
 
     public static boolean isFirstThreadFinished() {

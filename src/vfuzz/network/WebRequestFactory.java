@@ -7,10 +7,11 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.StringEntity;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.core.ArgParse;
-import vfuzz.network.strategy.*;
+import vfuzz.network.strategy.requestmethod.*;
+import vfuzz.network.strategy.requestmode.*;
 import vfuzz.operations.RandomAgent;
+
 import java.io.UnsupportedEncodingException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -20,9 +21,12 @@ import java.util.Objects;
 
 public class WebRequestFactory {
 
-    public static RequestModeStrategy requestModeStrategy;
+    private static RequestModeStrategy requestModeStrategy;
+    private static RequestMethodStrategy requestMethodStrategy;
 
-    private boolean setRandomAgent;
+    private final boolean isUserAgentRandomizationEnabled;
+
+    private HttpRequestBase prototypeRequest;
 
     static {
         switch (ConfigAccessor.getConfigValue("requestMode", RequestMode.class)) {
@@ -31,30 +35,22 @@ public class WebRequestFactory {
             case VHOST -> requestModeStrategy = new RequestModeStrategyVhost();
             case SUBDOMAIN -> requestModeStrategy = new RequestModeStrategySubdomain();
         }
+        switch (ConfigAccessor.getConfigValue("requestMethod", RequestMethod.class)) {
+            case GET -> requestMethodStrategy = new RequestMethodStrategyGET();
+            case HEAD -> requestMethodStrategy = new RequestMethodStrategyHEAD();
+            case POST -> requestMethodStrategy = new RequestMethodStrategyPOST();
+        }
     }
 
     public WebRequestFactory() {
         buildPrototypeRequest();
-        setRandomAgent = ConfigAccessor.getConfigValue("randomAgent", Boolean.class);
+        isUserAgentRandomizationEnabled = ConfigAccessor.getConfigValue("randomAgent", Boolean.class);
+
     }
 
-    private HttpRequestBase prototypeRequest;
-
     public void buildPrototypeRequest() {
-        // initialize request here and set HTTP Method
-        switch (ConfigAccessor.getConfigValue("requestMethod", RequestMethod.class)) {
-            case GET -> prototypeRequest = new HttpGet();
-            case HEAD -> prototypeRequest = new HttpHead();
-            case POST -> {
-                HttpPost postRequest = new HttpPost();
-                try {
-                    postRequest.setEntity(new StringEntity(ConfigAccessor.getConfigValue("postRequestData", String.class)));
-                } catch (UnsupportedEncodingException e) {
-                    throw new RuntimeException(e);
-                }
-                prototypeRequest = postRequest;
-            }
-        }
+        // initialize request and set HTTP method
+        prototypeRequest = requestMethodStrategy.createPrototypeRequest();
 
         // set up Headers
         if (!ArgParse.getHeaders().isEmpty()) {
@@ -87,13 +83,15 @@ public class WebRequestFactory {
                 payload = encodedPayload;
             }
 
-            requestModeStrategy.modifyRequest(prototypeRequest, requestUrl, payload);
+            HttpRequestBase clonedRequest = requestMethodStrategy.cloneRequest(prototypeRequest);
 
-            if (setRandomAgent) {
-                prototypeRequest.setHeader("User-Agent", RandomAgent.get());
+            requestModeStrategy.modifyRequest(clonedRequest, requestUrl, payload);
+
+            if (isUserAgentRandomizationEnabled) {
+                clonedRequest.setHeader("User-Agent", RandomAgent.get());
             }
 
-            return prototypeRequest;
+            return clonedRequest;
 
         } catch (IllegalArgumentException e) {
             System.err.println("Invalid URI: " + e.getMessage());
@@ -138,10 +136,5 @@ public class WebRequestFactory {
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
         }
-
     }
-
-
-
-
 }

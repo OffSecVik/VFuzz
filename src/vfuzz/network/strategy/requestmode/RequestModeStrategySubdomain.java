@@ -1,4 +1,4 @@
-package vfuzz.network.strategy;
+package vfuzz.network.strategy.requestmode;
 
 import org.apache.http.client.methods.HttpRequestBase;
 

@@ -18,9 +18,6 @@ public class RateLimiter {
     public void setRateLimit(int refillRatePerSecond) { // synonymous to requests per second
         this.maxTokens = refillRatePerSecond;
         this.refillRatePerSecond = refillRatePerSecond;
-        this.availableTokens = maxTokens;
-        this.lastRefillTimestamp = System.currentTimeMillis();
-        System.out.println("Setting rate limit to " + refillRatePerSecond + "/s");
     }
 
     public synchronized boolean tokenAvailable() {
@@ -56,6 +53,10 @@ public class RateLimiter {
                 }
             }
         }
+    }
+
+    public int getRateLimit() {
+        return maxTokens;
     }
 
     public boolean isEnabled() {

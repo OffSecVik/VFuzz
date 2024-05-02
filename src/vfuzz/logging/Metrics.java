@@ -1,5 +1,6 @@
 package vfuzz.logging;
 
+import vfuzz.network.WebRequester;
 import vfuzz.operations.Target;
 
 import java.util.Arrays;
@@ -71,6 +72,10 @@ public class Metrics {
         } else {
             retryRate = 0;
         }
+
+
+
+
 
         /*
         // dynamic logic for failure and retries:

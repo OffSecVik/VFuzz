@@ -1,18 +1,15 @@
-package vfuzz.network.strategy;
+package vfuzz.network.strategy.requestmode;
 
 import org.apache.http.client.methods.HttpRequestBase;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 
-public class RequestModeStrategyVhost extends RequestModeStrategy {
+public class RequestModeStrategyStandard extends RequestModeStrategy {
 
     @Override
     public void modifyRequest(HttpRequestBase request, String requestUrl, String payload) throws URISyntaxException {
         requestUrl = requestUrl.endsWith("/") ? requestUrl : requestUrl + "/";
-        request.setURI(new URI(requestUrl));
-        String vhostUrl = vhostRebuilder(requestUrl, payload);
-        request.setHeader("Host", vhostUrl);
-        URI uri = new URI("TEST");
+        request.setURI(new URI(requestUrl + payload));
     }
 }

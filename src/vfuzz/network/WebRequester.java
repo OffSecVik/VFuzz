@@ -17,7 +17,6 @@ import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.nio.reactor.ConnectingIOReactor;
 import org.apache.http.nio.reactor.IOReactorException;
 import vfuzz.config.ConfigAccessor;
-import vfuzz.core.QueueConsumer;
 import vfuzz.logging.Metrics;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
@@ -80,25 +79,24 @@ public class WebRequester {
 
 
     public static CompletableFuture<HttpResponse> sendRequestWithRetry(HttpRequestBase request, int maxRetries, long delay, TimeUnit unit) { // TODO decide whether to pass the delay as argument or have it as a static variable / ConfigManager setting
-
-        Metrics.incrementRequestsCount();
-        if (maxRetries < QueueConsumer.MAX_RETRIES) { // TODO this is janky as fuck
-            Metrics.incrementRetriesCount();
-        }
-
         rateLimiter.awaitToken();
-        CompletableFuture<HttpResponse> attempt = sendRequest(request);
-        return attempt.handle((resp, th) -> {
-            if (th == null) {
 
+        CompletableFuture<HttpResponse> attempt = sendRequest(request);
+
+        return attempt.handle((resp, th) -> {
+            Metrics.incrementRequestsCount();
+            if (th == null) {
                 // Success case, return the response
                 Metrics.incrementSuccessfulRequestsCount();
+                //WebRequester.getRateLimiter().setRateLimit(WebRequester.getRateLimiter().getRateLimit() + 1);
                 return CompletableFuture.completedFuture(resp);
             } else if (maxRetries > 0) {
+                //WebRequester.getRateLimiter().setRateLimit(Math.max(1000, WebRequester.getRateLimiter().getRateLimit() - 1));
                 // Retry case, schedule the retry with a delay
+                Metrics.incrementRetriesCount();
                 CompletableFuture<HttpResponse> delayedRetry = new CompletableFuture<>();
                 scheduler.schedule(() ->
-                                sendRequestWithRetry(request, maxRetries - 1, delay, unit).whenComplete((retryResp, retryTh) -> {
+                                sendRequestWithRetry(request, maxRetries - 1, 250, unit).whenComplete((retryResp, retryTh) -> {
                                     if (retryTh == null) {
                                         delayedRetry.complete(retryResp);
                                     } else {
@@ -119,6 +117,7 @@ public class WebRequester {
 
     public static CompletableFuture<HttpResponse> sendRequest(HttpRequestBase request) {
         CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+
         client.execute(request, new FutureCallback<>() {
             @Override
             public void completed(HttpResponse response) {
@@ -164,5 +163,9 @@ public class WebRequester {
         HttpResponse response = new BasicHttpResponse(protocolVersion, statusCode, null);
         response.setEntity(new StringEntity("", StandardCharsets.UTF_8));
         return response;
+    }
+
+    public static RateLimiter getRateLimiter() {
+        return rateLimiter;
     }
 }
