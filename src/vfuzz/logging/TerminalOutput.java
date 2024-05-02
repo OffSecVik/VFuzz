@@ -68,7 +68,7 @@ public class TerminalOutput implements Runnable {
 
     public void updatePayload() {
         eraseToEOL();
-        System.out.println("Now fuzzing " + Metrics.getCurrentRequest());
+        // System.out.println("Now fuzzing " + Metrics.getCurrentRequest());
     }
 
     /* // TODO: reimplement
