@@ -11,7 +11,7 @@ public class ConfigurationPrinter {
     public static void printConfiguration() {
         AtomicBoolean isDefault = new AtomicBoolean();
 
-        System.out.println("Your current Arguemnts:");
+        System.out.println("Your current Arguments:");
 
         System.out.println(getConfigDisplayString("threadCount", Integer.class, isDefault, "Thread Count"));
         System.out.println(getConfigDisplayString("wordlistPath", String.class, isDefault, "Wordlist Path"));
