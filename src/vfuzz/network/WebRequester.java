@@ -18,6 +18,7 @@ import org.apache.http.nio.reactor.ConnectingIOReactor;
 import org.apache.http.nio.reactor.IOReactorException;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.logging.Metrics;
+import vfuzz.network.ratelimiter.RateLimiterLeakyBucket;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Random;
@@ -31,7 +32,7 @@ import java.util.regex.Pattern;
 
 public class WebRequester {
 
-    private static final RateLimiter rateLimiter;
+    private static final RateLimiterLeakyBucket rateLimiter;
 
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
@@ -42,7 +43,7 @@ public class WebRequester {
     public static void initialize() {}
 
     static {
-        rateLimiter = new RateLimiter(ConfigAccessor.getConfigValue("rateLimit", Integer.class));
+        rateLimiter = new RateLimiterLeakyBucket(ConfigAccessor.getConfigValue("rateLimit", Integer.class));
 
         System.setProperty("networkaddress.cache.ttl", "60");
         System.setProperty("networkaddress.cache.negative.ttl", "10");
@@ -83,8 +84,10 @@ public class WebRequester {
 
 
     public static CompletableFuture<HttpResponse> sendRequestWithRetry(HttpRequestBase request, int maxRetries, long delay, TimeUnit unit) { // TODO decide whether to pass the delay as argument or have it as a static variable / ConfigManager setting
+
         rateLimiter.awaitToken();
-        CompletableFuture<HttpResponse> attemptedRequest = sendRequest(request);
+
+        CompletableFuture<HttpResponse> attemptedRequest = sendRequestWithJitter(request);
 
         return attemptedRequest.handle((response, throwable) -> {
             Metrics.incrementRequestsCount();
@@ -180,11 +183,11 @@ public class WebRequester {
         return response;
     }
 
-    public static RateLimiter getRateLimiter() {
+    public static RateLimiterLeakyBucket getRateLimiter() {
         return rateLimiter;
     }
 
     public static void setRateLimit(int i) {
-        rateLimiter.setRateLimit(i);
+        rateLimiter.setRateLimitPerSecond(i);
     }
 }
