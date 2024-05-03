@@ -1,8 +1,8 @@
 package vfuzz.config;
 
 import vfuzz.logging.Color;
-import vfuzz.network.RequestMethod;
-import vfuzz.network.RequestMode;
+import vfuzz.network.strategy.requestmethod.RequestMethod;
+import vfuzz.network.strategy.requestmode.RequestMode;
 
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
