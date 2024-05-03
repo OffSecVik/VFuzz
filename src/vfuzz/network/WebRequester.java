@@ -14,18 +14,18 @@ import org.apache.http.impl.nio.conn.PoolingNHttpClientConnectionManager;
 import org.apache.http.impl.nio.reactor.DefaultConnectingIOReactor;
 import org.apache.http.impl.nio.reactor.IOReactorConfig;
 import org.apache.http.message.BasicHttpResponse;
+import org.apache.http.nio.client.HttpAsyncClient;
 import org.apache.http.nio.reactor.ConnectingIOReactor;
 import org.apache.http.nio.reactor.IOReactorException;
+
 import vfuzz.config.ConfigAccessor;
 import vfuzz.logging.Metrics;
 import vfuzz.network.ratelimiter.RateLimiterLeakyBucket;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import java.util.Random;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,6 +41,8 @@ public class WebRequester {
     private static final Random random = new Random();
 
     public static void initialize() {}
+
+    private final static boolean jitterEnabled = true;
 
     static {
         rateLimiter = new RateLimiterLeakyBucket(ConfigAccessor.getConfigValue("rateLimit", Integer.class));
@@ -83,60 +85,77 @@ public class WebRequester {
     }
 
 
-    public static CompletableFuture<HttpResponse> sendRequestWithRetry(HttpRequestBase request, int maxRetries, long delay, TimeUnit unit) { // TODO decide whether to pass the delay as argument or have it as a static variable / ConfigManager setting
+    /**
+     * Sends an HTTP request asynchronously, applying an optional jitter to simulate network variability. This method first
+     * acquires a token from a rate limiter to ensure compliance with rate limiting policies before sending the request.
+     * If the initial request fails, it automatically retries the request based on the specified delay and time unit.
+     *
+     * @param request The {@link HttpRequestBase} object representing the HTTP request to be sent. It must be fully
+     *                configured with the target URL, headers, and any necessary request body.
+     * @param retryDelay The delay between retries, if the initial request fails.
+     * @param unit The {@link TimeUnit} of the {@code retryDelay}, specifying time unit of the delay.
+     * @return A {@link CompletableFuture<HttpResponse>} that eventually completes with the result of the HTTP request.
+     *         The future completes exceptionally if all retry attempts fail or if an error occurs during request processing.
+     *         On successful completion, returns the HTTP response. If the request fails, the method retries sending the
+     *         request as per the specified delay and continues to do so indefinitely.
+     */
+    public static CompletableFuture<HttpResponse> sendRequest(HttpRequestBase request, long retryDelay, TimeUnit unit) {
 
         rateLimiter.awaitToken();
 
-        CompletableFuture<HttpResponse> attemptedRequest = sendRequestWithJitter(request);
+        CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
 
-        return attemptedRequest.handle((response, throwable) -> {
-            Metrics.incrementRequestsCount();
+        Runnable requestTask = () -> executeRequest(request, responseFuture);
 
-            if (throwable == null) { // Success case, return the response
+        if (jitterEnabled) {
+            int jitter = random.nextInt(500);
+            CompletableFuture.delayedExecutor(jitter, TimeUnit.MILLISECONDS).execute(requestTask);
+        } else {
+            requestTask.run();
+        }
+
+        return responseFuture.handle((response, throwable) -> {
+            if (throwable != null) {
+                Metrics.incrementRetriesCount();
+                return handleRetries(request, retryDelay, unit);
+            } else {
                 Metrics.incrementSuccessfulRequestsCount();
                 return CompletableFuture.completedFuture(response);
-
-            } else if (maxRetries > 0) { // Retry case, schedule the retry with a delay
-                Metrics.incrementRetriesCount();
-                CompletableFuture<HttpResponse> delayedRetry = new CompletableFuture<>();
-                scheduler.schedule(() -> sendRequestWithRetry(request, maxRetries - 1, random.nextInt((int) delay), unit)
-                                        .whenComplete((retryResponse, retryThrowable) -> {
-                                    if (retryThrowable == null) {
-                                        delayedRetry.complete(retryResponse);
-                                    } else {
-                                        delayedRetry.completeExceptionally(retryThrowable);
-                                    }
-                                }),
-                        delay, unit
-                );
-                return delayedRetry;
-
-            } else { // Failure case, no retries left
-                CompletableFuture<HttpResponse> failed = new CompletableFuture<>();
-                failed.completeExceptionally(throwable);
-                return failed;
             }
         }).thenCompose(Function.identity());
     }
 
-    public static CompletableFuture<HttpResponse> sendRequest(HttpRequestBase request) {
-        CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
 
-        executeRequest(request, responseFuture);
-        return responseFuture;
+    /**
+     * Handles the retries for an HTTP request asynchronously. This method is called when an initial request fails and
+     * continues to retry the request indefinitely until it succeeds or the application stops it. It uses a scheduled
+     * executor to delay retries according to the specified delay and time unit.
+     *
+     * @param request The {@link HttpRequestBase} object that needs to be retried. This request should already be configured
+     *                with all necessary settings like URL, headers, and body as required.
+     * @param delay The time to wait before making another retry attempt.
+     * @param unit The {@link TimeUnit} that specifies the unit of the {@code delay}.
+     * @return A {@link CompletableFuture<HttpResponse>} that completes with the response of the successful HTTP request.
+     *         If a retry attempt fails, the method schedules another attempt using the same delay, effectively creating
+     *         an infinite loop of retries until successful completion.
+     */
+    private static CompletableFuture<HttpResponse> handleRetries(HttpRequestBase request, long delay, TimeUnit unit) {
+        return CompletableFuture.supplyAsync(() ->
+                sendRequest(request, delay, unit), scheduler
+        ).thenCompose(Function.identity());
     }
 
-    public static CompletableFuture<HttpResponse> sendRequestWithJitter(HttpRequestBase request) {
-        CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-
-        CompletableFuture.delayedExecutor(random.nextInt(500), TimeUnit.MILLISECONDS)
-                .execute(() -> {
-                    executeRequest(request, responseFuture);
-                });
-
-        return responseFuture;
-    }
-
+    /**
+     * Executes an HTTP request asynchronously using {@link HttpAsyncClient}. This method handles the completion of the
+     * request whether it succeeds, fails, or is cancelled, and updates the provided {@link CompletableFuture} accordingly.
+     *
+     * @param request The {@link HttpRequestBase} object representing the HTTP request to be sent. It should be fully configured
+     *                with the target URL, headers, and any request body as needed.
+     * @param responseFuture A {@link CompletableFuture<HttpResponse>} that will be completed when the HTTP request completes.
+     *                       If the request is successful, the future is completed with the response. If the request fails
+     *                       due to an exception, the future completes exceptionally, wrapping the encountered exception.
+     *                       If the request is cancelled, the future is cancelled as well.
+     */
     private static void executeRequest(HttpRequestBase request, CompletableFuture<HttpResponse> responseFuture) {
         client.execute(request, new FutureCallback<>() {
             @Override
@@ -146,20 +165,12 @@ public class WebRequester {
 
             @Override
             public void failed(Exception ex) {
-                Throwable cause = ex.getCause();
-                if (cause == null) {
-                    cause = ex;
-                }
+                Throwable cause = extractRelevantCause(ex);
                 if (cause instanceof ProtocolException) {
-                    if (cause.getMessage().contains("Unexpected response:")) {
-                        // Extracting the Http StatusLine object from the exception message
-                        Pattern pattern = Pattern.compile("(\\S+?)/(\\d)\\.(\\d) (\\d{3})");
-                        Matcher matcher = pattern.matcher(cause.getMessage());
-                        if (matcher.find()) {
-                            HttpResponse response = createHttpResponseFromException(matcher);
-                            responseFuture.complete(response);
-                            return;
-                        }
+                    Optional<HttpResponse> response = tryParseHttpResponse(cause.getMessage());
+                    if (response.isPresent()) {
+                        responseFuture.complete(response.get());
+                        return;
                     }
                 }
                 responseFuture.completeExceptionally(ex);
@@ -169,6 +180,29 @@ public class WebRequester {
                 responseFuture.cancel(true);
             }
         });
+    }
+
+    public static RateLimiterLeakyBucket getRateLimiter() {
+        return rateLimiter;
+    }
+
+    /**
+     * Extracts the most relevant cause for an exception. Defaults to the given exception if no cause is found.
+     */
+    private static Throwable extractRelevantCause(Throwable ex) {
+        return (ex.getCause() != null) ? ex.getCause() : ex;
+    }
+
+    /**
+     * Attempts to parse an HTTP response from an exception message containing unexpected response codes.
+     */
+    private static Optional<HttpResponse> tryParseHttpResponse(String message) {
+        Pattern pattern = Pattern.compile("(\\S+?)/(\\d)\\.(\\d) (\\d{3})");
+        Matcher matcher = pattern.matcher(message);
+        if (matcher.find()) {
+            return Optional.of(createHttpResponseFromException(matcher));
+        }
+        return Optional.empty();
     }
 
     private static HttpResponse createHttpResponseFromException(Matcher matcher) {
@@ -181,10 +215,6 @@ public class WebRequester {
         HttpResponse response = new BasicHttpResponse(protocolVersion, statusCode, null);
         response.setEntity(new StringEntity("", StandardCharsets.UTF_8));
         return response;
-    }
-
-    public static RateLimiterLeakyBucket getRateLimiter() {
-        return rateLimiter;
     }
 
     public static void setRateLimit(int i) {
