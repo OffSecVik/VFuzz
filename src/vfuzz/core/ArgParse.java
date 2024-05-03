@@ -2,8 +2,8 @@ package vfuzz.core;
 
 import vfuzz.config.ConfigManager;
 import vfuzz.logging.Metrics;
-import vfuzz.network.RequestMethod;
-import vfuzz.network.RequestMode;
+import vfuzz.network.strategy.requestmethod.RequestMethod;
+import vfuzz.network.strategy.requestmode.RequestMode;
 import vfuzz.operations.Range;
 import vfuzz.utils.Validator;
 
