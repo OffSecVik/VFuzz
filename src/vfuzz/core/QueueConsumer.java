@@ -4,15 +4,13 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpRequestBase;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.network.ParsedHttpRequest;
-import vfuzz.network.RequestMode;
+import vfuzz.network.strategy.requestmode.RequestMode;
 import vfuzz.network.WebRequestFactory;
 import vfuzz.network.WebRequester;
 import vfuzz.operations.Hit;
 import vfuzz.operations.Range;
 import vfuzz.operations.Target;
-
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -22,12 +20,10 @@ import java.util.concurrent.*;
 public class QueueConsumer implements Runnable {
 
     private static int activeThreads;
-
     private final WordlistReader wordlistReader;
     private final String url;
     private final ThreadOrchestrator orchestrator;
     private final ExecutorService executor;
-    public static final int MAX_RETRIES = 20; // TODO: move this somewhere it makes sense, it's just here for metrics
     private volatile boolean running = true;
     private static boolean firstThreadFinished = false;
     private final Target target;
@@ -119,7 +115,7 @@ public class QueueConsumer implements Runnable {
     }
 
     private void sendAndProcessRequest(HttpRequestBase request) {
-        WebRequester.sendRequestWithRetry(request, MAX_RETRIES, 250, TimeUnit.MILLISECONDS)
+        WebRequester.sendRequest(request, 250, TimeUnit.MILLISECONDS)
                 .thenApplyAsync(response -> {
             try {
                 parseResponse(response, request);
