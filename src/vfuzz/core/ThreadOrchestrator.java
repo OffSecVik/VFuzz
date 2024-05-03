@@ -3,7 +3,7 @@ package vfuzz.core;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.operations.Target;
 import vfuzz.logging.TerminalOutput;
-import vfuzz.network.RequestMode;
+import vfuzz.network.strategy.requestmode.RequestMode;
 import vfuzz.logging.Color;
 
 import java.util.ArrayList;

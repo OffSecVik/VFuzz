@@ -1,4 +1,4 @@
-package vfuzz.network;
+package vfuzz.network.strategy.requestmode;
 
 public enum RequestMode {
     STANDARD, VHOST, SUBDOMAIN, FUZZ
