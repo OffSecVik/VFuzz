@@ -115,6 +115,7 @@ public class WebRequester {
         }
 
         return responseFuture.handle((response, throwable) -> {
+            Metrics.incrementRequestsCount();
             if (throwable != null) {
                 Metrics.incrementRetriesCount();
                 return handleRetries(request, retryDelay, unit);
