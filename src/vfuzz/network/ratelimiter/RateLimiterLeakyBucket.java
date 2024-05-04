@@ -13,14 +13,19 @@ public class RateLimiterLeakyBucket {
     public RateLimiterLeakyBucket(int rateLimitPerSecond) {
         this.rateLimitPerSecond = rateLimitPerSecond;
         this.capacity = rateLimitPerSecond;
-        this.availableSpace = 0;  // Start with full capacity
-        this.lastCheck = System.currentTimeMillis();
+        this.availableSpace = 0;  // start without any tokens
+        this.lastCheck = 0;
     }
 
     public synchronized boolean request() {
         if (!enabled) {
             return true;
         }
+
+        if (lastCheck == 0) {
+            lastCheck = System.currentTimeMillis();
+        }
+
         long now = System.currentTimeMillis();
         long elapsedTime = now - lastCheck;
 
@@ -37,11 +42,10 @@ public class RateLimiterLeakyBucket {
         return false;
     }
 
-    @SuppressWarnings("BusyWait")
     public void awaitToken() {
         if (enabled) {
             while (!request()) {
-                LockSupport.parkNanos(500000);
+                LockSupport.parkNanos(500000); // wait for .5 milliseconds // ToDo: this is likely not optimal.
             }
         }
     }
