@@ -1,0 +1,42 @@
+
+
+CompletableFutures
+
+CompletableFutures are a way to represent asynchronous computations that may complete in the future.
+When creating a CompletableFuture, we're basically creating a placeholder for the result of a computation that will be
+available at some point in the future.
+When creating a CompletableFuture, it is typical to chain asynchronous operations onto it using
+    .thenApply
+    .thenCompose
+    .thenAccept etc.
+These methods allow to specify what should happen when the CompletableFuture completes normally, exceptionally, or both.
+
+Once set up, the CompletableFuture is triggered when its dependent computations complete.
+Once triggered, it moves on to execute the specified actions.
+
+> complete(value) and completeExceptionally(exception) methods sets the value of a CompletableFuture. Cannot be changed once set
+
+> someFuture.handle((result, exception) -> {});
+    > handle takes a BiFunction as an argument, which takes two parameters
+    > the first parameter represents the result of the asynchronous operation in case of successful computation
+    > the second parameter represents the exception
+    > the return value of the handle call will be the return value of the lambda expression
+
+> thenCompose(Function f) takes a Function as argument
+    > the Function represents the second asynchronous operation to be executed
+    > it is applied to the result of the fist CompletableFuture
+    > it returns a new CompletableFuture which is the result of the second operation
+    > main difference to thenApply():
+        > thenCompose expects the mapping function to return another CompletableFuture
+        > thenApply explains the mapping function to return a value
+
+> thenCompose(Function.identity()) is used to "flatten" a CompletableFuture
+
+> whenComplete als takes a BiFunction as an argument
+    > on success, the success parameter will be non-null
+    > on failure, the exception parameter will be non-null
+    > does not affect the CompletableFuture
+    > is mostly used for side effects (e.g. logging or updating state)
+
+> thenAccept is used to specify a callback to be executed asynchronously when the CompletableFuture completes normally
+    > typically used when desiring to perform an action with the result of a CompletableFuture without returning a value

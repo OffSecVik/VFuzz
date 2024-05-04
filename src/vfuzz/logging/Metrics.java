@@ -1,163 +1,118 @@
 package vfuzz.logging;
 
-import vfuzz.network.WebRequester;
-import vfuzz.operations.Target;
-
-import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class Metrics {
-    public static ScheduledExecutorService executor = null;
 
-    // request metrics variables
-    private static final AtomicLong requestCount = new AtomicLong(0);
-    private static final AtomicLong retriesCount = new AtomicLong(0);
-    private static final AtomicLong failedRequestsCount = new AtomicLong(0);
-    private static final AtomicLong successfulRequestCount = new AtomicLong(0);
-    private static String currentRequest;
-    private static double failureRate = 0;
     private static double retryRate = 0;
-    private static final long updateInterval = 100; // time in milliseconds, this is how often the thread updates its metrics
-    private static final double[] requestsPerSecond = new double[1000 / (int)updateInterval]; // calculating actual RPS through this
-    private static final double[] retriesPerSecond = new double[1000 / (int)updateInterval]; // calculating actual RPS through this private static double
-    private static final double[] failedRequestsPerSecond = new double[1000 / (int)updateInterval];
-    private static final double[] successfulRequestsPerSecond = new double[1000 / (int)updateInterval];
-    private static int timesUpdated = 0;
+    private static ScheduledExecutorService executor;
+
+    /**
+     * Update interval in milliseconds for how frequently metrics are refreshed.
+     * A lower update interval increases the resolution and responsiveness of the metric data,
+     * allowing the system to more quickly react to changes in behavior. However, it can also increase CPU load
+     * due to more frequent execution of update tasks.
+     */
+    private static final long updateInterval = 10;
+
+    /**
+     * The size of the circular buffers used to store historical metric data.
+     * Larger buffer sizes provide a smoother calculation of metrics over a longer period,
+     * which can help dampen the effect of transient spikes in data.
+     * However, larger buffers may delay the recognition of recent shifts in system behavior,
+     * as the data is averaged over a more extended period.
+     */
+    private static final int BUFFER_SIZE = 100;
+
+    private static final long[] requestsBuffer = new long[BUFFER_SIZE];
+    private static final long[] successfulRequestsBuffer = new long[BUFFER_SIZE];
+    private static final long[] retriesBuffer = new long[BUFFER_SIZE];
+
+    // Indices for circular buffer
+    private static int currentIndex = 0;
+
+    // Total counters for metrics
+    private static final AtomicLong totalRequests = new AtomicLong();
+    private static final AtomicLong totalSuccessfulRequests = new AtomicLong();
+    private static final AtomicLong totalRetries = new AtomicLong();
 
 
-    public static synchronized void startMetrics() { // initializes the executor
+
+    public static synchronized void startMetrics() {
         if (executor == null || executor.isShutdown()) {
             executor = Executors.newSingleThreadScheduledExecutor();
-            executor.scheduleAtFixedRate(Metrics::updateAll, updateInterval, updateInterval, TimeUnit.MILLISECONDS); // (1) executes updateAll (2) waits 1 second before it executes the task for the first time (3) period between consecutive task executions (4) specifies time unit for (2) and (3)
+            executor.scheduleAtFixedRate(Metrics::updateAll, 0, updateInterval, TimeUnit.MILLISECONDS);
         }
+    }
+
+    private static void updateAll() {
+        updateMetrics();
+        updateDynamicRateLimiter();
+    }
+
+    private static void updateMetrics() {
+        currentIndex = (currentIndex + 1) % BUFFER_SIZE;
+
+        // Reset the current index in the buffer
+        requestsBuffer[currentIndex] = 0;
+        successfulRequestsBuffer[currentIndex] = 0;
+        retriesBuffer[currentIndex] = 0;
+    }
+
+    public static void incrementRequestsCount() {
+        requestsBuffer[currentIndex]++;
+        totalRequests.incrementAndGet();
+    }
+
+    public static void incrementSuccessfulRequestsCount() {
+        successfulRequestsBuffer[currentIndex]++;
+        totalSuccessfulRequests.incrementAndGet();
+    }
+
+    public static void incrementRetriesCount() {
+        retriesBuffer[currentIndex]++;
+        totalRetries.incrementAndGet();
+    }
+
+    public static double getRequestsPerSecond() {
+        return calculateSum(requestsBuffer) / (BUFFER_SIZE * (updateInterval / 1000.0));
+    }
+
+    public static double getSuccessfulRequestsPerSecond() {
+        return calculateSum(successfulRequestsBuffer) / (BUFFER_SIZE * (updateInterval / 1000.0));
+    }
+
+    public static double getRetriesPerSecond() {
+        return calculateSum(retriesBuffer) / (BUFFER_SIZE * (updateInterval / 1000.0));
+    }
+
+    // Helper method to calculate sum of elements in an array
+    private static long calculateSum(long[] array) {
+        long sum = 0;
+        for (long value : array) {
+            sum += value;
+        }
+        return sum;
+    }
+
+    private static void updateDynamicRateLimiter() {
+        double requestsPerSecond = getRequestsPerSecond();
+        double retriesPerSecond = getRetriesPerSecond();
+
+        retryRate = (requestsPerSecond != 0) ? retriesPerSecond / requestsPerSecond : retriesPerSecond;
+    }
+
+    public static double getRetryRate() {
+        return retryRate;
     }
 
     public static synchronized void stopMetrics() {
         if (executor != null) {
             executor.shutdown();
-            executor = null; // flush the executor down the toilet
+            executor = null;
         }
-    }
-
-    private static void updateAll() {
-
-        updateRequestsPerSecond();
-        updateSuccessfulRequestsPerSecond();
-        updateRetriesPerSecond();
-        updateFailedRequestsPerSecond();
-        updateDynamicRateLimiter();
-        updateShutdown();
-        timesUpdated++;
-    }
-
-    @SuppressWarnings("StatementWithEmptyBody")
-    private static void updateShutdown() {
-        if (Target.getActiveTargets() == 0 && getRequestsPerSecond() == 0) {
-            // TODO shutdown everything from this condition.
-            // TODO find better solution for shutdown?
-        }
-    }
-
-    @SuppressWarnings("CommentedOutCode")
-    private static void updateDynamicRateLimiter() {
-        double requestsPerSecond = getRequestsPerSecond();
-        double failedRequestsPerSecond = getFailedRequestsPerSecond(); // making new variables here because I was worried the class variables would change values amidst operation of this method
-        double retriesPerSecond = getRetriesPerSecond();
-        if (requestsPerSecond != 0) {
-            failureRate = failedRequestsPerSecond / requestsPerSecond;
-            retryRate = retriesPerSecond / requestsPerSecond;
-        } else {
-            retryRate = 0;
-        }
-
-        /*
-        // dynamic logic for failure and retries:
-        if (failureRate > 0.1 || retryRate > 0.2) { // throttle conditions: 10% of requests fail OR 20% of requests are retries
-            WebRequester.enableRequestRateLimiter((int) (requestsPerSecond * ( 1 - failureRate)));
-        } else if (failureRate < 0.0001 && retryRate < 0.1) { // turn the darn thing off if we have lower than 0.01% failure
-            WebRequester.disableRequestRateLimiter();
-        } else if (failureRate < 0.01 && retryRate < 0.05) { // speed back up if we're below 1% failure rate and 5% retry rate
-            WebRequester.setRequestRateLimiter((int) (requestsPerSecond * (1 + failureRate)));
-        }
-        */
-
-    }
-
-    private static void updateSuccessfulRequestsPerSecond() {
-        successfulRequestsPerSecond[timesUpdated % (1000 / (int)updateInterval)] = successfulRequestCount.get();
-        successfulRequestCount.set(0);
-    }
-
-    private static void updateRequestsPerSecond() {
-        requestsPerSecond[timesUpdated % (1000 / (int)updateInterval)] = requestCount.get(); // places Requests/updateInterval in the array
-        requestCount.set(0); // reset count for next interval
-    }
-
-
-    private static void updateRetriesPerSecond() {
-        retriesPerSecond[timesUpdated % (1000 / (int)updateInterval)] = retriesCount.get();
-        retriesCount.set(0);
-    }
-
-    private static void updateFailedRequestsPerSecond() {
-        failedRequestsPerSecond[timesUpdated % (1000 / (int)updateInterval)] = failedRequestsCount.get();
-        failedRequestsCount.set(0);
-    }
-
-    // request metrics methods
-    public static void incrementRequestsCount() {
-        requestCount.incrementAndGet();
-    }
-
-    public static void incrementSuccessfulRequestsCount() {
-        successfulRequestCount.incrementAndGet();
-    }
-
-    public static void incrementRetriesCount() {
-        retriesCount.incrementAndGet();
-    }
-
-    public static void incrementFailedRequestsCount() {
-        failedRequestsCount.incrementAndGet();
-    }
-
-
-    public static double getRequestsPerSecond() {
-        return Arrays.stream(requestsPerSecond).sum();
-    }
-
-    public static double getSuccessfulRequestsPerSecond() {
-        return Arrays.stream(successfulRequestsPerSecond).sum();
-    }
-
-    public static double getRetriesPerSecond() {
-        return Arrays.stream(retriesPerSecond).sum();
-    }
-
-    public static double getFailedRequestsPerSecond() {
-        return Arrays.stream(failedRequestsPerSecond).sum();
-    }
-
-    public static void setCurrentRequest(String request) {
-        currentRequest = request;
-    }
-
-    public static String getCurrentRequest() {
-        return currentRequest;
-    }
-
-    public static void shutdown() {
-        executor.shutdown();
-    }
-
-    public static double getFailureRate() {
-        return failureRate;
-    }
-
-    public static double getRetryRate() {
-        return retryRate;
     }
 }
