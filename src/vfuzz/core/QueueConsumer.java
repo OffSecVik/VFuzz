@@ -64,7 +64,7 @@ public class QueueConsumer implements Runnable {
 
     @Override
     public void run() {
-        if (!ConfigAccessor.getConfigValue("followRedirects", Boolean.class)) {
+        if (!ConfigAccessor.getConfigValue("requestFileFuzzing", Boolean.class)) {
             standardMode();
         } else {
             requestFileMode();
