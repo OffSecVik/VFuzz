@@ -1,5 +1,7 @@
 	NEXT STEPS
 
+> fix -r mode throwing errors with bad request file
+
 > Currently with a single thread and recursive mode, new recursive targets receive 0 threads.
     Rethink if this conservative approach is favorable over giving each new target 1 new thread, independent of the specified thread count by the user.
 

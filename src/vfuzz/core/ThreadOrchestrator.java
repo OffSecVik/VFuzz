@@ -29,7 +29,7 @@ public class ThreadOrchestrator {
 
     public void startFuzzing() {
         try {
-            this.executor = Executors.newFixedThreadPool(THREAD_COUNT + 11); // plus one for Terminal Output
+            this.executor = Executors.newFixedThreadPool(THREAD_COUNT + 1); // plus one for Terminal Output
 
             TerminalOutput terminalOutput = new TerminalOutput();
             executor.submit(terminalOutput);

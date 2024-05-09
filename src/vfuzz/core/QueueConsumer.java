@@ -3,9 +3,11 @@ package vfuzz.core;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpRequestBase;
 import vfuzz.config.ConfigAccessor;
-import vfuzz.network.ParsedHttpRequest;
+import vfuzz.network.request.ParsedHttpRequest;
+import vfuzz.network.request.ParsedRequestFactory;
+import vfuzz.network.request.WebRequestFactory;
 import vfuzz.network.strategy.requestmode.RequestMode;
-import vfuzz.network.WebRequestFactory;
+import vfuzz.network.request.StandardRequestFactory;
 import vfuzz.network.WebRequester;
 import vfuzz.operations.Hit;
 import vfuzz.operations.Range;
@@ -16,35 +18,45 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
 
-// TECHNICALLY there's no more queue but this still iterates over a wordlist.
 public class QueueConsumer implements Runnable {
 
-    private static int activeThreads;
-    private final WordlistReader wordlistReader;
-    private final String url;
     private final ThreadOrchestrator orchestrator;
     private final ExecutorService executor;
+
+    private final WordlistReader wordlistReader;
+
+    private final String baseTargetUrl;
+    private final Target target;
+    private final String url;
+
+    private final boolean recursionEnabled;
+    private final int recursionDepth;
+
     private volatile boolean running = true;
     private static boolean firstThreadFinished = false;
-    private final Target target;
-    private final int recursionDepth;
-    private final boolean recursionEnabled;
+
     private final Set<Range> excludedStatusCodes;
     private final Set<Range> excludedLength;
-    private final boolean vhostMode;
-    private final String baseTargetUrl;
-    private final WebRequestFactory webRequestFactory;
     private final List<String> excludedResults;
 
+    private final boolean vhostMode;
+
+    private WebRequestFactory webRequestFactory;
+
     public QueueConsumer(ThreadOrchestrator orchestrator, Target target) {
-        activeThreads++;
-        this.target = target;
+
         this.orchestrator = orchestrator;
         this.executor = orchestrator.getExecutor();
+
         this.wordlistReader = target.getWordlistReader();
+
+        this.baseTargetUrl = ConfigAccessor.getConfigValue("url", String.class) + "/";
+        this.target = target;
         this.url = target.getUrl();
+
         this.recursionEnabled = ConfigAccessor.getConfigValue("recursionEnabled", Boolean.class);
         this.recursionDepth = target.getRecursionDepth();
+
         this.excludedStatusCodes = ArgParse.getExcludedStatusCodes();
         this.excludedLength = ArgParse.getExcludedLength();
 
@@ -55,52 +67,25 @@ public class QueueConsumer implements Runnable {
             this.excludedResults = null;
         }
 
-
         this.vhostMode = ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.VHOST;
-        this.baseTargetUrl = ConfigAccessor.getConfigValue("url", String.class) + "/";
-
-        this.webRequestFactory = new WebRequestFactory();
     }
 
     @Override
     public void run() {
-        if (!ConfigAccessor.getConfigValue("requestFileFuzzing", Boolean.class)) {
-            standardMode();
+        if (ConfigAccessor.getConfigValue("requestFileFuzzing", String.class) == null) {
+            webRequestFactory = new StandardRequestFactory(url);
         } else {
-            requestFileMode();
+            webRequestFactory = new ParsedRequestFactory();
         }
-    }
 
-    private void standardMode() {
         while (running) {
             String payload = wordlistReader.getNextPayload();
             if (payload == null) {
                 reachedEndOfWordlist();
                 break;
             }
-            HttpRequestBase request = webRequestFactory.buildRequest(url, payload);
-            sendAndProcessRequest(request);
-        }
-    }
 
-    private void requestFileMode() {
-        ParsedHttpRequest prototypeRequest;
-        String payload;
-        try {
-            prototypeRequest = new ParsedHttpRequest().parseHttpRequestFromFile(ConfigAccessor.getConfigValue("requestFilePath", String.class));
-        } catch (IOException e) {
-            System.err.println("There was an error parsing the request from the file:\n" + e.getMessage());
-            return;
-        }
-        while (running) {
-            payload = wordlistReader.getNextPayload();
-            if (payload == null) {
-                reachedEndOfWordlist();
-                break;
-            }
-
-            ParsedHttpRequest rawCopy = new ParsedHttpRequest(prototypeRequest);
-            HttpRequestBase request = webRequestFactory.buildRequestFromFile(rawCopy, payload);
+            HttpRequestBase request = webRequestFactory.buildRequest(payload);
             sendAndProcessRequest(request);
         }
     }
@@ -108,7 +93,6 @@ public class QueueConsumer implements Runnable {
     private void reachedEndOfWordlist() {
         running = false;
         firstThreadFinished = true;
-        activeThreads--;
         if (ConfigAccessor.getConfigValue("recursionEnabled", Boolean.class) && target.setScanComplete()) {
             orchestrator.redistributeThreads();
         }
@@ -208,9 +192,5 @@ public class QueueConsumer implements Runnable {
 
     public boolean isRunning() {
         return running;
-    }
-
-    public static int getActiveThreads() {
-        return activeThreads;
     }
 }

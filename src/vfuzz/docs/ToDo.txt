@@ -1,6 +1,8 @@
 	NEXT STEPS
 
 > fix -r mode throwing errors with bad request file
+    -> if a bad request file is built and there are some internal errors, we'd need to throw appropriate exceptions and stop program executions
+    -> this is a good time to think about logging: is terminal output still the way to go?
 
 > Currently with a single thread and recursive mode, new recursive targets receive 0 threads.
     Rethink if this conservative approach is favorable over giving each new target 1 new thread, independent of the specified thread count by the user.

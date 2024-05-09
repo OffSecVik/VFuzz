@@ -1,4 +1,4 @@
-package vfuzz.network;
+package vfuzz.network.request;
 
 import vfuzz.config.ConfigAccessor;
 
@@ -21,7 +21,7 @@ public class ParsedHttpRequest {
     public ParsedHttpRequest() {
     }
 
-    public ParsedHttpRequest(ParsedHttpRequest that) { // copy constructor - this will be called very often
+    public ParsedHttpRequest(ParsedHttpRequest that) {
         method = that.method;
         url = that.url;
         headers = that.headers; // TODO: Ensure that this actually makes a deep copy of the original headers Map

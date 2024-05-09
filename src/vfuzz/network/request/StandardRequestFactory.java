@@ -1,4 +1,4 @@
-package vfuzz.network;
+package vfuzz.network.request;
 
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 
 
-public class WebRequestFactory {
+public class StandardRequestFactory implements WebRequestFactory {
 
     private static RequestModeStrategy requestModeStrategy;
     private static RequestMethodStrategy requestMethodStrategy;
@@ -27,6 +27,8 @@ public class WebRequestFactory {
     private final boolean isUserAgentRandomizationEnabled;
 
     private HttpRequestBase prototypeRequest;
+
+    private final String targetUrl;
 
     static {
         switch (ConfigAccessor.getConfigValue("requestMode", RequestMode.class)) {
@@ -42,7 +44,8 @@ public class WebRequestFactory {
         }
     }
 
-    public WebRequestFactory() {
+    public StandardRequestFactory(String targetUrl) {
+        this.targetUrl = targetUrl;
         buildPrototypeRequest();
         isUserAgentRandomizationEnabled = ConfigAccessor.getConfigValue("randomAgent", Boolean.class);
 
@@ -75,7 +78,8 @@ public class WebRequestFactory {
         }
     }
 
-    public HttpRequestBase buildRequest(String requestUrl, String payload) {
+    @Override
+    public HttpRequestBase buildRequest(String payload) {
         try {
             String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8);
 
@@ -85,7 +89,7 @@ public class WebRequestFactory {
 
             HttpRequestBase clonedRequest = requestMethodStrategy.cloneRequest(prototypeRequest);
 
-            requestModeStrategy.modifyRequest(clonedRequest, requestUrl, payload);
+            requestModeStrategy.modifyRequest(clonedRequest, targetUrl, payload);
 
             if (isUserAgentRandomizationEnabled) {
                 clonedRequest.setHeader("User-Agent", RandomAgent.get());
@@ -100,41 +104,5 @@ public class WebRequestFactory {
         }
 
         return null;
-    }
-
-    public HttpRequestBase buildRequestFromFile(ParsedHttpRequest parsedRequest, String payload) {
-        try {
-            String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8); // urlencoding, some wordlists have weird payloads
-            parsedRequest.replaceFuzzMarker(encodedPayload); // injecting the payload into the request // TODO: OPTIONAL: could avoid making deep copies of the parsedRequest in QueueConsumer if we found a way to parse for FUZZ AFTER extracting the data from the parsedRequest. This would likely involve making a method in this class right here or checking for FUZZ every time we read data from the request
-            // String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8);
-            HttpRequestBase request = null;
-            String requestUrl = parsedRequest.getUrl();
-            // requestUrl = requestUrl.endsWith("/") ? requestUrl : requestUrl + "/"; // TODO: Take care of duplicate due to backslashes another way, this is a little janky
-
-            // set request method
-            switch (parsedRequest.getMethod().toUpperCase()) {
-                case "GET" -> request = new HttpGet(requestUrl);
-                case "HEAD" -> request = new HttpHead(requestUrl);
-                case "POST" -> {
-                    HttpPost postRequest = new HttpPost(requestUrl);
-                    postRequest.setEntity(new StringEntity(parsedRequest.getBody())); // TODO: check if POST body is preserved, handle content-length dynamically based on payload length
-                    request = postRequest;
-                }
-            }
-
-            // set up headers
-            for (Map.Entry<String, String>entry : parsedRequest.getHeaders().entrySet()) {
-                Objects.requireNonNull(request).setHeader(entry.getKey(), entry.getValue());
-            }
-
-            if (ConfigAccessor.getConfigValue("randomAgent", Boolean.class)) {
-                Objects.requireNonNull(request).setHeader("User-Agent", RandomAgent.get());
-            }
-
-            return request;
-
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
     }
 }
