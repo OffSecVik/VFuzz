@@ -82,6 +82,10 @@ public class ConfigManager {
         return configValues.get(key);
     }
 
+    public List<CommandLineArgument> getRegisteredArguments() {
+        return new ArrayList<>(arguments.values());
+    }
+
     @SuppressWarnings("unused")
     public void verifyRequiredArguments() {
         if (arguments.values().stream().anyMatch(arg -> !arg.isOptional() && !providedArgs.contains(arg.getName()) && !providedArgs.contains(arg.getAlias()))) {
