@@ -57,13 +57,34 @@ public class TerminalOutput implements Runnable {
      */
 
     public void updateMetrics() {
-        System.out.println("---------------------------------------------------------");
-        System.out.println("Rate Limit: " + WebRequester.getRateLimiter().getRateLimitPerSecond());
-        System.out.println("Attempted Requests per Second: \t\t" + (int)Metrics.getRequestsPerSecond());
-        System.out.println("Successful requests per Second: \t" + (int)Metrics.getSuccessfulRequestsPerSecond());
-        System.out.println("Retries per Second: \t\t\t\t" + (int)Metrics.getRetriesPerSecond());
-        System.out.println("\t\tretry rate: " + String.format("%.3f", Metrics.getRetryRate()*100) + "%");
+        System.out.println(Color.GRAY + "---------------------------------------------------------" + Color.RESET);
+        System.out.println(Color.YELLOW_BOLD + "Rate Limit: " + Color.RESET + Color.WHITE_BOLD + "\t\t\t\t\t\t" + WebRequester.getRateLimiter().getRateLimitPerSecond() + Color.RESET);
+        System.out.println(Color.BLUE_BOLD + "Attempted Requests per Second: " + Color.RESET + Color.WHITE_BOLD + "\t\t" + (int) Metrics.getRequestsPerSecond() + Color.RESET);
+        System.out.println(Color.GREEN_BOLD + "Successful Requests per Second: " + Color.RESET + Color.WHITE_BOLD + "\t" + (int) Metrics.getSuccessfulRequestsPerSecond() + Color.RESET);
+        System.out.println(Color.ORANGE_BOLD + "Retries per Second: " + Color.RESET + Color.WHITE_BOLD + "\t\t\t\t" + (int) Metrics.getRetriesPerSecond() + Color.RESET);
+
+        double retryRate = Metrics.getRetryRate() * 100;
+        String retryRateString = String.format("%.3f", retryRate) + "%";
+        String retryRateColor = getRetryRateColor(retryRate);
+
+        System.out.println("\t\t" + Color.ORANGE_BOLD + "Retry Rate: " + Color.RESET + retryRateColor + "\t\t\t\t" + retryRateString + Color.RESET);
         System.out.println();
+    }
+
+    private String getRetryRateColor(double retryRate) {
+        if (retryRate >= 90) {
+            return Color.RED;
+        } else if (retryRate >= 70) {
+            return Color.ORANGE;
+        } else if (retryRate >= 50) {
+            return Color.YELLOW;
+        } else if (retryRate >= 30) {
+            return Color.GREEN_BRIGHT;
+        } else if (retryRate >= 10) {
+            return Color.GREEN;
+        } else {
+            return Color.GREEN_BOLD;
+        }
     }
 
     public void updatePayload() {
