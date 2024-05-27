@@ -108,6 +108,10 @@ public class ConfigManager {
         configValues.clear();
     }
 
+    public List<CommandLineArgument> getRegisteredArguments() {
+        return new ArrayList<>(arguments.values());
+    }
+
     @SuppressWarnings("unused")
     public Set<String> getRegisteredArgumentNames() {
         return arguments.keySet();
