@@ -88,6 +88,9 @@ public class ConfigManager {
 
     @SuppressWarnings("unused")
     public void verifyRequiredArguments() {
+        if (arguments.values().stream().anyMatch(arg -> arg.getName().equals("--help"))) {
+            return;
+        }
         if (arguments.values().stream().anyMatch(arg -> !arg.isOptional() && !providedArgs.contains(arg.getName()) && !providedArgs.contains(arg.getAlias()))) {
             System.err.println("Missing required arguments. Exiting.");
             System.exit(1);

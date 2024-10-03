@@ -345,6 +345,16 @@ public class ArgParse {
                 "false",
                 true
         ));
+
+        configManager.registerArgument(new CommandLineArgument(
+                "--help", "-h", "help",
+                (cm, value) -> cm.setConfigValue("help", value),
+                value -> true,
+                "Displays this menu.",
+                true,
+                "false",
+                true
+        ));
     }
 
     //TODO: Remove this garbage lol, find a way to use the ConfigAccessor for this.

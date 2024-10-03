@@ -13,24 +13,27 @@ import vfuzz.network.WebRequester;
 public class VFuzz {
     public static void main(String[] args) {
 
-
         ConfigManager configManager = ConfigManager.getInstance();
 
         ArgParse.registerArguments();
 
         configManager.processArguments(args);
+
         configManager.verifyRequiredArguments(); // TODO: Check if work!
 
-        ConfigurationPrinter.printConfiguration();
-
-        for (CommandLineArgument arg : configManager.getRegisteredArguments()) {
-            System.out.printf("  " + Color.CYAN + "%s" + Color.RESET + ", " + Color.CYAN_BOLD + "%s" + Color.RESET + "\n",
-                    arg.getName(),
-                    arg.getAlias());
-            System.out.printf("    " + Color.GREEN + "%s" + Color.RESET + "\n", arg.getDescription());
-            System.out.printf("    " + Color.PURPLE + "Default: " + Color.RESET + "%s\n\n",
-                    arg.getDefaultValue() != null ? arg.getDefaultValue() : "none");
+        if (configManager.isArgumentRegistered("--help")) {
+            for (CommandLineArgument arg : configManager.getRegisteredArguments()) {
+                System.out.printf("  " + Color.CYAN + "%s" + Color.RESET + ", " + Color.CYAN_BOLD + "%s" + Color.RESET + "\n",
+                        arg.getName(),
+                        arg.getAlias());
+                System.out.printf("    " + Color.GREEN + "%s" + Color.RESET + "\n", arg.getDescription());
+                System.out.printf("    " + Color.PURPLE + "Default: " + Color.RESET + "%s\n\n",
+                        arg.getDefaultValue() != null ? arg.getDefaultValue() : "none");
+            }
+            System.exit(1);
         }
+
+        ConfigurationPrinter.printConfiguration();
 
         int threadCount = ConfigAccessor.getConfigValue("threadCount", Integer.class);
         String wordlistPath = ConfigAccessor.getConfigValue("wordlistPath", String.class);
