@@ -38,9 +38,11 @@ public class ConfigManager {
      */
     public void registerArgument(CommandLineArgument arg) {
         arguments.put(arg.getName(), arg);
+        /*
         if (!arg.getAlias().isEmpty()) {
             arguments.put(arg.getAlias(), arg);
         }
+        */
         setOptionalDefaultValue(arg);
     }
 
@@ -71,19 +73,19 @@ public class ConfigManager {
      * Processes the given command-line arguments.
      * It identifies registered arguments and executes their actions or sets values accordingly.
      *
-     * @param args the command-line arguments to process
+     * @param passedArguments the command-line arguments to process
      */
-    public void processArguments(String[] args) {
-        for (int i = 0; i < args.length; i++) {
-            String arg = args[i];
-            CommandLineArgument cmdArg = arguments.getOrDefault(arg, findArgumentByAlias(arg));
+    public void processArguments(String[] passedArguments) {
+        for (int i = 0; i < passedArguments.length; i++) {
+            String argument = passedArguments[i];
+            CommandLineArgument cmdArg = arguments.getOrDefault(argument, findArgumentByAlias(argument));
 
             if (cmdArg != null) {
-                String value = getValueForArgument(args, cmdArg, i);
+                String value = getValueForArgument(passedArguments, cmdArg, i);
                 if (value != null && cmdArg.validate(value)) {
                     cmdArg.executeAction(this, value);
                 } else if (!cmdArg.isFlag()) {
-                    System.out.println("Error: Argument '" + arg + "' expects a value.");
+                    System.out.println("Error: Argument '" + argument + "' expects a value.");
                 }
             }
         }
