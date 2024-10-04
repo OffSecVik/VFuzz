@@ -37,7 +37,7 @@ public class VFuzz {
         configManager.processArguments(args);
 
         // Display help information if the "--help" argument is passed
-        if (configManager.isArgumentRegistered("--help")) {
+        if (configManager.getConfigValue("help").equals("true")) {
             for (CommandLineArgument arg : configManager.getRegisteredArguments()) {
                 System.out.printf("  " + Color.CYAN + "%s" + Color.RESET + ", " + Color.CYAN_BOLD + "%s" + Color.RESET + "\n",
                         arg.getName(),
@@ -46,7 +46,7 @@ public class VFuzz {
                 System.out.printf("    " + Color.PURPLE + "Default: " + Color.RESET + "%s\n\n",
                         arg.getDefaultValue() != null ? arg.getDefaultValue() : "none");
             }
-            System.exit(1); // Exit the application after displaying help
+            System.exit(0); // Exit the application after displaying help
         }
 
         // Verify that all required arguments have been provided
