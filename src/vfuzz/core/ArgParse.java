@@ -11,8 +11,28 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-
+/**
+ * The {@code ArgParse} class is responsible for handling command-line argument registration and parsing.
+ * It registers multiple arguments using the {@code ConfigManager} singleton, allowing various
+ * options like thread count, URL, wordlist, HTTP methods, request modes, and other parameters
+ * for the fuzzing tool to be set through the command line.
+ *
+ * <p>Each argument is registered with a validator to ensure that the user-provided values meet
+ * expected formats (e.g., integers, valid URLs, or HTTP status codes). The class also provides
+ * functionality for retrieving headers, excluded status codes, and excluded lengths.</p>
+ */
 public class ArgParse {
+
+    private static final ConfigManager configManager = ConfigManager.getInstance();
+
+    private static final Set<String> headers = new HashSet<>();
+
+
+    /**
+     * Registers all available command-line arguments with the {@code ConfigManager} instance.
+     * Each argument can be configured with an associated action, validator, description,
+     * and other attributes such as optionality or default values.
+     */
     public static void registerArguments() {
         ConfigManager configManager = ConfigManager.getInstance();
 
@@ -357,10 +377,12 @@ public class ArgParse {
         ));
     }
 
-    //TODO: Remove this garbage lol, find a way to use the ConfigAccessor for this.
-
-    private static final ConfigManager configManager = ConfigManager.getInstance();
-
+    /**
+     * Retrieves a set of HTTP status codes or ranges that should be excluded from results.
+     *
+     * @return A set of {@link Range} objects representing the excluded status codes or ranges.
+     * If no exclusions are configured, an empty set is returned.
+     */
     public static Set<Range> getExcludedStatusCodes() {
         String codes = configManager.getConfigValue("excludedStatusCodes");
         if (codes == null || codes.trim().isEmpty()) {
@@ -372,6 +394,12 @@ public class ArgParse {
                 .collect(Collectors.toSet());
     }
 
+    /**
+     * Retrieves a set of content lengths or length ranges that should be excluded from results.
+     *
+     * @return A set of {@link Range} objects representing the excluded content lengths or ranges.
+     * If no exclusions are configured, an empty set is returned.
+     */
     public static Set<Range> getExcludedLength() {
         String lengths = configManager.getConfigValue("excludeLength");
         if (lengths == null || lengths.trim().isEmpty()) {
@@ -383,14 +411,12 @@ public class ArgParse {
                 .collect(Collectors.toSet());
     }
 
-    private static final Set<String> headers = new HashSet<>();
-
+    /**
+     * Retrieves a set of custom headers that have been set for requests.
+     *
+     * @return A set of strings representing the custom headers. If no headers are set, an empty set is returned.
+     */
     public static Set<String> getHeaders() {
         return headers;
-        /*
-        String headers = configManager.getConfigValue("headers");
-        return headers == null ? Set.of() : Stream.of(headers.split(",\\s*")).collect(Collectors.toSet());
-
-         */
     }
 }

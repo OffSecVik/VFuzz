@@ -1,3 +1,9 @@
+/**
+ * The ConfigManager class is a singleton responsible for managing configuration values
+ * and command-line arguments within the application. It allows registering command-line
+ * arguments, storing config values, and handling defaults. The class also processes
+ * command-line arguments and ensures required arguments are provided.
+ */
 package vfuzz.config;
 
 import vfuzz.core.CommandLineArgument;
@@ -5,7 +11,10 @@ import vfuzz.core.CommandLineArgument;
 import java.util.*;
 
 public class ConfigManager {
+
     private static ConfigManager instance;
+
+    // Maps to store command-line arguments and their corresponding values
     private final Map<String, CommandLineArgument> arguments = new HashMap<>();
     private final Map<String, String> configValues = new HashMap<>();
     private final Map<String, String> defaultValues = new HashMap<>();
@@ -20,6 +29,13 @@ public class ConfigManager {
         return instance;
     }
 
+    /**
+     * Registers a command-line argument to the manager.
+     * Adds the argument and its alias (if any) to the internal map.
+     * If the argument is optional, applies the default value if not provided.
+     *
+     * @param arg the CommandLineArgument to register
+     */
     public void registerArgument(CommandLineArgument arg) {
         arguments.put(arg.getName(), arg);
         if (!arg.getAlias().isEmpty()) {
@@ -28,6 +44,12 @@ public class ConfigManager {
         setOptionalDefaultValue(arg);
     }
 
+    /**
+     * Sets the default value for an optional argument if it wasn't provided.
+     * The default value is applied if the argument or its alias was not used.
+     *
+     * @param arg the CommandLineArgument whose default value is being set
+     */
     private void setOptionalDefaultValue(CommandLineArgument arg) {
         if (arg.isOptional() && !providedArgs.contains(arg.getName()) && !providedArgs.contains(arg.getAlias())) {
             arg.applyDefaultValue(this);
@@ -35,10 +57,22 @@ public class ConfigManager {
         }
     }
 
+    /**
+     * Checks whether the value for a given configuration key is the default value.
+     *
+     * @param key the configuration key to check
+     * @return true if the value is the default, false otherwise
+     */
     public boolean isDefaultValue(String key) {
         return defaultValues.containsKey(key) && Objects.equals(configValues.get(key), defaultValues.get(key));
     }
 
+    /**
+     * Processes the given command-line arguments.
+     * It identifies registered arguments and executes their actions or sets values accordingly.
+     *
+     * @param args the command-line arguments to process
+     */
     public void processArguments(String[] args) {
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
@@ -55,6 +89,12 @@ public class ConfigManager {
         }
     }
 
+    /**
+     * Finds a command-line argument by its alias.
+     *
+     * @param arg the alias of the argument
+     * @return the CommandLineArgument if found, otherwise null
+     */
     private CommandLineArgument findArgumentByAlias(String arg) {
         return arguments.values().stream()
                 .filter(a -> arg.equals(a.getAlias()))
@@ -62,6 +102,16 @@ public class ConfigManager {
                 .orElse(null);
     }
 
+    /**
+     * Retrieves the value associated with a command-line argument.
+     * If the argument is a flag, it returns "true".
+     * If the argument expects a value, it fetches the next command-line value.
+     *
+     * @param args the array of command-line arguments
+     * @param cmdArg the CommandLineArgument being processed
+     * @param index the current index in the command-line arguments
+     * @return the value for the argument, or null if no valid value is found
+     */
     private String getValueForArgument(String[] args, CommandLineArgument cmdArg, int index) {
         if (cmdArg.isFlag()) {
             providedArgs.add(cmdArg.getName());
@@ -74,19 +124,39 @@ public class ConfigManager {
         return null;
     }
 
+    /**
+     * Sets a configuration value for a specific key.
+     *
+     * @param key the configuration key
+     * @param value the value to be set
+     */
     public void setConfigValue(String key, String value) {
         configValues.put(key, value);
     }
 
+    /**
+     * Retrieves the configuration value for a given key.
+     *
+     * @param key the configuration key
+     * @return the configuration value, or null if the key doesn't exist
+     */
     public String getConfigValue(String key) {
         return configValues.get(key);
     }
 
+    /**
+     * Returns a list of all registered command-line arguments.
+     *
+     * @return a List of registered CommandLineArgument objects
+     */
     public List<CommandLineArgument> getRegisteredArguments() {
         return new ArrayList<>(arguments.values());
     }
 
-    @SuppressWarnings("unused")
+    /**
+     * Verifies that all required arguments are provided.
+     * If any required argument is missing, the program exits with an error message.
+     */
     public void verifyRequiredArguments() {
         if (arguments.values().stream().anyMatch(arg -> arg.getName().equals("--help"))) {
             return;
@@ -97,11 +167,22 @@ public class ConfigManager {
         }
     }
 
-    @SuppressWarnings("unused")
+    /**
+     * Checks if a command-line argument with the given name is registered.
+     *
+     * @param argName the name of the argument
+     * @return true if the argument is registered, false otherwise
+     */
     public boolean isArgumentRegistered(String argName) {
         return arguments.containsKey(argName);
     }
 
+    /**
+     * Unregisters a command-line argument by its name.
+     * If the argument has an alias, it removes that as well.
+     *
+     * @param argName the name of the argument to unregister
+     */
     @SuppressWarnings("unused")
     public void unregisterArgument(String argName) {
         CommandLineArgument arg = arguments.remove(argName);
@@ -110,11 +191,19 @@ public class ConfigManager {
         }
     }
 
+    /**
+     * Clears all stored configuration values.
+     */
     @SuppressWarnings("unused")
     public void clearConfigValues() {
         configValues.clear();
     }
 
+    /**
+     * Retrieves the set of all registered argument names.
+     *
+     * @return a Set of registered argument names
+     */
     @SuppressWarnings("unused")
     public Set<String> getRegisteredArgumentNames() {
         return arguments.keySet();

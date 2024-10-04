@@ -7,7 +7,22 @@ import vfuzz.network.strategy.requestmode.RequestMode;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * The ConfigurationPrinter class provides functionality to print the current configuration
+ * settings to the console. It retrieves configuration values using the {@link ConfigAccessor} class,
+ * formats them, and prints them with appropriate colors. Each configuration value is displayed with
+ * a label, and if the value is a default, it is displayed in a different color.
+ *
+ * @see ConfigAccessor
+ * @see Color
+ */
 public class ConfigurationPrinter {
+
+    /**
+     * Prints the current configuration settings to the console.
+     * For each configuration key, it retrieves the value using {@link ConfigAccessor#getConfigValue},
+     * checks whether the value is the default, and formats it with a label and color.
+     */
     public static void printConfiguration() {
         AtomicBoolean isDefault = new AtomicBoolean();
 
@@ -36,6 +51,18 @@ public class ConfigurationPrinter {
         System.out.println(getConfigDisplayString("randomAgent", Boolean.class, isDefault, "Random Agent"));
     }
 
+    /**
+     * Retrieves the configuration value for the specified key and converts it to the given type.
+     * It then formats the result as a display string with an associated label and color based on
+     * whether the value is a default value or not.
+     *
+     * @param key The configuration key to retrieve the value for.
+     * @param type The type of the configuration value.
+     * @param isDefault An {@link AtomicBoolean} indicating if the value is a default value.
+     * @param label The label to display alongside the configuration value.
+     * @param <T> The type of the configuration value.
+     * @return A string formatted with the label, configuration value, and color.
+     */
     private static <T> String getConfigDisplayString(String key, Class<T> type, AtomicBoolean isDefault, String label) {
         T value = ConfigAccessor.getConfigValue(key, type, isDefault);
         String color = isDefault.get() ? Color.GRAY : Color.BLUE;

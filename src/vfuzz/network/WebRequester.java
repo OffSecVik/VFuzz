@@ -17,12 +17,11 @@ import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.nio.client.HttpAsyncClient;
 import org.apache.http.nio.reactor.ConnectingIOReactor;
 import org.apache.http.nio.reactor.IOReactorException;
-
 import vfuzz.config.ConfigAccessor;
 import vfuzz.logging.Metrics;
 import vfuzz.network.ratelimiter.RateLimiterLeakyBucket;
-
 import java.nio.charset.StandardCharsets;
+
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.*;
@@ -30,6 +29,15 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * The {@code WebRequester} class handles sending HTTP requests asynchronously with built-in support for rate limiting,
+ * retries, and optional jitter. It uses an asynchronous HTTP client to send requests and provides functionality for
+ * retrying requests if they fail.
+ *
+ * <p>This class is designed to work in a high-throughput environment where multiple requests are sent continuously.
+ * It integrates with a leaky bucket rate limiter to ensure requests are sent within predefined rate limits.
+ * Optional jitter is applied to simulate network variability, and retries are handled for failed requests.
+ */
 public class WebRequester {
 
     private static final RateLimiterLeakyBucket rateLimiter;
@@ -183,12 +191,13 @@ public class WebRequester {
         });
     }
 
-    public static RateLimiterLeakyBucket getRateLimiter() {
-        return rateLimiter;
-    }
 
     /**
-     * Extracts the most relevant cause for an exception. Defaults to the given exception if no cause is found.
+     * Extracts the most relevant cause for an exception.
+     * If no cause is found, returns the given exception.
+     *
+     * @param ex The exception from which to extract the cause.
+     * @return The most relevant cause or the original exception if no cause is found.
      */
     private static Throwable extractRelevantCause(Throwable ex) {
         return (ex.getCause() != null) ? ex.getCause() : ex;
@@ -196,6 +205,9 @@ public class WebRequester {
 
     /**
      * Attempts to parse an HTTP response from an exception message containing unexpected response codes.
+     *
+     * @param message The exception message to parse.
+     * @return An {@link Optional<HttpResponse>} containing the parsed HTTP response, if parsing is successful.
      */
     private static Optional<HttpResponse> tryParseHttpResponse(String message) {
         Pattern pattern = Pattern.compile("(\\S+?)/(\\d)\\.(\\d) (\\d{3})");
@@ -206,6 +218,12 @@ public class WebRequester {
         return Optional.empty();
     }
 
+    /**
+     * Creates an {@link HttpResponse} from the matched exception message.
+     *
+     * @param matcher The {@link Matcher} containing matched groups from the exception message.
+     * @return A {@link HttpResponse} object representing the HTTP response parsed from the exception message.
+     */
     private static HttpResponse createHttpResponseFromException(Matcher matcher) {
         String protocol = matcher.group(1);
         int protocolVersionMajor = Integer.parseInt(matcher.group(2));
@@ -220,5 +238,9 @@ public class WebRequester {
 
     public static void setRateLimit(int i) {
         rateLimiter.setRateLimitPerSecond(i);
+    }
+
+    public static RateLimiterLeakyBucket getRateLimiter() {
+        return rateLimiter;
     }
 }

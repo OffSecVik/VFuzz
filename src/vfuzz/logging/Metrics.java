@@ -5,6 +5,24 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * The {@code Metrics} class tracks and reports performance metrics related to requests,
+ * successful requests, and retries within the application.
+ *
+ * <p>Metrics are updated at a fixed interval, stored in circular buffers for a
+ * historical view, and used to calculate rates such as requests per second and retry rate.
+ *
+ * <p>Key features of this class include:
+ * <ul>
+ *     <li>Tracking the number of total requests, successful requests, and retries.</li>
+ *     <li>Calculating the rate of requests, successful requests, and retries per second.</li>
+ *     <li>Providing retry rates as a ratio of retries to requests.</li>
+ *     <li>Updating metrics at a configurable interval.</li>
+ * </ul>
+ *
+ * <p>This class uses a circular buffer to store recent history and averages the metrics over
+ * time, ensuring that the system can quickly adapt to changes in behavior while keeping historical data.
+ */
 public class Metrics {
 
     private static double retryRate = 0;
@@ -39,8 +57,10 @@ public class Metrics {
     private static final AtomicLong totalSuccessfulRequests = new AtomicLong();
     private static final AtomicLong totalRetries = new AtomicLong();
 
-
-
+    /**
+     * Starts the scheduled task to update metrics and rate limits at regular intervals.
+     * <p>This method is synchronized to ensure only one instance of the update task is running.
+     */
     public static synchronized void startMetrics() {
         if (executor == null || executor.isShutdown()) {
             executor = Executors.newSingleThreadScheduledExecutor();
@@ -48,11 +68,30 @@ public class Metrics {
         }
     }
 
+    /**
+     * Stops the scheduled task that updates the metrics and rate limits.
+     * <p>This method is synchronized to ensure that the task is safely shut down without leaving any running tasks.
+     */
+    public static synchronized void stopMetrics() {
+        if (executor != null) {
+            executor.shutdown();
+            executor = null;
+        }
+    }
+
+    /**
+     * Updates both metrics and the dynamic rate limiter at each interval.
+     * This method is run at a fixed rate and ensures that metrics are kept current.
+     */
     private static void updateAll() {
         updateMetrics();
         updateDynamicRateLimiter();
     }
 
+    /**
+     * Updates the circular buffers for requests, successful requests, and retries,
+     * and resets the current buffer index for the next interval.
+     */
     private static void updateMetrics() {
         currentIndex = (currentIndex + 1) % BUFFER_SIZE;
 
@@ -62,34 +101,63 @@ public class Metrics {
         retriesBuffer[currentIndex] = 0;
     }
 
+    /**
+     * Increments the count of total requests and updates the circular buffer at the current index.
+     */
     public static void incrementRequestsCount() {
         requestsBuffer[currentIndex]++;
         totalRequests.incrementAndGet();
     }
 
+    /**
+     * Increments the count of successful requests and updates the circular buffer at the current index.
+     */
     public static void incrementSuccessfulRequestsCount() {
         successfulRequestsBuffer[currentIndex]++;
         totalSuccessfulRequests.incrementAndGet();
     }
 
+    /**
+     * Increments the count of retries and updates the circular buffer at the current index.
+     */
     public static void incrementRetriesCount() {
         retriesBuffer[currentIndex]++;
         totalRetries.incrementAndGet();
     }
 
+    /**
+     * Calculates and returns the average number of requests per second over the duration of the buffer.
+     *
+     * @return The average requests per second.
+     */
     public static double getRequestsPerSecond() {
         return calculateSum(requestsBuffer) / (BUFFER_SIZE * (updateInterval / 1000.0));
     }
 
+    /**
+     * Calculates and returns the average number of successful requests per second over the duration of the buffer.
+     *
+     * @return The average successful requests per second.
+     */
     public static double getSuccessfulRequestsPerSecond() {
         return calculateSum(successfulRequestsBuffer) / (BUFFER_SIZE * (updateInterval / 1000.0));
     }
 
+    /**
+     * Calculates and returns the average number of retries per second over the duration of the buffer.
+     *
+     * @return The average retries per second.
+     */
     public static double getRetriesPerSecond() {
         return calculateSum(retriesBuffer) / (BUFFER_SIZE * (updateInterval / 1000.0));
     }
 
-    // Helper method to calculate sum of elements in an array
+    /**
+     * Helper method to calculate the sum of elements in a given array.
+     *
+     * @param array The array to sum.
+     * @return The sum of all elements in the array.
+     */
     private static long calculateSum(long[] array) {
         long sum = 0;
         for (long value : array) {
@@ -98,6 +166,9 @@ public class Metrics {
         return sum;
     }
 
+    /**
+     * Updates the retry rate, which is calculated as the ratio of retries to requests over time.
+     */
     private static void updateDynamicRateLimiter() {
         double requestsPerSecond = getRequestsPerSecond();
         double retriesPerSecond = getRetriesPerSecond();
@@ -107,12 +178,5 @@ public class Metrics {
 
     public static double getRetryRate() {
         return retryRate;
-    }
-
-    public static synchronized void stopMetrics() {
-        if (executor != null) {
-            executor.shutdown();
-            executor = null;
-        }
     }
 }

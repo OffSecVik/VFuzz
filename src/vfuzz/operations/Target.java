@@ -1,10 +1,19 @@
 package vfuzz.operations;
 
 import vfuzz.core.WordlistReader;
-
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+
+/**
+ * The {@code Target} class represents a fuzzing target in the fuzzer.
+ * Each target includes information such as the URL to be fuzzed, the recursion depth,
+ * the number of allocated threads, and whether the scan is complete.
+ *
+ * <p>Targets are stored in a thread-safe {@link CopyOnWriteArrayList} to ensure safe access
+ * and modification in a multithreaded environment. The class also tracks the status of
+ * each target and manages wordlist reading for the fuzzing process.
+ */
 public class Target {
 
     private static final CopyOnWriteArrayList<Target> targets = new CopyOnWriteArrayList<>();
@@ -15,10 +24,20 @@ public class Target {
     private final WordlistReader wordlistReader;
     private final AtomicBoolean scanComplete = new AtomicBoolean(false);
 
+    /**
+     * Checks if the scan for this target is complete.
+     *
+     * @return {@code true} if the scan is complete, {@code false} otherwise.
+     */
     public boolean isScanComplete() {
         return scanComplete.get();
     }
 
+    /**
+     * Retrieves the number of active (incomplete) targets.
+     *
+     * @return The number of active targets that have not completed scanning.
+     */
     public static int getActiveTargets() {
         int activeTargets = 0;
         for (Target target : targets) {
@@ -29,13 +48,22 @@ public class Target {
         return activeTargets;
     }
 
+
+    /**
+     * Constructs a new {@code Target} with the specified URL, recursion depth, and wordlist reader.
+     *
+     * <p>The new target is automatically added to the global list of targets.
+     *
+     * @param url The URL to be fuzzed.
+     * @param recursionDepth The recursion depth for this target.
+     * @param wordlistReader The wordlist reader for fuzzing payloads.
+     */
     public Target(String url, int recursionDepth, WordlistReader wordlistReader) {
         this.url = url;
         this.recursionDepth = recursionDepth;
         this.wordlistReader = wordlistReader;
         targets.add(this);
     }
-
 
     public static CopyOnWriteArrayList<Target> getTargets() {
         return targets;

@@ -5,12 +5,23 @@ import vfuzz.operations.Target;
 import vfuzz.logging.TerminalOutput;
 import vfuzz.network.strategy.requestmode.RequestMode;
 import vfuzz.logging.Color;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
+/**
+ * The {@code ThreadOrchestrator} class manages the lifecycle of multiple fuzzing threads
+ * in a multithreaded environment. It coordinates the thread allocation, handles recursion
+ * when new targets are discovered, and ensures that resources are dynamically distributed
+ * between active fuzzing targets. It also manages shutdown operations gracefully.
+ *
+ * <p>This class uses a {@link ConcurrentHashMap} to keep track of targets and their associated
+ * {@link QueueConsumer} tasks, and it adjusts thread allocation based on task completion
+ * and new target discovery.
+ *
+ * <p>A shutdown hook is registered to ensure proper shutdown and thread termination when the fuzzing process ends.
+ */
 public class ThreadOrchestrator {
 
     private final String wordlistPath;
@@ -18,15 +29,24 @@ public class ThreadOrchestrator {
     private final int THREAD_COUNT;
     private final ConcurrentHashMap<Target, List<QueueConsumer>> consumerTasks = new ConcurrentHashMap<>();
 
+    /**
+     * Initializes the {@code ThreadOrchestrator} with a wordlist path and thread limit.
+     *
+     * @param wordlistPath The path to the wordlist file used during fuzzing.
+     * @param threadLimit  The maximum number of threads allowed for fuzzing.
+     */
     public ThreadOrchestrator(String wordlistPath, int threadLimit) {
         this.wordlistPath = wordlistPath;
         this.THREAD_COUNT = threadLimit;
     }
 
-    public ExecutorService getExecutor() {
-        return executor;
-    }
-
+    /**
+     * Starts the fuzzing process by initializing the executor service, submitting {@link QueueConsumer}
+     * tasks for the initial target, and registering a shutdown hook for graceful termination.
+     *
+     * <p>Each {@code QueueConsumer} consumes payloads from the wordlist and sends HTTP requests.
+     * The initial target is created based on the URL fetched from the configuration.
+     */
     public void startFuzzing() {
         try {
             this.executor = Executors.newFixedThreadPool(THREAD_COUNT + 1); // plus one for Terminal Output
@@ -37,7 +57,7 @@ public class ThreadOrchestrator {
             WordlistReader wordlistReader = new WordlistReader(wordlistPath);
             Target initialTarget = new Target(ConfigAccessor.getConfigValue("url", String.class), 0, wordlistReader);
 
-            // submitting the initial tasks to the executor
+            // Submit the initial tasks to the executor
             List<QueueConsumer> consumersForURL = new ArrayList<>();
             for (int i = 0; i < THREAD_COUNT; i++) {
                 QueueConsumer consumerTask = new QueueConsumer(this, initialTarget);
@@ -45,10 +65,10 @@ public class ThreadOrchestrator {
                 consumersForURL.add(consumerTask);
             }
 
-            // making the Target object
+            // Add the target and associated consumers to the task map
             consumerTasks.put(initialTarget, consumersForURL);
 
-            // Shutdown hook
+            // Register a shutdown hook for graceful termination
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 terminalOutput.shutdown();
                 terminalOutput.setRunning(false);
@@ -71,21 +91,29 @@ public class ThreadOrchestrator {
         }
     }
 
+    /**
+     * Allocates available threads to active fuzzing targets. Ensures the initial target
+     * gets more resources initially, and adjusts the allocation dynamically when new
+     * targets are added or tasks complete.
+     */
     private void allocateThreads() {
         int activeTargets = Target.getActiveTargets();
         int[] allocatedThreads = new int[activeTargets];
         int availableThreads = THREAD_COUNT;
         int helper = QueueConsumer.isFirstThreadFinished() ? 0 : 1;
+
         if (!QueueConsumer.isFirstThreadFinished()) {
             allocatedThreads[0] = Math.max(THREAD_COUNT / 2, 1); // for our initial target, which gets the chunk of the resources
             availableThreads -= allocatedThreads[0];
         }
+
         int extraThreads = availableThreads % (activeTargets - helper);
         // System.out.println("Total threads " + availableThreads + " remaining threads " + extraThreads);
         for (int i = helper; i < activeTargets; i++) {
             allocatedThreads[i] = (availableThreads / (activeTargets - helper));
             // allocatedThreads[i] = Math.max((availableThreads / (activeTargets - helper)), 1); // this is the implementation for non-conservative recursive fuzzing where each new target gets one baseline thread
         }
+
         int index = 0;
         while (extraThreads > 0) {
             allocatedThreads[(index + helper) % allocatedThreads.length] += 1;
@@ -101,6 +129,14 @@ public class ThreadOrchestrator {
         }
     }
 
+    /**
+     * Initiates recursive fuzzing when a new target URL is discovered, unless
+     * the recursion depth limit is reached. The new target is assigned threads
+     * from the existing pool, and the thread allocation is adjusted dynamically.
+     *
+     * @param newTargetUrl The newly discovered target URL.
+     * @param currentDepth The current recursion depth.
+     */
     public void initiateRecursion(String newTargetUrl, int currentDepth) {
         int recursionDepthLimit = 5;
         if (currentDepth >= recursionDepthLimit) return; // if max recursion depth is hit, don't add target to list
@@ -110,7 +146,7 @@ public class ThreadOrchestrator {
             newTargetUrl += "/FUZZ";
         }
 
-        // make new target and equip it with threads
+        // Create a new target and allocate threads to it
         WordlistReader recursiveReader = new WordlistReader(wordlistPath);
         Target recursiveTarget = new Target(newTargetUrl, newDepth, recursiveReader);
         allocateThreads();
@@ -122,32 +158,35 @@ public class ThreadOrchestrator {
         }
         consumerTasks.put(recursiveTarget, consumersForRecursiveURL);
 
-        // then we remove threads from our targets:
+        // Adjust the thread allocation for existing targets
         for (Map.Entry<Target, List<QueueConsumer>> entry : consumerTasks.entrySet()) {
             Target target = entry.getKey();
             String targetUrl = target.getUrl();
             List<QueueConsumer> consumers = entry.getValue();
-            if (targetUrl.equals(ConfigAccessor.getConfigValue("url", String.class))) { // handle our initial target, it gets the chunk of the resources
-                //System.out.println("HANDLING INITIAL TARGET " + ArgParse.getUrl());
+
+            if (targetUrl.equals(ConfigAccessor.getConfigValue("url", String.class))) { // If the original target is still being fuzzed it gets the majority of resources
                 while (consumers.size() > Math.max(THREAD_COUNT / 2, 1)) {
                     QueueConsumer consumer = consumers.remove(consumers.size() - 1); // remove from the end
-                    consumer.cancel(); // cancel the QueueConsumer
+                    consumer.cancel();
                 }
             } else if (!targetUrl.equals(newTargetUrl)) {
                 while (consumers.size() > target.getAllocatedThreads()) {
                     QueueConsumer consumer = consumers.remove(consumers.size() - 1); // remove from the end
-                    consumer.cancel(); // cancel QueueConsumer
+                    consumer.cancel();
                 }
             }
         }
-        System.out.println(Color.GREEN + "Initiating recursion: " + Color.RESET);
-        printActiveThreadsByTarget();
+        // System.out.println(Color.GREEN + "Initiating recursion: " + Color.RESET);
+        // printActiveThreadsByTarget();
     }
 
-
+    /**
+     * Redistributes threads among active targets. This method assumes that the
+     * original target finishes first, and then threads are reallocated to other
+     * targets.
+     */
     public void redistributeThreads() { // assuming our original target will finish first, and we can now evenly redistribute threads
         allocateThreads();
-        // System.out.println(Color.GREEN + "Redistributing threads:" + Color.RESET);
         for (Map.Entry<Target, List<QueueConsumer>> entry : consumerTasks.entrySet()) {
             Target target = entry.getKey();
             if (target.isScanComplete()) continue; // find active targets
@@ -163,12 +202,13 @@ public class ThreadOrchestrator {
                 executor.submit(fillConsumer);
                 consumers.add(fillConsumer);
             }
-            // System.out.println("Adding " + threads + " threads to " + target.getUrl());
-            // System.out.println("-----------" + target.getUrl() + " now has " + target.getAllocatedThreads() + " threads.");
         }
-        // printActiveThreadsByTarget();
     }
 
+    /**
+     * Prints the number of active threads for each target to the console.
+     */
+    @SuppressWarnings("unused")
     public void printActiveThreadsByTarget() {
         consumerTasks.forEach((target, consumers) -> {
             int activeCount = (int) consumers.stream().filter(QueueConsumer::isRunning).count();
@@ -177,12 +217,21 @@ public class ThreadOrchestrator {
         });
     }
 
-    // simple shutdown method //TODO handle program shutdown (shutdown hook, all tasks finished)
+   //TODO handle program shutdown (shutdown hook, all tasks finished)
     public void shutdown() {
         executor.shutdown();
     }
 
+    /**
+     * Checks if the executor service has been shut down.
+     *
+     * @return {@code true} if the executor is shut down, {@code false} otherwise.
+     */
     public boolean isShutdown() {
         return executor.isShutdown();
+    }
+
+    public ExecutorService getExecutor() {
+        return executor;
     }
 }

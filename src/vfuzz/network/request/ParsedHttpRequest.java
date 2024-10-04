@@ -1,7 +1,6 @@
 package vfuzz.network.request;
 
 import vfuzz.config.ConfigAccessor;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -12,22 +11,59 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.stream.Collectors;
 
+
+/**
+ * The {@code ParsedHttpRequest} class represents an HTTP request that has been parsed from a text file.
+ *
+ * <p>This class allows you to create a request by reading from a file, and it can also replace
+ * specific fuzzing markers within the request with fuzzing payloads. The class stores the HTTP method,
+ * URL, headers, and body, and provides utility methods for working with the parsed request.
+ * </p>
+ *
+ * <p>It provides methods for:
+ * <ul>
+ *     <li>Reading a request from a file.</li>
+ *     <li>Replacing fuzzing markers with provided payloads in the method, URL, headers, or body.</li>
+ *     <li>Generating a deep copy of the request.</li>
+ * </ul>
+ * </p>
+ */
 public class ParsedHttpRequest {
     private String method;
     private String url;
     private Map<String, String> headers = new HashMap<>();
     private String body;
 
+    /**
+     * Default constructor for {@code ParsedHttpRequest}.
+     */
     public ParsedHttpRequest() {
     }
 
+
+    /**
+     * Copy constructor that creates a deep copy of an existing {@code ParsedHttpRequest} object.
+     *
+     * @param that The {@code ParsedHttpRequest} object to copy.
+     */
     public ParsedHttpRequest(ParsedHttpRequest that) {
-        method = that.method;
-        url = that.url;
-        headers = that.headers; // TODO: Ensure that this actually makes a deep copy of the original headers Map
-        body = that.body;
+        this.method = that.method;
+        this.url = that.url;
+        this.headers = new HashMap<>(that.headers); // TODO: Ensure that this actually makes a deep copy of the original headers Map
+        this.body = that.body;
     }
 
+
+    /**
+     * Parses an HTTP request from a text file and returns a new {@code ParsedHttpRequest} object.
+     *
+     * <p>The file must contain an HTTP request in plain text format, with the request line (method and URL),
+     * headers, and optionally a body. Each part is parsed and stored in the respective fields of the request object.</p>
+     *
+     * @param filePath The path to the text file containing the HTTP request.
+     * @return A new {@code ParsedHttpRequest} object with the parsed values.
+     * @throws IOException If there is an error reading the file.
+     */
     public ParsedHttpRequest parseHttpRequestFromFile(String filePath) throws IOException {
         ParsedHttpRequest request = new ParsedHttpRequest();
         List<String> lines = Files.readAllLines(Paths.get(filePath), StandardCharsets.UTF_8);
@@ -61,6 +97,14 @@ public class ParsedHttpRequest {
         return request;
     }
 
+    /**
+     * Replaces the fuzzing marker (e.g., "FUZZ") with the provided payload throughout the request.
+     *
+     * <p>This method checks for the fuzz marker in the URL, method, headers, and body, and replaces it with
+     * the given payload. It allows the request to be customized dynamically during fuzzing operations.</p>
+     *
+     * @param payload The fuzzing payload that will replace the fuzz marker.
+     */
     public void replaceFuzzMarker(String payload) {
         String fuzzMarker = ConfigAccessor.getConfigValue("fuzzMarker", String.class);
         // check and replace in URL
@@ -124,12 +168,16 @@ public class ParsedHttpRequest {
         this.body = body;
     }
 
+    /**
+     * Returns a string representation of the {@code ParsedHttpRequest}, including the method, URL,
+     * headers, and body.
+     *
+     * @return A string representation of the HTTP request.
+     */
     public String toString() {
-        String r = "";
-        r += "Method: " + method;
-        r += "\nUrl " + url;
-        r += "\nHeaders: " + headers.toString();
-        r += "\nBody: " + body;
-        return r;
+        return "Method: " + method +
+                "\nUrl: " + url +
+                "\nHeaders: " + headers.toString() +
+                "\nBody: " + body;
     }
 }

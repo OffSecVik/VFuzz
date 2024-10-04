@@ -8,8 +8,15 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 
+/**
+ * The {@code RandomAgent} class provides functionality to return a random user-agent string
+ * from a predefined list stored in the "RandomAgents.txt" file. This class is useful in
+ * situations where user-agents need to be randomized to avoid detection or to simulate different browsers.
+ *
+ * <p>The user-agents are loaded into memory upon class initialization from the "RandomAgents.txt" file.
+ * The class uses a {@link Random} object to randomly select a user-agent from the list when requested.
+ */
 public class RandomAgent {
-
 
     static final Random random = new Random();
     static final List<String> lines = new ArrayList<>();
@@ -31,6 +38,11 @@ public class RandomAgent {
         }
     }
 
+    /**
+     * Returns a randomly selected user-agent string from the list.
+     *
+     * @return A randomly selected user-agent string.
+     */
     public static String get() {
         return lines.get(random.nextInt(lines.size()));
     }
