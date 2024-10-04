@@ -1,10 +1,12 @@
 package vfuzz.logging;
 
 import vfuzz.network.WebRequester;
+import vfuzz.config.ConfigManager;
 
 @SuppressWarnings("CommentedOutCode")
 public class TerminalOutput implements Runnable {
 
+    private ConfigManager config = ConfigManager.getInstance();
 
     private volatile boolean running = true;
 
@@ -13,18 +15,20 @@ public class TerminalOutput implements Runnable {
     public void run() {
         while (running) {
 
-            updateMetrics();
+            if (config.getConfigValue("metricsEnabled").equals("true")) {
+                updateMetrics();
+            }
+
             // updateDynamicRateLimiter();
+
 			/*
-			if (ArgParse.getMetricsEnabled()) {
-				updateMetrics();
-			}
 			updateOutput();
 			if (ArgParse.getMetricsEnabled()) {
 				updatePayload();
 			}
 			returnCursorToTop();
 			*/
+
             try {
                 //noinspection BusyWait
                 Thread.sleep(1000);
