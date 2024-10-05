@@ -1,5 +1,7 @@
 package vfuzz.logging;
 
+import vfuzz.core.ThreadOrchestrator;
+
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;

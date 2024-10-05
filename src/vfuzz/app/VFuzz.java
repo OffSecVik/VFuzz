@@ -10,6 +10,8 @@ import vfuzz.logging.Color;
 import vfuzz.logging.Metrics;
 import vfuzz.network.WebRequester;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * The {@code VFuzz} class serves as the entry point for the VFuzz application.
  *

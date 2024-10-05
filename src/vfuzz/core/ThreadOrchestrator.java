@@ -4,7 +4,7 @@ import vfuzz.config.ConfigAccessor;
 import vfuzz.operations.Target;
 import vfuzz.logging.TerminalOutput;
 import vfuzz.network.strategy.requestmode.RequestMode;
-import vfuzz.logging.Color;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +26,7 @@ public class ThreadOrchestrator {
 
     private final String wordlistPath;
     private ExecutorService executor;
+    private ScheduledExecutorService scheduler;
     private final int THREAD_COUNT;
     private final ConcurrentHashMap<Target, List<QueueConsumer>> consumerTasks = new ConcurrentHashMap<>();
 
@@ -83,6 +84,8 @@ public class ThreadOrchestrator {
                 }
                 System.out.println("Goodbye");
             }));
+
+            scheduleCompletionCheck();
 
         } catch (RuntimeException e) {
             System.err.println("Failed to start fuzzing due to an error: " + e.getMessage());
@@ -220,6 +223,8 @@ public class ThreadOrchestrator {
    //TODO handle program shutdown (shutdown hook, all tasks finished)
     public void shutdown() {
         executor.shutdown();
+        System.out.println("Fuzzing completed successfully.");
+        System.exit(0);
     }
 
     /**
@@ -233,5 +238,32 @@ public class ThreadOrchestrator {
 
     public ExecutorService getExecutor() {
         return executor;
+    }
+
+    public boolean fuzzingIsFinished() {
+        // Iterate through all QueueConsumers in consumerTasks
+        for (Map.Entry<Target, List<QueueConsumer>> entry : consumerTasks.entrySet()) {
+            List<QueueConsumer> consumers = entry.getValue();
+            for (QueueConsumer consumer : consumers) {
+                if (!consumer.allFuturesCompleted()) {
+                    return false; // If any future is not complete, fuzzing is not finished
+                }
+            }
+        }
+        return true; // If all futures are complete, fuzzing is finished
+    }
+
+    /**
+     * Schedules a periodic task to check for fuzzing completion every 5 seconds.
+     */
+    private void scheduleCompletionCheck() {
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler.scheduleAtFixedRate(() -> {
+            if (fuzzingIsFinished()) {
+                System.out.println("All fuzzing tasks are complete. Initiating shutdown...");
+                shutdown();
+                scheduler.shutdown(); // Stop the scheduler
+            }
+        }, 5, 5, TimeUnit.SECONDS); // Initial delay of 0, repeat every 5 seconds
     }
 }

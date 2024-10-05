@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * The {@code QueueConsumer} class is responsible for handling the fuzzing logic within the fuzzer.
@@ -45,6 +46,9 @@ public class QueueConsumer implements Runnable {
     private final Set<Range> excludedLength;
     private final List<String> excludedResults;
     private WebRequestFactory webRequestFactory;
+
+    private AtomicInteger totalFutures = new AtomicInteger(0);
+    private AtomicInteger completedFutures = new AtomicInteger(0);
 
     /**
      * Constructs a new {@code QueueConsumer} object with the given {@link ThreadOrchestrator} and {@link Target}.
@@ -118,7 +122,7 @@ public class QueueConsumer implements Runnable {
      * @param request The HTTP request to be sent.
      */
     private void sendAndProcessRequest(HttpRequestBase request) {
-        WebRequester.sendRequest(request, 250, TimeUnit.MILLISECONDS)
+        CompletableFuture<HttpResponse> c = WebRequester.sendRequest(request, 250, TimeUnit.MILLISECONDS)
                 .thenApplyAsync(response -> {
             try {
                 parseResponse(response, request);
@@ -127,7 +131,13 @@ public class QueueConsumer implements Runnable {
             }
             return response;
         }, executor)
-        .exceptionally(ex -> null);
+                .exceptionally(ex -> null)
+                .thenApply(response -> {
+                    completedFutures.incrementAndGet();
+                    return response;
+                });
+
+        totalFutures.incrementAndGet();
     }
 
     /**
@@ -244,5 +254,16 @@ public class QueueConsumer implements Runnable {
      */
     public boolean isRunning() {
         return running;
+    }
+
+    /**
+     * Gets the list of all tracked CompletableFutures.
+     * @return The list of CompletableFutures.
+     */
+    public boolean allFuturesCompleted() {
+        if (totalFutures.get() == 0) {
+            return false;
+        }
+        return (completedFutures.get() == totalFutures.get());
     }
 }
