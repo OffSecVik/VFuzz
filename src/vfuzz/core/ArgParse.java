@@ -37,7 +37,7 @@ public class ArgParse {
         ConfigManager configManager = ConfigManager.getInstance();
 
         configManager.registerArgument(new CommandLineArgument(
-                "--threads", "-t", "threadCount",
+                "-t", "--threads", "threadCount",
                 (cm, value) -> cm.setConfigValue("threadCount", value), // Action: Set Value
                 value -> Validator.isIntegerInRange(value, 1, 200),
                 "Number of threads. Must be a number between 1 and 200.", // Description
@@ -47,7 +47,7 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "--wordlist", "-w", "wordlistPath",
+                "-w", "--wordlist", "wordlistPath",
                 (cm, value) -> cm.setConfigValue("wordlistPath", value),
                 Validator::isNotEmpty, // Validator
                 "Path to the word list. This argument is required.",
@@ -57,7 +57,7 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "--url", "-u", "url",
+                "-u", "--url", "url",
                 (cm, value) -> cm.setConfigValue("url", value),
                 Validator::isValidUrlWithProcessing,
                 "URL to the target website. This argument is required and must start with http:// or https://. Trailing slashes are automatically removed.",
@@ -67,7 +67,7 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "--excludeResult", "-E", "excludedResults",
+                "-E", "--excludeResult", "excludedResults",
                 (cm, value) -> cm.setConfigValue("excludedResults", value),
                 value -> true,
                 "Results to exclude from being shown and used in recursive mode.",
@@ -77,7 +77,7 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "--excludeStatusCodes", "-e", "excludedStatusCodes",
+                "-e", "--excludeStatusCodes", "excludedStatusCodes",
                 (cm, value) -> {
                     String[] parts = value.split(",");
                     List<String> validCodesAndRanges = new ArrayList<>();
@@ -109,7 +109,7 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "--excludeLength", "-l", "excludeLength",
+                "-l", "--excludeLength", "excludeLength",
                 (cm, value) -> {
                     String[] lengths = value.split(",");
                     List<String> validLengthsAndRanges = new ArrayList<>();
@@ -277,7 +277,7 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "--user-agent", "-A", "userAgent",
+                "-A", "--user-agent", "userAgent",
                 (cm, value) -> headers.add("User-Agent: " + value),
                 value -> !value.trim().isEmpty(),
                 "Sets the user agent for requests. Example: --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"",
@@ -287,7 +287,7 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "-r", "", "requestFileFuzzing",
+                "-r", "--request-file", "requestFileFuzzing",
                 (cm, value) -> {
                     cm.setConfigValue("requestFilePath", value); //TODO: Fix wrong ConfigurationPrinter
                     cm.setConfigValue("requestFileFuzzing", "true");
@@ -367,7 +367,7 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "--help", "-h", "help",
+                "-h", "--help", "help",
                 (cm, value) -> cm.setConfigValue("help", value),
                 value -> true,
                 "Displays this menu.",
