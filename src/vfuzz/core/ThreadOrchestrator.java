@@ -220,26 +220,24 @@ public class ThreadOrchestrator {
         });
     }
 
-   //TODO handle program shutdown (shutdown hook, all tasks finished)
+
+    /**
+     * Shuts down the executor service and quits the program.
+     */
     public void shutdown() {
         executor.shutdown();
         System.out.println("Fuzzing completed successfully.");
         System.exit(0);
     }
 
-    /**
-     * Checks if the executor service has been shut down.
-     *
-     * @return {@code true} if the executor is shut down, {@code false} otherwise.
-     */
-    public boolean isShutdown() {
-        return executor.isShutdown();
-    }
-
     public ExecutorService getExecutor() {
         return executor;
     }
 
+    /**
+     *
+     * @return {@code true} if all payloads have been sent, {@code false} otherwise.
+     */
     public boolean fuzzingIsFinished() {
         // Iterate through all QueueConsumers in consumerTasks
         for (Map.Entry<Target, List<QueueConsumer>> entry : consumerTasks.entrySet()) {
