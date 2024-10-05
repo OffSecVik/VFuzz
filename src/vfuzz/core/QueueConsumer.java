@@ -122,12 +122,11 @@ public class QueueConsumer implements Runnable {
      * @param request The HTTP request to be sent.
      */
     private void sendAndProcessRequest(HttpRequestBase request) {
-        CompletableFuture<HttpResponse> c = WebRequester.sendRequest(request, 250, TimeUnit.MILLISECONDS)
+        WebRequester.sendRequest(request, 250, TimeUnit.MILLISECONDS)
                 .thenApplyAsync(response -> {
             try {
                 parseResponse(response, request);
-            } catch (Exception e) {
-                // System.err.println("Error processing response for " + response.getStatusLine().getStatusCode() + " response: " + e.getMessage());
+            } catch (Exception ignored) {
             }
             return response;
         }, executor)
