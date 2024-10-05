@@ -46,7 +46,7 @@ public class VFuzz {
                 System.out.printf("    " + Color.PURPLE + "Default: " + Color.RESET + "%s\n\n",
                         arg.getDefaultValue() != null ? arg.getDefaultValue() : "none");
             }
-            System.exit(0); // Exit the application after displaying help
+            System.exit(0); // Exit the application after displaying help menu
         }
 
         // Verify that all required arguments have been provided
