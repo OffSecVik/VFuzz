@@ -15,7 +15,7 @@ public class ConfigManager {
     private static ConfigManager instance;
 
     // Maps to store command-line arguments and their corresponding values
-    private final Map<String, CommandLineArgument> arguments = new HashMap<>();
+    private final Map<String, CommandLineArgument> arguments = new LinkedHashMap<>();
     private final Map<String, String> configValues = new HashMap<>();
     private final Map<String, String> defaultValues = new HashMap<>();
     private final Set<String> providedArgs = new HashSet<>();
@@ -38,11 +38,6 @@ public class ConfigManager {
      */
     public void registerArgument(CommandLineArgument arg) {
         arguments.put(arg.getName(), arg);
-        /*
-        if (!arg.getAlias().isEmpty()) {
-            arguments.put(arg.getAlias(), arg);
-        }
-        */
         setOptionalDefaultValue(arg);
     }
 
@@ -78,7 +73,7 @@ public class ConfigManager {
     public void processArguments(String[] passedArguments) {
         for (int i = 0; i < passedArguments.length; i++) {
             String argument = passedArguments[i];
-            CommandLineArgument cmdArg = arguments.getOrDefault(argument, findArgumentByAlias(argument));
+            CommandLineArgument cmdArg = findArgumentByString(argument);
 
             if (cmdArg != null) {
                 String value = getValueForArgument(passedArguments, cmdArg, i);
@@ -92,14 +87,14 @@ public class ConfigManager {
     }
 
     /**
-     * Finds a command-line argument by its alias.
+     * Finds a command-line argument by a string.
      *
-     * @param arg the alias of the argument
+     * @param s the search string
      * @return the CommandLineArgument if found, otherwise null
      */
-    private CommandLineArgument findArgumentByAlias(String arg) {
+    private CommandLineArgument findArgumentByString(String s) {
         return arguments.values().stream()
-                .filter(a -> arg.equals(a.getAlias()))
+                .filter(a -> a.getName().equals(s) || a.getAlias().equals(s))
                 .findFirst()
                 .orElse(null);
     }
