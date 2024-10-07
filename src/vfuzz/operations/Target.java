@@ -1,5 +1,6 @@
 package vfuzz.operations;
 
+import vfuzz.config.ConfigAccessor;
 import vfuzz.core.WordlistReader;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -100,7 +101,7 @@ public class Target {
     }
 
     public boolean targetIsFuzzed() {
-        return successfulRequestCount.get() == wordlistReader.getWordlistSize();
+        return successfulRequestCount.get() == wordlistReader.getWordlistSize() * fileExtensionCount();
     }
 
     public static boolean allTargetsAreFuzzed() {
@@ -110,5 +111,9 @@ public class Target {
             }
         }
         return true;
+    }
+
+    private int fileExtensionCount() {
+        return ConfigAccessor.getConfigValue("fileExtensions", String.class).split(",").length;
     }
 }
