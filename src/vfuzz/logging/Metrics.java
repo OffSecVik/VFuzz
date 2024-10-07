@@ -181,4 +181,8 @@ public class Metrics {
     public static double getRetryRate() {
         return retryRate;
     }
+
+    public static long getTotalSuccessfulRequests() {
+        return totalSuccessfulRequests.get();
+    }
 }

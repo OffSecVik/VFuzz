@@ -3,6 +3,7 @@ package vfuzz.operations;
 import vfuzz.core.WordlistReader;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
@@ -22,26 +23,27 @@ public class Target {
     private final int recursionDepth; // the recursion depth at which this is fuzzed
     private int allocatedThreads;
     private final WordlistReader wordlistReader;
-    private final AtomicBoolean scanComplete = new AtomicBoolean(false);
+    private final AtomicBoolean allocationComplete = new AtomicBoolean(false);
+    public AtomicInteger successfulRequestCount = new AtomicInteger();
 
     /**
-     * Checks if the scan for this target is complete.
+     * Checks if a target has been allocated CompletableFutures for each payload.
      *
-     * @return {@code true} if the scan is complete, {@code false} otherwise.
+     * @return {@code true} if the allocation is complete, {@code false} otherwise.
      */
-    public boolean isScanComplete() {
-        return scanComplete.get();
+    public boolean getAllocationComplete() {
+        return allocationComplete.get();
     }
 
     /**
      * Retrieves the number of active (incomplete) targets.
      *
-     * @return The number of active targets that have not completed scanning.
+     * @return The number of active targets that have not yet been allocated CompletableFutures.
      */
     public static int getActiveTargets() {
         int activeTargets = 0;
         for (Target target : targets) {
-            if (!target.isScanComplete()) {
+            if (!target.getAllocationComplete()) {
                 activeTargets++;
             }
         }
@@ -89,7 +91,15 @@ public class Target {
         return wordlistReader;
     }
 
-    public boolean setScanComplete() {
-        return scanComplete.compareAndSet(false, true);
+    public boolean setAllocationComplete() {
+        return allocationComplete.compareAndSet(false, true);
+    }
+
+    public void incrementSuccessfulRequestCount() {
+        successfulRequestCount.incrementAndGet();
+    }
+
+    public boolean fuzzingComplete() {
+        return successfulRequestCount.get() == wordlistReader.getWordlistSize();
     }
 }

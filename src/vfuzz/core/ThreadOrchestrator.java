@@ -1,6 +1,7 @@
 package vfuzz.core;
 
 import vfuzz.config.ConfigAccessor;
+import vfuzz.logging.Metrics;
 import vfuzz.operations.Target;
 import vfuzz.logging.TerminalOutput;
 import vfuzz.network.strategy.requestmode.RequestMode;
@@ -125,7 +126,7 @@ public class ThreadOrchestrator {
         }
         index = 0;
         for (Target target : Target.getTargets()) {
-            if (!target.isScanComplete()) {
+            if (!target.getAllocationComplete()) {
                 target.setAllocatedThreads(allocatedThreads[index]);
                 index++;
             }
@@ -192,7 +193,7 @@ public class ThreadOrchestrator {
         allocateThreads();
         for (Map.Entry<Target, List<QueueConsumer>> entry : consumerTasks.entrySet()) {
             Target target = entry.getKey();
-            if (target.isScanComplete()) continue; // find active targets
+            if (target.getAllocationComplete()) continue; // find active targets
             List<QueueConsumer> consumers = entry.getValue();
             int activeConsumers = 0;
             for (QueueConsumer consumer : consumers) {
@@ -216,7 +217,7 @@ public class ThreadOrchestrator {
         consumerTasks.forEach((target, consumers) -> {
             int activeCount = (int) consumers.stream().filter(QueueConsumer::isRunning).count();
             // int inactiveCount = (int) consumers.stream().filter(consumer -> !consumer.isRunning()).count();
-            System.out.println(target.getUrl() + " has " + activeCount + " working threads." + (target.isScanComplete() ? " (finished creating CompletableFutures for this target.)" :"")); // and " + inactiveCount + " completed thread(s).");
+            System.out.println(target.getUrl() + " has " + activeCount + " working threads." + (target.getAllocationComplete() ? " (finished creating CompletableFutures for this target.)" :"")); // and " + inactiveCount + " completed thread(s).");
         });
     }
 
@@ -239,16 +240,12 @@ public class ThreadOrchestrator {
      * @return {@code true} if all payloads have been sent, {@code false} otherwise.
      */
     public boolean fuzzingIsFinished() {
-        // Iterate through all QueueConsumers in consumerTasks
-        for (Map.Entry<Target, List<QueueConsumer>> entry : consumerTasks.entrySet()) {
-            List<QueueConsumer> consumers = entry.getValue();
-            for (QueueConsumer consumer : consumers) {
-                if (!consumer.allFuturesCompleted()) {
-                    return false; // If any future is not complete, fuzzing is not finished
-                }
+        for (Target t : Target.getTargets()) {
+            if (!t.fuzzingComplete()) {
+                return false;
             }
         }
-        return true; // If all futures are complete, fuzzing is finished
+        return true;
     }
 
     /**
@@ -259,6 +256,8 @@ public class ThreadOrchestrator {
         scheduler.scheduleAtFixedRate(() -> {
             if (fuzzingIsFinished()) {
                 System.out.println("All fuzzing tasks are complete. Initiating shutdown...");
+                System.out.println("Completed after sending " + Metrics.getTotalSuccessfulRequests() + " web requests.");
+                System.out.println("Thank you for fuzzing with VFuzz.");
                 shutdown();
                 scheduler.shutdown(); // Stop the scheduler
             }

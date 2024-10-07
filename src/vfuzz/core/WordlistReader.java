@@ -71,4 +71,8 @@ public class WordlistReader {
     public boolean hasMorePayloads() {
         return currentIndex.get() < wordlist.size();
     }
+
+    public int getWordlistSize() {
+        return wordlist.size();
+    }
 }
