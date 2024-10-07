@@ -99,7 +99,16 @@ public class Target {
         successfulRequestCount.incrementAndGet();
     }
 
-    public boolean fuzzingComplete() {
+    public boolean targetIsFuzzed() {
         return successfulRequestCount.get() == wordlistReader.getWordlistSize();
+    }
+
+    public static boolean allTargetsAreFuzzed() {
+        for (Target target : targets) {
+            if (!target.targetIsFuzzed()) {
+                return false;
+            }
+        }
+        return true;
     }
 }

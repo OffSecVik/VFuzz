@@ -227,7 +227,6 @@ public class ThreadOrchestrator {
      */
     public void shutdown() {
         executor.shutdown();
-        System.out.println("Fuzzing completed successfully.");
         System.exit(0);
     }
 
@@ -235,18 +234,6 @@ public class ThreadOrchestrator {
         return executor;
     }
 
-    /**
-     *
-     * @return {@code true} if all payloads have been sent, {@code false} otherwise.
-     */
-    public boolean fuzzingIsFinished() {
-        for (Target t : Target.getTargets()) {
-            if (!t.fuzzingComplete()) {
-                return false;
-            }
-        }
-        return true;
-    }
 
     /**
      * Schedules a periodic task to check for fuzzing completion every 5 seconds.
@@ -254,9 +241,10 @@ public class ThreadOrchestrator {
     private void scheduleCompletionCheck() {
         scheduler = Executors.newSingleThreadScheduledExecutor();
         scheduler.scheduleAtFixedRate(() -> {
-            if (fuzzingIsFinished()) {
-                System.out.println("All fuzzing tasks are complete. Initiating shutdown...");
-                System.out.println("Completed after sending " + Metrics.getTotalSuccessfulRequests() + " web requests.");
+            if (Target.allTargetsAreFuzzed()) {
+                System.out.println("\n\nAll fuzzing tasks are complete. Initiating shutdown...");
+                String s = Target.getTargets().size() == 1 ? "target" : "targets";
+                System.out.println("Fuzzing completed after sending " + Metrics.getTotalSuccessfulRequests() + " web requests to " + Target.getTargets().size() + " " + s + ".");
                 System.out.println("Thank you for fuzzing with VFuzz.");
                 shutdown();
                 scheduler.shutdown(); // Stop the scheduler
