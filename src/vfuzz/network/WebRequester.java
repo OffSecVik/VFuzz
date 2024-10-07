@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -40,6 +41,10 @@ import java.util.regex.Pattern;
  * Optional jitter is applied to simulate network variability, and retries are handled for failed requests.
  */
 public class WebRequester {
+
+    private static final AtomicInteger activeFutures = new AtomicInteger(0);
+
+    private static double futureLimit = 1000;
 
     private static final RateLimiterLeakyBucket rateLimiter;
 
@@ -110,7 +115,16 @@ public class WebRequester {
      */
     public static CompletableFuture<HttpResponse> sendRequest(HttpRequestBase request, long retryDelay, TimeUnit unit) {
 
-        rateLimiter.awaitToken();
+        while (!futureSlotAvailable()) {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        activeFutures.incrementAndGet();
+        // rateLimiter.awaitToken();
 
         CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
 
@@ -124,6 +138,7 @@ public class WebRequester {
         }
 
         return responseFuture.handle((response, throwable) -> {
+            activeFutures.decrementAndGet();
             Metrics.incrementRequestsCount();
             if (throwable != null) {
                 Metrics.incrementRetriesCount();
@@ -135,6 +150,9 @@ public class WebRequester {
         }).thenCompose(Function.identity());
     }
 
+    private static boolean futureSlotAvailable() {
+        return activeFutures.get() <= futureLimit;
+    }
 
     /**
      * Handles the retries for an HTTP request asynchronously. This method is called when an initial request fails and
@@ -243,5 +261,21 @@ public class WebRequester {
 
     public static RateLimiterLeakyBucket getRateLimiter() {
         return rateLimiter;
+    }
+
+    public static void setFutureLimit(int i) {
+        futureLimit = i;
+    }
+
+    public static double getFutureLimit() {
+        return futureLimit;
+    }
+
+    public static void increaseFutureLimit() {
+        futureLimit = Math.min(futureLimit * 1.005, 10000);
+    }
+
+    public static void decreaseFutureLimit() {
+        futureLimit = Math.max((int) (futureLimit * .995), 10);
     }
 }

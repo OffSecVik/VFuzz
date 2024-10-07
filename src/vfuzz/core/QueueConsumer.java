@@ -177,7 +177,7 @@ public class QueueConsumer implements Runnable {
         }
 
         new Hit(requestUrl, responseCode, responseContentLength); // Idea: make Hit object take a HttpRequest as argument, this way we could retain more information?
-        System.out.println("Hit for " + request + " : " + responseCode);
+        System.out.println("Hit for " + request + " : " + responseCode + ", Content-Length: " + responseContentLength);
         if (recursionEnabled && isRecursiveTarget(requestUrl)) {
             orchestrator.initiateRecursion(requestUrl, recursionDepth);
         }

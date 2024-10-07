@@ -1,6 +1,7 @@
 package vfuzz.logging;
 
 import vfuzz.core.ThreadOrchestrator;
+import vfuzz.network.WebRequester;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.Executors;
@@ -176,6 +177,16 @@ public class Metrics {
         double retriesPerSecond = getRetriesPerSecond();
 
         retryRate = (requestsPerSecond != 0) ? retriesPerSecond / requestsPerSecond : retriesPerSecond;
+
+
+
+        if (retryRate > .50) {
+            WebRequester.decreaseFutureLimit();
+            // System.out.println("Decreasing future limit to " + WebRequester.getFutureLimit());
+        } else {
+            WebRequester.increaseFutureLimit();
+            // System.out.println("Increasing future limit to " + WebRequester.getFutureLimit());
+        }
     }
 
     public static double getRetryRate() {
