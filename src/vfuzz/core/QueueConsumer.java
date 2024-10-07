@@ -3,6 +3,7 @@ package vfuzz.core;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpRequestBase;
 import vfuzz.config.ConfigAccessor;
+import vfuzz.config.ConfigManager;
 import vfuzz.network.request.ParsedRequestFactory;
 import vfuzz.network.request.WebRequestFactory;
 import vfuzz.network.strategy.requestmode.RequestMode;
@@ -11,6 +12,8 @@ import vfuzz.network.WebRequester;
 import vfuzz.operations.Hit;
 import vfuzz.operations.Range;
 import vfuzz.operations.Target;
+
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -88,6 +91,14 @@ public class QueueConsumer implements Runnable {
             webRequestFactory = new ParsedRequestFactory();
         }
 
+        boolean fileFuzzingEnabled = false;
+
+        String[] fileExtensions = null;
+        if (ConfigAccessor.getConfigValue("fileExtensions", String.class) != null) {
+            fileFuzzingEnabled = true;
+            fileExtensions = ConfigAccessor.getConfigValue("fileExtensions", String.class).split(",");
+        }
+
         while (running) {
             String payload = wordlistReader.getNextPayload();
             if (payload == null) {
@@ -95,8 +106,19 @@ public class QueueConsumer implements Runnable {
                 break;
             }
 
+            // ToDo: move all this logic to the webRequestFactory, including the payload.
             HttpRequestBase request = webRequestFactory.buildRequest(payload);
-            sendAndProcessRequest(request);
+
+            String uri = String.valueOf(request.getURI());
+
+            if (fileFuzzingEnabled) {
+                for (String extension : fileExtensions) {
+                    request.setURI(URI.create(uri + extension));
+                    sendAndProcessRequest(request);
+                }
+            } else {
+                sendAndProcessRequest(request);
+            }
         }
     }
 

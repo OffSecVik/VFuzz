@@ -109,6 +109,29 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
+                "-x", "--extensions","fileExtensions",
+                (cm, value) -> {
+                    String[] extensions = value.split(",");
+                    List<String> fileExtensions = new ArrayList<>();
+                    for (String e : extensions) {
+                        e = e.trim();
+                        if (!e.startsWith(".")) {
+                            e = "." + e;
+                        }
+                        fileExtensions.add(e);
+                    }
+                    cm.setConfigValue("fileExtensions", String.join(",", fileExtensions));
+                },
+                value -> true,
+                "List of file extensions to fuzz for.",
+                true,
+                null,
+                false
+
+
+        ));
+
+        configManager.registerArgument(new CommandLineArgument(
                 "-l", "--excludeLength", "excludeLength",
                 (cm, value) -> {
                     String[] lengths = value.split(",");
@@ -294,7 +317,9 @@ public class ArgParse {
                 },
                 Validator::isValidFile,
                 "Specifies the filepath to the HTTP request file for fuzzing. This activates file-based fuzzing mode. Ensure the file exists. Example: -r \"/path/to/requestfile.txt\"",
-                true, null, false
+                true,
+                null,
+                false
         ));
 
         configManager.registerArgument(new CommandLineArgument(
