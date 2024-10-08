@@ -190,9 +190,9 @@ public class QueueConsumer implements Runnable {
 
         Hit.hitIfNotPresent(requestUrl, responseCode, responseContentLength);
 
-//        if (recursionEnabled) {
-//            orchestrator.initiateRecursion(requestUrl, recursionDepth);
-//        }
+        if (recursionEnabled) {
+            orchestrator.initiateRecursion(requestUrl, recursionDepth);
+        }
     }
 
     private boolean isBaseTargetUrl(String url) {
