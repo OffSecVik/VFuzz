@@ -1,6 +1,7 @@
 package vfuzz.core;
 
 import vfuzz.config.ConfigAccessor;
+import vfuzz.logging.Color;
 import vfuzz.logging.Metrics;
 import vfuzz.operations.Target;
 import vfuzz.logging.TerminalOutput;
@@ -112,10 +113,9 @@ public class ThreadOrchestrator {
         }
 
         int extraThreads = availableThreads % (activeTargets - helper);
-        // System.out.println("Total threads " + availableThreads + " remaining threads " + extraThreads);
         for (int i = helper; i < activeTargets; i++) {
-            allocatedThreads[i] = (availableThreads / (activeTargets - helper));
-            // allocatedThreads[i] = Math.max((availableThreads / (activeTargets - helper)), 1); // this is the implementation for non-conservative recursive fuzzing where each new target gets one baseline thread
+            // allocatedThreads[i] = (availableThreads / (activeTargets - helper));
+            allocatedThreads[i] = Math.max((availableThreads / (activeTargets - helper)), 1); // this is the implementation for non-conservative recursive fuzzing where each new target gets one baseline thread
         }
 
         int index = 0;
@@ -180,8 +180,8 @@ public class ThreadOrchestrator {
                 }
             }
         }
-        // System.out.println(Color.GREEN + "Initiating recursion: " + Color.RESET);
-        // printActiveThreadsByTarget();
+        System.out.println(Color.GREEN + "Initiating recursion: " + Color.RESET);
+        printActiveThreadsByTarget();
     }
 
     /**

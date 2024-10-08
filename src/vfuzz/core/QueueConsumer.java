@@ -3,7 +3,6 @@ package vfuzz.core;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpRequestBase;
 import vfuzz.config.ConfigAccessor;
-import vfuzz.config.ConfigManager;
 import vfuzz.network.request.ParsedRequestFactory;
 import vfuzz.network.request.WebRequestFactory;
 import vfuzz.network.strategy.requestmode.RequestMode;
@@ -61,7 +60,7 @@ public class QueueConsumer implements Runnable {
         this.orchestrator = orchestrator;
         this.executor = orchestrator.getExecutor();
         this.wordlistReader = target.getWordlistReader();
-        this.baseTargetUrl = ConfigAccessor.getConfigValue("url", String.class) + "/";
+        this.baseTargetUrl = ConfigAccessor.getConfigValue("url", String.class);
         this.target = target;
         this.url = target.getUrl();
         this.recursionEnabled = ConfigAccessor.getConfigValue("recursionEnabled", Boolean.class);
@@ -170,6 +169,7 @@ public class QueueConsumer implements Runnable {
             }
         }
 
+        // checking for excluded status codes
         int responseContentLength = (int)response.getEntity().getContentLength();
         for (Range range : excludedLength) {
             if (range.contains(responseContentLength)) {
@@ -177,67 +177,79 @@ public class QueueConsumer implements Runnable {
             }
         }
 
-        String requestUrl;
-        if (vhostMode) { // setting the requestUrl to the vhost value for simplicity
-            requestUrl = request.getHeaders("HOST")[0].getValue(); // simply setting the requestUrl (which never changes in vhost mode) to the header value (which is the interesting field)
-        } else {
-            requestUrl = request.getURI().toString();
-        }
-
+        // checking if we hit an excluded url
+        String requestUrl = vhostMode ? request.getHeaders("HOST")[0].getValue() : request.getURI().toString();
         if (isExcluded(requestUrl)) {
             return;
         }
 
-        // checking for double hit:
-        for (Hit hit : Hit.getHits()) {
-            if (hit.url().equals(requestUrl)) {
-                return;
-            }
-            if (hit.url().equalsIgnoreCase(requestUrl)) { //TODO make this optional, this ignores case insensitive double hits
-                return;
-            }
+        // checking for double hit (mainly due to wordlists sometimes having slashes or whitespaces)
+        if (isAlreadyHit(requestUrl)) {
+            return;
         }
 
-        new Hit(requestUrl, responseCode, responseContentLength); // Idea: make Hit object take a HttpRequest as argument, this way we could retain more information?
+        Hit.hitIfNotPresent(requestUrl, responseCode, responseContentLength);
         System.out.println("Hit for " + request + " : " + responseCode + ", Content-Length: " + responseContentLength);
-        if (recursionEnabled && isRecursiveTarget(requestUrl)) {
+
+        if (recursionEnabled) {
             orchestrator.initiateRecursion(requestUrl, recursionDepth);
         }
     }
 
-    /**
-     * Determines if the URL is a valid target for recursion based on previous hits and the base URL.
-     *
-     * @param url The URL to check.
-     * @return {@code true} if the URL is a recursive target, {@code false} otherwise.
-     */
-    private boolean isRecursiveTarget(String url) {
-        if (url.equals(baseTargetUrl)) { // this does fix the initial forking
-            return false;
-        }
-        for (Hit hit : Hit.getHits()) { // checking for a redundant hit which would make recursion fork every time it's encountered, e.g. "google.com" and "google.com/" (the trailing slash!)
-            if (hit.url().equals(url + "/") || (hit.url() + "/").equals(url)) {
-                return false;
-            }
-        }
-        return true; // we have a new and unique target!
+    private boolean isBaseTargetUrl(String url) {
+        String normalizedUrl = normalizeUrl(url);
+        String normalizedBase = normalizeUrl(baseTargetUrl);
+
+        // Check if the target URL is the same as the base URL
+        return normalizedUrl.equals(normalizedBase);
     }
 
     /**
-     * Checks if the URL is in the list of excluded results.
+     * Normalizes a URL by removing any trailing slashes.
+     *
+     * @param url The URL to normalize.
+     * @return The normalized URL.
+     */
+    private String normalizeUrl(String url) {
+        if (url.endsWith("/")) {
+            return url.substring(0, url.length() - 1);
+        }
+        return url;
+    }
+
+    /**
+     * Checks whether the URL  has already been hit before.
      *
      * @param url The URL to check.
-     * @return {@code true} if the URL is excluded, {@code false} otherwise.
+     * @return {@code true} if the URL is excluded or has already been hit, {@code false} otherwise.
      */
-    private boolean isExcluded(String url) {
-        if (excludedResults == null) {
-            return false;
+    private boolean isAlreadyHit(String url) {
+        String normalizedUrl = normalizeUrl(url);
+
+        // Check if it's the base target URL
+        if (isBaseTargetUrl(normalizedUrl)) {
+            return true;
         }
-        int lastSlashIndex = url.lastIndexOf('/');
-        String subdomain = url.substring(lastSlashIndex + 1);
-        for (String result : excludedResults) {
-            if (result.equals(subdomain)) {
-                System.out.println("Excluded " + subdomain + " successfully!");
+
+        // Check if it's already been hit
+        for (Hit hit : Hit.getHits()) {
+            System.out.println("Hit url: " + hit.url());
+            if (normalizeUrl(hit.url()).equals(normalizedUrl)) {
+                return true;
+            }
+            if (ConfigAccessor.getConfigValue("ignoreCase", String.class).equals("true")) {
+                if (normalizeUrl(hit.url()).equalsIgnoreCase(url)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isExcluded(String url) {
+        for (String excludedUrl : excludedResults) {
+            if (url.equals(excludedUrl)) {
                 return true;
             }
         }

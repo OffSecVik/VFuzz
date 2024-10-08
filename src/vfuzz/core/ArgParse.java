@@ -400,6 +400,16 @@ public class ArgParse {
                 "false",
                 true
         ));
+
+        configManager.registerArgument(new CommandLineArgument(
+                "--ignore-case", "", "ignoreCase",
+                (cm, value) -> cm.setConfigValue("ignoreCase", "true"),
+                value -> true,
+                "Makes the fuzzer case insensitive. Can lead to forking with recursion, depending on the wordlist.",
+                true,
+                "false",
+                true
+        ));
     }
 
     /**

@@ -31,7 +31,7 @@ public record Hit(String url, int statusCode, int length) {
         synchronized (hits) {
             if (hits.add(newHit)) { // Set.add returns true if the element was added (i.e., it was not already present)
                 hitCounter++;
-                System.out.println("New Hit added: " + newHit);
+                System.out.println(newHit);
             }
         }
     }
