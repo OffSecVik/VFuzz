@@ -180,8 +180,8 @@ public class ThreadOrchestrator {
                 }
             }
         }
-        System.out.println(Color.GREEN + "Initiating recursion: " + Color.RESET);
-        printActiveThreadsByTarget();
+//        System.out.println(Color.GREEN + "Initiating recursion: " + Color.RESET);
+//        printActiveThreadsByTarget();
     }
 
     /**
