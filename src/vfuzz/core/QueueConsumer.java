@@ -189,11 +189,10 @@ public class QueueConsumer implements Runnable {
         }
 
         Hit.hitIfNotPresent(requestUrl, responseCode, responseContentLength);
-        System.out.println("Hit for " + request + " : " + responseCode + ", Content-Length: " + responseContentLength);
 
-        if (recursionEnabled) {
-            orchestrator.initiateRecursion(requestUrl, recursionDepth);
-        }
+//        if (recursionEnabled) {
+//            orchestrator.initiateRecursion(requestUrl, recursionDepth);
+//        }
     }
 
     private boolean isBaseTargetUrl(String url) {
@@ -233,7 +232,6 @@ public class QueueConsumer implements Runnable {
 
         // Check if it's already been hit
         for (Hit hit : Hit.getHits()) {
-            System.out.println("Hit url: " + hit.url());
             if (normalizeUrl(hit.url()).equals(normalizedUrl)) {
                 return true;
             }
@@ -248,6 +246,9 @@ public class QueueConsumer implements Runnable {
     }
 
     private boolean isExcluded(String url) {
+        if (excludedResults == null) {
+            return false;
+        }
         for (String excludedUrl : excludedResults) {
             if (url.equals(excludedUrl)) {
                 return true;
