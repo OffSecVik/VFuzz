@@ -236,7 +236,7 @@ public class ThreadOrchestrator {
 
 
     /**
-     * Schedules a periodic task to check for fuzzing completion every 5 seconds.
+     * Schedules a periodic task to check for fuzzing completion every 2 seconds.
      */
     private void scheduleCompletionCheck() {
         scheduler = Executors.newSingleThreadScheduledExecutor();

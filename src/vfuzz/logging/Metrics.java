@@ -60,6 +60,15 @@ public class Metrics {
     private static final AtomicLong totalSuccessfulRequests = new AtomicLong();
     private static final AtomicLong totalRetries = new AtomicLong();
 
+    // Counter for successive measuring points with increased retry rate
+    private static int requestsWithIncident = 0;
+
+    // Number of successive measuring points after which rate limiting starts. Acts as a buffer to prevent jitter
+    private static final int incidentLimit = 20;
+
+    // Declares minimum threshold of a problematic retry rate. Everything above this value is considered problematic
+    private static final double acceptableRetryRate = 0.1;
+
     /**
      * Starts the scheduled task to update metrics and rate limits at regular intervals.
      * <p>This method is synchronized to ensure only one instance of the update task is running.
@@ -178,12 +187,15 @@ public class Metrics {
 
         retryRate = (requestsPerSecond != 0) ? retriesPerSecond / requestsPerSecond : retriesPerSecond;
 
+        if (retryRate > acceptableRetryRate) {
+            requestsWithIncident++;
 
-
-        if (retryRate > .50) {
-            WebRequester.decreaseFutureLimit();
-            // System.out.println("Decreasing future limit to " + WebRequester.getFutureLimit());
+            if (requestsWithIncident >= incidentLimit) {
+                WebRequester.decreaseFutureLimit();
+                // System.out.println("Decreasing future limit to " + WebRequester.getFutureLimit());
+            }
         } else {
+            requestsWithIncident = 0;
             WebRequester.increaseFutureLimit();
             // System.out.println("Increasing future limit to " + WebRequester.getFutureLimit());
         }
