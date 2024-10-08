@@ -260,7 +260,7 @@ public class ArgParse {
                 },
                 "Sets the maximum number of requests per second. This value must be a positive integer. Default is 4000.",
                 true,
-                "4000",
+                "0",
                 false
         ));
 

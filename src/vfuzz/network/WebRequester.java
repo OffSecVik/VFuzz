@@ -123,7 +123,7 @@ public class WebRequester {
         }
 
         activeFutures.incrementAndGet();
-        // rateLimiter.awaitToken();
+        rateLimiter.awaitToken();
 
         CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
 

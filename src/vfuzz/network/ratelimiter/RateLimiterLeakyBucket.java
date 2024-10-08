@@ -22,7 +22,7 @@ public class RateLimiterLeakyBucket {
     private final long capacity;          // capacity of the bucket
     private long availableSpace;          // current available space in the bucket
     private long lastCheck;               // last time the bucket was checked
-    private boolean enabled = true;       // controls whether rate limiting is enabled
+    private boolean enabled = false;       // controls whether rate limiting is enabled
 
     /**
      * Constructs a new {@code RateLimiterLeakyBucket} with the specified rate limit.
@@ -31,6 +31,9 @@ public class RateLimiterLeakyBucket {
      */
     public RateLimiterLeakyBucket(int rateLimitPerSecond) {
         this.rateLimitPerSecond = rateLimitPerSecond;
+        if (rateLimitPerSecond > 0) {
+            enabled = true;
+        }
         this.capacity = rateLimitPerSecond;
         this.availableSpace = 0;  // start without any tokens
         this.lastCheck = 0;

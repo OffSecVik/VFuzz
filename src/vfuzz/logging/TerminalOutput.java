@@ -63,7 +63,12 @@ public class TerminalOutput implements Runnable {
     public void updateMetrics() {
         System.out.println(Color.GRAY + "---------------------------------------------------------" + Color.RESET);
         System.out.println("Future limit: " + WebRequester.getFutureLimit());
-        System.out.println(Color.YELLOW_BOLD + "Rate Limit: " + Color.RESET + Color.WHITE_BOLD + "\t\t\t\t\t\t" + WebRequester.getRateLimiter().getRateLimitPerSecond() + Color.RESET);
+
+        // Print rate limit
+        int rateLimit = WebRequester.getRateLimiter().getRateLimitPerSecond();
+        String rateLimitString = rateLimit == 0 ? "-" : String.valueOf(rateLimit);
+        System.out.println(Color.YELLOW_BOLD + "Rate Limit: " + Color.RESET + Color.WHITE_BOLD + "\t\t\t\t\t\t" + rateLimitString + Color.RESET);
+
         System.out.println(Color.BLUE_BOLD + "Attempted Requests per Second: " + Color.RESET + Color.WHITE_BOLD + "\t\t" + (int) Metrics.getRequestsPerSecond() + Color.RESET);
         System.out.println(Color.GREEN_BOLD + "Successful Requests per Second: " + Color.RESET + Color.WHITE_BOLD + "\t" + (int) Metrics.getSuccessfulRequestsPerSecond() + Color.RESET);
         System.out.println(Color.ORANGE_BOLD + "Retries per Second: " + Color.RESET + Color.WHITE_BOLD + "\t\t\t\t" + (int) Metrics.getRetriesPerSecond() + Color.RESET);
