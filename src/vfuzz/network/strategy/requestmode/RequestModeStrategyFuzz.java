@@ -16,7 +16,7 @@ import java.net.URISyntaxException;
  */
 public class RequestModeStrategyFuzz extends RequestModeStrategy {
 
-    private String fuzzMarker;
+    private final String fuzzMarker;
 
     /**
      * Constructs a new {@code RequestModeStrategyFuzz} by retrieving the

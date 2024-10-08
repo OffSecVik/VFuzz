@@ -114,6 +114,10 @@ public class Target {
     }
 
     private int fileExtensionCount() {
-        return ConfigAccessor.getConfigValue("fileExtensions", String.class).split(",").length;
+        String fileExtensions = ConfigAccessor.getConfigValue("fileExtensions", String.class);
+        if (fileExtensions == null) {
+            return 1;
+        }
+        return fileExtensions.split(",").length;
     }
 }
