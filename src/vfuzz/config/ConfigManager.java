@@ -85,8 +85,12 @@ public class ConfigManager {
                 }
             }
         }
-        if ((ConfigAccessor.getConfigValue("postRequestData",String.class)).contains(ConfigAccessor.getConfigValue("fuzzMarker",String.class))) {
-            this.setConfigValue("requestMode", RequestMode.FUZZ.name());
+        String postRequestData = ConfigAccessor.getConfigValue("postRequestData",String.class);
+        String fuzzMarker = ConfigAccessor.getConfigValue("fuzzMarker",String.class);
+        if (postRequestData != null && fuzzMarker != null) {
+            if ((postRequestData).contains(fuzzMarker)) {
+                this.setConfigValue("requestMode", RequestMode.FUZZ.name());
+            }
         }
     }
 
