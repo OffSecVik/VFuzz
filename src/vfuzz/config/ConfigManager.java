@@ -7,6 +7,7 @@
 package vfuzz.config;
 
 import vfuzz.core.CommandLineArgument;
+import vfuzz.network.strategy.requestmode.RequestMode;
 
 import java.util.*;
 
@@ -83,6 +84,9 @@ public class ConfigManager {
                     System.out.println("Error: Argument '" + argument + "' expects a value.");
                 }
             }
+        }
+        if ((ConfigAccessor.getConfigValue("postRequestData",String.class)).contains(ConfigAccessor.getConfigValue("fuzzMarker",String.class))) {
+            this.setConfigValue("requestMode", RequestMode.FUZZ.name());
         }
     }
 

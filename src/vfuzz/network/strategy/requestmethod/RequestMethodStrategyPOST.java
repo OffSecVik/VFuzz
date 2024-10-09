@@ -30,8 +30,6 @@ public class RequestMethodStrategyPOST extends RequestMethodStrategy {
     public RequestMethodStrategyPOST() {
         try {
             ContentType contentType = ArgParse.getContentType();
-            System.out.println("Detected content type: " + contentType);
-
             if (contentType != null) {
                 postData = new StringEntity(ConfigAccessor.getConfigValue("postRequestData", String.class), contentType);
             } else {

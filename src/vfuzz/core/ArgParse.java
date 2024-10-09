@@ -1,6 +1,7 @@
 package vfuzz.core;
 
 import org.apache.http.entity.ContentType;
+import vfuzz.config.ConfigAccessor;
 import vfuzz.config.ConfigManager;
 import vfuzz.logging.Metrics;
 import vfuzz.network.strategy.requestmethod.RequestMethod;
@@ -349,6 +350,16 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
+                "--fuzz-marker", "", "fuzzMarker",
+                (cm, value) -> cm.setConfigValue("fuzzMarker", value),
+                value -> !value.trim().isEmpty(),
+                "Specifies the fuzz marker within the request file that will be replaced with dynamic content. Example: --fuzz-marker \"FUZZ\"",
+                true,
+                "FUZZ",
+                false
+        ));
+
+        configManager.registerArgument(new CommandLineArgument(
                 "-d", "--post-data", "postRequestData",
                 (cm, value) -> {
                     cm.setConfigValue("postRequestData", value);
@@ -358,16 +369,6 @@ public class ArgParse {
                 "Sets data to be used in POST request.",
                 true,
                 null,
-                false
-        ));
-
-        configManager.registerArgument(new CommandLineArgument(
-                "--fuzz-marker", "", "fuzzMarker",
-                (cm, value) -> cm.setConfigValue("fuzzMarker", value),
-                value -> !value.trim().isEmpty(),
-                "Specifies the fuzz marker within the request file that will be replaced with dynamic content. Example: --fuzz-marker \"FUZZ\"",
-                true,
-                "FUZZ",
                 false
         ));
 
