@@ -105,17 +105,16 @@ public class QueueConsumer implements Runnable {
                 break;
             }
 
-            // ToDo: move all this logic to the webRequestFactory, including the payload.
-            HttpRequestBase request = webRequestFactory.buildRequest(payload);
-
-            String uri = String.valueOf(request.getURI());
-
             if (fileFuzzingEnabled) {
                 for (String extension : fileExtensions) {
+                    HttpRequestBase request = webRequestFactory.buildRequest(payload);
+                    String uri = String.valueOf(request.getURI());
                     request.setURI(URI.create(uri + extension));
                     sendAndProcessRequest(request);
                 }
             } else {
+                HttpRequestBase request = webRequestFactory.buildRequest(payload);
+
                 sendAndProcessRequest(request);
             }
         }
