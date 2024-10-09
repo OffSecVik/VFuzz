@@ -1,5 +1,6 @@
 package vfuzz.core;
 
+import org.apache.http.entity.ContentType;
 import vfuzz.config.ConfigManager;
 import vfuzz.logging.Metrics;
 import vfuzz.network.strategy.requestmethod.RequestMethod;
@@ -324,7 +325,7 @@ public class ArgParse {
 
         configManager.registerArgument(new CommandLineArgument(
                 "-H", "", "headers",
-                (cm, value) -> cm.setConfigValue("headers", value),
+                (cm, value) -> headers.add(value),
                 Validator::isValidHeader,
                 "Sets custom headers for the requests. Each header must be in the 'Name: Value' format. Can be used multiple times for multiple headers. Example: -H \"Content-Type: application/json\"",
                 true, null, false
@@ -350,7 +351,6 @@ public class ArgParse {
         configManager.registerArgument(new CommandLineArgument(
                 "-d", "--post-data", "postRequestData",
                 (cm, value) -> {
-                    System.out.println("SETTING TO POST");
                     cm.setConfigValue("postRequestData", value);
                     cm.setConfigValue("requestMethod", "POST"); // using any kind of POST data sets the request method to POST
                 },
@@ -453,5 +453,17 @@ public class ArgParse {
      */
     public static Set<String> getHeaders() {
         return headers;
+    }
+
+    public static ContentType getContentType() {
+        ContentType contentType = null;
+        for (String h : headers) {
+            String[] header = h.split(":");
+            if (header[0].equals("Content-Type")) {
+                contentType = ContentType.parse(header[1]);
+                break;
+            }
+        }
+        return contentType;
     }
 }

@@ -1,9 +1,16 @@
 package vfuzz.network.strategy.requestmode;
 
+import org.apache.http.Header;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
 import vfuzz.config.ConfigAccessor;
+import vfuzz.core.ArgParse;
+
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * The {@code RequestModeStrategyFuzz} class is a concrete implementation of
@@ -17,6 +24,7 @@ import java.net.URISyntaxException;
 public class RequestModeStrategyFuzz extends RequestModeStrategy {
 
     private final String fuzzMarker;
+    private final ContentType contentType;
 
     /**
      * Constructs a new {@code RequestModeStrategyFuzz} by retrieving the
@@ -25,6 +33,7 @@ public class RequestModeStrategyFuzz extends RequestModeStrategy {
      */
     public RequestModeStrategyFuzz() {
         fuzzMarker = ConfigAccessor.getConfigValue("fuzzMarker", String.class);
+        contentType = ArgParse.getContentType();
     }
 
     /**
@@ -42,6 +51,23 @@ public class RequestModeStrategyFuzz extends RequestModeStrategy {
      */
     @Override
     public void modifyRequest(HttpRequestBase request, String requestUrl, String payload) throws URISyntaxException {
+        if ("POST".equals(ConfigAccessor.getConfigValue("requestMethod", String.class))) {
+            try {
+                byte[] contentBytes = ((HttpPost) request).getEntity().getContent().readAllBytes();
+                String content = new String(contentBytes, StandardCharsets.UTF_8).replaceFirst(fuzzMarker, payload);
+
+                if (contentType != null) {
+                    ((HttpPost) request).setEntity(new StringEntity(content, contentType));
+                } else {
+                    ((HttpPost) request).setEntity(new StringEntity(content));
+                }
+
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            request.setURI(new URI(requestUrl));
+            return;
+        }
         request.setURI(new URI(requestUrl.replaceFirst(fuzzMarker, payload)));
     }
 }

@@ -110,12 +110,12 @@ public class QueueConsumer implements Runnable {
                     HttpRequestBase request = webRequestFactory.buildRequest(payload);
                     String uri = String.valueOf(request.getURI());
                     request.setURI(URI.create(uri + extension));
-                    sendAndProcessRequest(request);
+                    sendAndProcessRequest(request, payload);
                 }
             } else {
                 HttpRequestBase request = webRequestFactory.buildRequest(payload);
 
-                sendAndProcessRequest(request);
+                sendAndProcessRequest(request, payload);
             }
         }
     }
@@ -138,11 +138,11 @@ public class QueueConsumer implements Runnable {
      *
      * @param request The HTTP request to be sent.
      */
-    private void sendAndProcessRequest(HttpRequestBase request) {
+    private void sendAndProcessRequest(HttpRequestBase request, String payload) {
         WebRequester.sendRequest(request, 250, TimeUnit.MILLISECONDS)
                 .thenApplyAsync(response -> {
             try {
-                parseResponse(response, request);
+                parseResponse(response, request, payload);
                 target.incrementSuccessfulRequestCount();
             } catch (Exception ignored) {
             }
@@ -159,7 +159,7 @@ public class QueueConsumer implements Runnable {
      * @param response The HTTP response received.
      * @param request The original HTTP request sent.
      */
-    private void parseResponse(HttpResponse response, HttpRequestBase request) {
+    private void parseResponse(HttpResponse response, HttpRequestBase request, String payload) {
 
         int responseCode = response.getStatusLine().getStatusCode();
         for (Range range : excludedStatusCodes) {
@@ -187,7 +187,7 @@ public class QueueConsumer implements Runnable {
             return;
         }
 
-        Hit.hitIfNotPresent(requestUrl, responseCode, responseContentLength);
+        Hit.hitIfNotPresent(requestUrl, response, payload);
 
         if (recursionEnabled) {
             orchestrator.initiateRecursion(requestUrl, recursionDepth);
@@ -222,6 +222,10 @@ public class QueueConsumer implements Runnable {
      * @return {@code true} if the URL is excluded or has already been hit, {@code false} otherwise.
      */
     private boolean isAlreadyHit(String url) {
+        if ("POST".equals(ConfigAccessor.getConfigValue("requestMethod", String.class))) {
+            return false;
+        }
+
         String normalizedUrl = normalizeUrl(url);
 
         // Check if it's the base target URL

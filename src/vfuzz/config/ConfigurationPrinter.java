@@ -43,7 +43,7 @@ public class ConfigurationPrinter {
         System.out.println(getConfigDisplayString("userAgent", String.class, isDefault, "User Agent"));
         System.out.println(getConfigDisplayString("requestFileFuzzing", Boolean.class, isDefault, "Request File Fuzzing"));
         System.out.println(getConfigDisplayString("requestFilePath", String.class, isDefault, "Request File Path"));
-        System.out.println(getConfigDisplayString("headers", Set.class, isDefault, "Headers"));
+        System.out.println(getConfigDisplayString("headers", String.class, isDefault, "Headers"));
         System.out.println(getConfigDisplayString("cookies", String.class, isDefault, "Cookies"));
         System.out.println(getConfigDisplayString("postRequestData", String.class, isDefault, "Post Data"));
         System.out.println(getConfigDisplayString("fuzzMarker", String.class, isDefault, "Fuzz Marker"));

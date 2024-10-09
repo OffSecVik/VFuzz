@@ -2,8 +2,10 @@ package vfuzz.network.strategy.requestmethod;
 
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import vfuzz.config.ConfigAccessor;
+import vfuzz.core.ArgParse;
 
 import java.io.UnsupportedEncodingException;
 
@@ -27,7 +29,15 @@ public class RequestMethodStrategyPOST extends RequestMethodStrategy {
      */
     public RequestMethodStrategyPOST() {
         try {
-            postData = new StringEntity(ConfigAccessor.getConfigValue("postRequestData", String.class));
+            ContentType contentType = ArgParse.getContentType();
+            System.out.println("Detected content type: " + contentType);
+
+            if (contentType != null) {
+                postData = new StringEntity(ConfigAccessor.getConfigValue("postRequestData", String.class), contentType);
+            } else {
+                postData = new StringEntity(ConfigAccessor.getConfigValue("postRequestData", String.class));
+            }
+
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException("Error cloning HTTP POST request entity", e);
         }

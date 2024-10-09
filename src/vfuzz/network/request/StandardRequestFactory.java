@@ -1,6 +1,7 @@
 package vfuzz.network.request;
 
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.entity.ContentType;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.core.ArgParse;
 import vfuzz.network.strategy.requestmethod.*;
@@ -73,6 +74,7 @@ public class StandardRequestFactory implements WebRequestFactory {
         setUpCookies();
     }
 
+
     /**
      * Sets up request headers from the configuration.
      */
@@ -81,6 +83,9 @@ public class StandardRequestFactory implements WebRequestFactory {
             for (String header : ArgParse.getHeaders()) {
                 String[] parts = header.split(":", 2);
                 if (parts.length == 2) {
+                    if (parts[0].equals("Content-Type")) {
+                        continue;
+                    }
                     prototypeRequest.setHeader(parts[0].trim(), parts[1].trim());
                 } else {
                     System.err.println("Invalid header format while building request: " + header);
