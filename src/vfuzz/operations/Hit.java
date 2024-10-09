@@ -41,10 +41,15 @@ public record Hit(String url, int statusCode, int length, String payload) {
 
     @Override
     public String toString() {
-        return String.format("Found:\t\t%-40s (Status Code %d) (Length: %d)", url, statusCode, length);
+        return String.format("%-40s (Status Code %d) (Length: %d)", url, statusCode, length);
     }
 
     private void printHitInfo() {
+        System.out.print("Found");
+        if ("VHOST".equals(ConfigAccessor.getConfigValue("requestMode", String.class))) {
+            System.out.print(" vhost");
+        }
+        System.out.print(": ");
         System.out.println(this);
         if (ConfigAccessor.getConfigValue(("requestMethod"), String.class).equals("POST")
         && ConfigAccessor.getConfigValue(("requestMode"), String.class).equals("FUZZ")) {
