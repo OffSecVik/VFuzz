@@ -84,6 +84,19 @@ public class QueueConsumer implements Runnable {
      */
     @Override
     public void run() {
+        startFuzzing();
+    }
+
+    private void startFuzzing() {
+        if (ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.SUBDOMAIN) {
+            System.out.println("Fuzzing subdomains");
+            fuzzSubdomains();
+        } else {
+            fuzzStandard();
+        }
+    }
+
+    private void fuzzStandard() {
         if (ConfigAccessor.getConfigValue("requestFileFuzzing", String.class) == null) {
             webRequestFactory = new StandardRequestFactory(url);
         } else {
@@ -105,7 +118,7 @@ public class QueueConsumer implements Runnable {
                 break;
             }
 
-            if (fileFuzzingEnabled) {
+            if (fileFuzzingEnabled && fileExtensions.length > 0) {
                 for (String extension : fileExtensions) {
                     HttpRequestBase request = webRequestFactory.buildRequest(payload);
                     String uri = String.valueOf(request.getURI());
@@ -118,6 +131,34 @@ public class QueueConsumer implements Runnable {
                 sendAndProcessRequest(request, payload);
             }
         }
+    }
+
+    private void fuzzSubdomains() {
+        String domain = ConfigAccessor.getConfigValue("domainName", String.class);
+        if (domain == null) {
+            System.out.println("Please provide a domain to fuzz using the \"-d\" flag.");
+            return;
+        }
+
+        DNSFuzzer fuzzer;
+        try {
+            fuzzer = new DNSFuzzer(domain, ConfigAccessor.getConfigValue("DNSServer", String.class));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        while (running) {
+
+            String payload = wordlistReader.getNextPayload();
+            if (payload == null) {
+                reachedEndOfWordlist();
+                break;
+            }
+
+            fuzzer.fuzz(payload);
+        }
+        System.out.println("ALL DONE");
+        System.exit(1);
     }
 
     /**

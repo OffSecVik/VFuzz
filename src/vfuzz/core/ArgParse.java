@@ -188,6 +188,16 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
+                "-D", "--domain", "domainName",
+                (cm, value) -> cm.setConfigValue("domainName", value),
+                value -> true,
+                "Sets the domain to fuzz with subdomain fuzzing mode.",
+                true,
+                null,
+                false
+        ));
+
+        configManager.registerArgument(new CommandLineArgument(
                 "--fuzz", "", "requestMode",
                 (cm, value) -> cm.setConfigValue("requestMode", RequestMode.FUZZ.name()),
                 value -> true,
@@ -195,6 +205,16 @@ public class ArgParse {
                 true,
                 null,
                 true
+        ));
+
+        configManager.registerArgument(new CommandLineArgument(
+                "--dns-server","","DNSServer",
+                (cm, value) -> cm.setConfigValue("DNSServer", value),
+                value -> true,
+                "Provides a custom DNS server for subdomain mode.",
+                true,
+                null,
+                false
         ));
 
 

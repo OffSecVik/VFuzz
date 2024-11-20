@@ -163,6 +163,17 @@ public class ConfigManager {
      * If any required argument is missing, the program exits with an error message.
      */
     public void verifyRequiredArguments() {
+        if (ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.SUBDOMAIN) {
+            if (!providedArgs.contains("-D")) {
+                System.err.println("Missing required arguments. Exiting.");
+                System.exit(1);
+            }
+            if (!providedArgs.contains("-w")) {
+                System.err.println("Missing required arguments. Exiting.");
+                System.exit(1);
+            }
+            return;
+        }
         if (arguments.values().stream().anyMatch(arg -> arg.getName().equals("--help"))) {
             return;
         }
