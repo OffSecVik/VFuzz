@@ -3,6 +3,7 @@ package vfuzz.core;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpRequestBase;
 import vfuzz.config.ConfigAccessor;
+import vfuzz.logging.Metrics;
 import vfuzz.network.request.ParsedRequestFactory;
 import vfuzz.network.request.WebRequestFactory;
 import vfuzz.network.strategy.requestmode.RequestMode;
@@ -89,7 +90,6 @@ public class QueueConsumer implements Runnable {
 
     private void startFuzzing() {
         if (ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.SUBDOMAIN) {
-            System.out.println("Fuzzing subdomains");
             fuzzSubdomains();
         } else {
             fuzzStandard();
@@ -155,10 +155,16 @@ public class QueueConsumer implements Runnable {
                 break;
             }
 
-            fuzzer.fuzz(payload);
+            executor.submit(() -> {
+                try {
+                    fuzzer.fuzzAsync(payload).join(); // Ensure the CompletableFuture completes
+                    target.incrementSuccessfulRequestCount();
+                    Metrics.incrementSuccessfulRequestsCount();
+                } catch (Exception e) {
+                    System.err.println("Error fuzzing subdomain: " + e.getMessage());
+                }
+            });
         }
-        System.out.println("ALL DONE");
-        System.exit(1);
     }
 
     /**

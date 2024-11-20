@@ -249,6 +249,6 @@ public class ThreadOrchestrator {
                 shutdown();
                 scheduler.shutdown(); // Stop the scheduler
             }
-        }, 0, 2, TimeUnit.SECONDS); // Initial delay of 0, repeat every 2 seconds
+        }, 2, 2, TimeUnit.SECONDS); // Initial delay of 0, repeat every 2 seconds
     }
 }

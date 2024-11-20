@@ -9,6 +9,8 @@ import vfuzz.core.ThreadOrchestrator;
 import vfuzz.logging.Color;
 import vfuzz.logging.Metrics;
 import vfuzz.network.WebRequester;
+import vfuzz.network.strategy.requestmethod.RequestMethod;
+import vfuzz.network.strategy.requestmode.RequestMode;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -65,7 +67,9 @@ public class VFuzz {
         ThreadOrchestrator orchestrator = new ThreadOrchestrator(wordlistPath, threadCount);
 
         // Initialize WebRequester (static initializer)
-        WebRequester.initialize();
+        if (!(ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.SUBDOMAIN)) {
+            WebRequester.initialize();
+        }
 
         // Start collecting metrics for performance analysis
         Metrics.startMetrics();
