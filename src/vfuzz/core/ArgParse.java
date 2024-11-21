@@ -104,7 +104,7 @@ public class ArgParse {
                     }
                 },
                 Validator::isValidStatusCodeCsv,
-                "List of HTTP status codes or ranges to exclude, separated by commas. For example: 404,405-410,505-560. Each code or range must be valid.",
+                "List of HTTP status codes or ranges to exclude, separated by commas. Each code or range must be valid.\n    Example: 404,405-410,505-560.",
                 true,
                 "404",
                 false
@@ -325,7 +325,7 @@ public class ArgParse {
                 "-A", "--user-agent", "userAgent",
                 (cm, value) -> headers.add("User-Agent: " + value),
                 value -> !value.trim().isEmpty(),
-                "Sets the user agent for requests. Example: --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"",
+                "Sets the user agent for requests.\n    Example: --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"",
                 true,
                 null,
                 false
@@ -338,7 +338,7 @@ public class ArgParse {
                     cm.setConfigValue("requestFileFuzzing", "true");
                 },
                 Validator::isValidFile,
-                "Specifies the filepath to the HTTP request file for fuzzing. This activates file-based fuzzing mode. Ensure the file exists. Example: -r \"/path/to/requestfile.txt\"",
+                "Specifies the filepath to the HTTP request file for fuzzing. This activates file-based fuzzing mode. Ensure the file exists.\n    Example: -r \"/path/to/requestfile.txt\"",
                 true,
                 null,
                 false
@@ -348,7 +348,7 @@ public class ArgParse {
                 "-H", "", "headers",
                 (cm, value) -> headers.add(value),
                 Validator::isValidHeader,
-                "Sets custom headers for the requests. Each header must be in the 'Name: Value' format. Can be used multiple times for multiple headers. Example: -H \"Content-Type: application/json\"",
+                "Sets custom headers for the requests. Each header must be in the 'Name: Value' format. Can be used multiple times for multiple headers.\n    Example: -H \"Content-Type: application/json\"",
                 true, null, false
         ));
 
@@ -363,7 +363,7 @@ public class ArgParse {
                     }
                 },
                 value -> true,
-                "Sets custom cookies for the requests. Can be used multiple times for multiple cookies. Example: -C \"username=JohnDoe\"",
+                "Sets custom cookies for the requests. Can be used multiple times for multiple cookies.\n    Example: -C \"username=JohnDoe\"",
                 true,
                 null,
                 false
@@ -373,7 +373,7 @@ public class ArgParse {
                 "--fuzz-marker", "", "fuzzMarker",
                 (cm, value) -> cm.setConfigValue("fuzzMarker", value),
                 value -> !value.trim().isEmpty(),
-                "Specifies the fuzz marker within the request file that will be replaced with dynamic content. Example: --fuzz-marker \"FUZZ\"",
+                "Specifies the fuzz marker that will be replaced with the payloads.\n    Example: --fuzz-marker \"FUZZ\"",
                 true,
                 "FUZZ",
                 false

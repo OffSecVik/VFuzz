@@ -49,7 +49,7 @@ public class ConfigManager {
      * @param arg the CommandLineArgument whose default value is being set
      */
     private void setOptionalDefaultValue(CommandLineArgument arg) {
-        if (arg.isOptional() && !providedArgs.contains(arg.getName()) && !providedArgs.contains(arg.getAlias())) {
+        if (arg.isOptional() && !providedArgs.contains(arg.getConfigName())) {
             arg.applyDefaultValue(this);
             defaultValues.put(arg.getConfigName(), configValues.get(arg.getConfigName()));
         }
@@ -72,6 +72,13 @@ public class ConfigManager {
      * @param passedArguments the command-line arguments to process
      */
     public void processArguments(String[] passedArguments) {
+
+        if (passedArguments.length == 0) {
+            CommandLineArgument cmdArg = findArgumentByString("--help");
+            providedArgs.add(cmdArg.getConfigName());
+            cmdArg.executeAction(this, "true");
+        }
+
         for (int i = 0; i < passedArguments.length; i++) {
             String argument = passedArguments[i];
             CommandLineArgument cmdArg = findArgumentByString(argument);
@@ -119,11 +126,11 @@ public class ConfigManager {
      */
     private String getValueForArgument(String[] args, CommandLineArgument cmdArg, int index) {
         if (cmdArg.isFlag()) {
-            providedArgs.add(cmdArg.getName());
+            providedArgs.add(cmdArg.getConfigName());
             return "true";
         }
         if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
-            providedArgs.add(cmdArg.getName());
+            providedArgs.add(cmdArg.getConfigName());
             return args[++index];
         }
         return null;
@@ -163,24 +170,28 @@ public class ConfigManager {
      * If any required argument is missing, the program exits with an error message.
      */
     public void verifyRequiredArguments() {
+        if (providedArgs.stream().anyMatch(a -> a.equals("help"))) {
+            return;
+        }
         if (ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.SUBDOMAIN) {
-            if (!providedArgs.contains("-D")) {
-                System.err.println("Missing required arguments. Exiting.");
-                System.exit(1);
+            if (!providedArgs.contains("domain")) {
+                System.out.println("Please provide a domain with \'-d\'");
+                System.exit(0);
             }
-            if (!providedArgs.contains("-w")) {
-                System.err.println("Missing required arguments. Exiting.");
-                System.exit(1);
+            if (!providedArgs.contains("wordlist")) {
+                System.out.println("Please provide a wordlist with \'-w\'");
+                System.exit(0);
             }
             return;
         }
-        if (arguments.values().stream().anyMatch(arg -> arg.getName().equals("--help"))) {
-            return;
+
+        if (arguments.values().stream().anyMatch(arg -> !arg.isOptional() && !providedArgs.contains(arg.getConfigName()))) {
+            printMissingAndExit();
         }
-        if (arguments.values().stream().anyMatch(arg -> !arg.isOptional() && !providedArgs.contains(arg.getName()) && !providedArgs.contains(arg.getAlias()))) {
-            System.err.println("Missing required arguments. Exiting.");
-            System.exit(1);
-        }
+    }
+    private void printMissingAndExit() {
+        System.err.println("Missing required arguments. Exiting.");
+        System.exit(1);
     }
 
     /**
