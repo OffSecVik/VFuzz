@@ -13,17 +13,17 @@ import java.util.Set;
 @SuppressWarnings("CommentedOutCode")
 public class TerminalOutput implements Runnable {
 
-    private String progressBarLine = ""; // Store the progress bar separately
+    private String progressBarLine = "";
 
     private Terminal terminal;
 
-    private ConfigManager config = ConfigManager.getInstance();
+    private final ConfigManager config = ConfigManager.getInstance();
 
     private volatile boolean running = true;
 
     private ArrayList<String> output = new ArrayList<>();
 
-    private final Set<String> hitsDisplayed = new HashSet<>(); // Track displayed hits
+    private final Set<String> hitsDisplayed = new HashSet<>();
 
     @Override
     public void run() {
@@ -33,21 +33,14 @@ public class TerminalOutput implements Runnable {
     }
 
     public void makeAndPrintOutput() {
-        if (config.getConfigValue("metricsEnabled").equals("true")) {
-            updateMetrics();
-        }
-
-        if (config.getConfigValue("metricsEnabled").equals("true")) {
-            updatePayload();
-        }
 
         updateProgressBar();
 
         updateHits();
 
-        printOutput();
+        moveUpAndDeleteLines(getOutputLineCount());
 
-        returnCursorToTop();
+        printOutput();
 
         try {
             Thread.sleep(250);
@@ -57,12 +50,17 @@ public class TerminalOutput implements Runnable {
         }
     }
 
+    private void moveUpAndDeleteLines(int n) {
+        System.out.printf("\033[%dF",n);
+    }
+
     private int getOutputLineCount() {
-        int outputLineCount = 1;
+        int lineCount = 0;
         for (String line : output) {
-            outputLineCount += Math.max(1, (line.length() + getTerminalWidth() - 1) / getTerminalWidth());
+            // Calculate how many terminal lines this string spans
+            lineCount += Math.max(1, (line.length() + getTerminalWidth() - 1) / getTerminalWidth());
         }
-        return outputLineCount;
+        return lineCount;
     }
 
     private void updateProgressBar() {
@@ -78,12 +76,12 @@ public class TerminalOutput implements Runnable {
         }
         progressBar.append("] ").append(current).append("/").append(total);
 
-        // Update the progress bar line
+        // Update progress bar as the first line
         progressBarLine = progressBar.toString();
         if (output.isEmpty()) {
-            output.add(progressBarLine); // Add if it's the first time
+            output.add(progressBarLine);
         } else {
-            output.set(0, progressBarLine); // Replace the first line with the updated bar
+            output.set(0, progressBarLine);
         }
     }
 
@@ -97,14 +95,10 @@ public class TerminalOutput implements Runnable {
         for (Hit hit : Hit.getHits()) {
             String hitString = hit.toString();
             if (!hitsDisplayed.contains(hitString)) {
-                output.add(hitString); // Append new hits
-                hitsDisplayed.add(hitString); // Track them to avoid duplicates
+                output.add(hitString);
+                hitsDisplayed.add(hitString);
             }
         }
-    }
-
-    private void clearOutput() {
-        output.clear();
     }
 
     public void updateMetrics() {
@@ -145,44 +139,14 @@ public class TerminalOutput implements Runnable {
     }
 
     public void updatePayload() {
-        eraseToEOL();
         // System.out.println("Now fuzzing " + Metrics.getCurrentRequest());
     }
 
-
     private int getTerminalWidth() {
-        return terminal.getSize().getColumns();
+        return terminal != null ? terminal.getSize().getColumns() : 80; // Default to 80 columns
     }
 
-    private void clearScreen() {
-        System.out.print("\033[J2");
-    }
 
-    private void moveUp(int n) {
-        System.out.printf("\033[%dA", n);
-    }
-
-    private void moveDown(int n) {
-        System.out.printf("\033[%dB", n);
-    }
-
-    private void eraseToEOL() {
-        System.out.print("\033[0K");
-    }
-
-    public void returnCursorToTop() {
-        if (getOutputLineCount() > 0) {
-            moveCursorUpBegLine(getOutputLineCount());
-        }
-    }
-
-    private void moveCursorDownBegLine(int n) {
-        System.out.printf("\033[%dE", n);
-    }
-
-    private void moveCursorUpBegLine(int n) {
-        System.out.printf("\033[%dF", n);
-    }
 
     public void setRunning(boolean running) {
         this.running = running;
