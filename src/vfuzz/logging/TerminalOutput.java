@@ -50,6 +50,8 @@ public class TerminalOutput implements Runnable {
 
         updateHits();
 
+        updateMetrics();
+
         printOutput();
 
         try {
@@ -111,7 +113,7 @@ public class TerminalOutput implements Runnable {
         }
     }
 
-    public void updateMetrics() {
+    public void updateMetricsOld() {
         System.out.println(Color.GRAY + "---------------------------------------------------------" + Color.RESET);
         System.out.println("Future limit: " + WebRequester.getFutureLimit());
 
@@ -132,6 +134,47 @@ public class TerminalOutput implements Runnable {
         System.out.println();
     }
 
+    public void updateMetrics() {
+        String metrics1 = "Rate limit: " + WebRequester.getRateLimiter().getRateLimitPerSecond();
+        if (output.size() > 1) {
+            output.set(1, metrics1);
+        } else {
+            output.add(metrics1);
+        }
+
+        String metrics2 = "Attempted R/s:  " + Metrics.getRequestsPerSecond();
+        if (output.size() > 2) {
+            output.set(2, metrics2);
+        } else {
+            output.add(metrics2);
+        }
+
+        String metrics3 = "Successful R/s: " + Metrics.getSuccessfulRequestsPerSecond();
+        if (output.size() > 3) {
+            output.set(3, metrics3);
+        } else {
+            output.add(metrics3);
+        }
+
+        double retryRate = Metrics.getRetryRate() * 100;
+        String retryRateString = String.format("%.3f", retryRate) + "%";
+        String retryRateColor = getRetryRateColor(retryRate);
+
+        String metrics4 = "Retry rate:     " + Color.RESET + retryRateColor + retryRateString + Color.RESET;
+        if (output.size() > 4) {
+            output.set(4, metrics4);
+        } else {
+            output.add(metrics4);
+        }
+
+        if  (output.size() > 5) {
+            output.set(5, "");
+        } else {
+            output.add("");
+        }
+
+    }
+
     private String getRetryRateColor(double retryRate) {
         if (retryRate >= 90) {
             return Color.RED;
@@ -146,10 +189,6 @@ public class TerminalOutput implements Runnable {
         } else {
             return Color.GREEN_BOLD;
         }
-    }
-
-    public void updatePayload() {
-        // System.out.println("Now fuzzing " + Metrics.getCurrentRequest());
     }
 
     private int getTerminalWidth() {
@@ -167,16 +206,12 @@ public class TerminalOutput implements Runnable {
         moveUpAndDeleteLines(getOutputLineCount());
 
         // Append shutdown messages
-        appendOutput("All fuzzing tasks are complete. Initiating shutdown...");
+        output.add("");
+        output.add("All fuzzing tasks are complete. Initiating shutdown...");
         String s = Target.getTargets().size() == 1 ? "target" : "targets";
-        appendOutput("Fuzzing completed after sending " + Metrics.getTotalSuccessfulRequests() + " requests to " + Target.getTargets().size() + " " + s + ".");
-        appendOutput("Thank you for fuzzing with VFuzz.");
+        output.add("Fuzzing completed after sending " + Metrics.getTotalSuccessfulRequests() + " requests to " + Target.getTargets().size() + " " + s + ".");
+        output.add("Thank you for fuzzing with VFuzz.");
 
         printOutput();
     }
-
-    public void appendOutput(String o) {
-        output.add(o);
-    }
-
 }

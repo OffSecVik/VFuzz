@@ -1,6 +1,5 @@
 package vfuzz.logging;
 
-import vfuzz.core.ThreadOrchestrator;
 import vfuzz.network.WebRequester;
 
 import java.util.concurrent.atomic.AtomicLong;

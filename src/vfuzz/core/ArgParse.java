@@ -280,9 +280,9 @@ public class ArgParse {
                         return false;
                     }
                 },
-                "Sets the maximum number of requests per second. This value must be a positive integer. Default is 4000.",
+                "Sets the maximum number of requests per second. Default is 4000. Set to 0 to disable",
                 true,
-                "0",
+                "4000",
                 false
         ));
 
