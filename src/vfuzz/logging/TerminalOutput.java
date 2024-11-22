@@ -1,70 +1,111 @@
 package vfuzz.logging;
 
+import org.jline.terminal.Terminal;
 import vfuzz.network.WebRequester;
 import vfuzz.config.ConfigManager;
 import vfuzz.operations.Hit;
+import vfuzz.operations.Target;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 @SuppressWarnings("CommentedOutCode")
 public class TerminalOutput implements Runnable {
+
+    private String progressBarLine = ""; // Store the progress bar separately
+
+    private Terminal terminal;
 
     private ConfigManager config = ConfigManager.getInstance();
 
     private volatile boolean running = true;
 
-    @SuppressWarnings("CommentedOutCode")
+    private ArrayList<String> output = new ArrayList<>();
+
+    private final Set<String> hitsDisplayed = new HashSet<>(); // Track displayed hits
+
     @Override
     public void run() {
         while (running) {
-
-            if (config.getConfigValue("metricsEnabled").equals("true")) {
-                updateMetrics();
-            }
-
-            // updateDynamicRateLimiter();
-
-			updateOutput();
-
-			if (config.getConfigValue("metricsEnabled").equals("true")) {
-				updatePayload();
-			}
-
-			returnCursorToTop();
-
-
-            try {
-                //noinspection BusyWait
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                running = false;
-                Thread.currentThread().interrupt();
-            }
-
+            makeAndPrintOutput();
         }
     }
 
+    public void makeAndPrintOutput() {
+        if (config.getConfigValue("metricsEnabled").equals("true")) {
+            updateMetrics();
+        }
 
-    public void returnCursorToTop() {
-        if (linesPrinted() > 0) {
-            moveCursorUpBegLine(linesPrinted() + 1);
+        if (config.getConfigValue("metricsEnabled").equals("true")) {
+            updatePayload();
+        }
+
+        updateProgressBar();
+
+        updateHits();
+
+        printOutput();
+
+        returnCursorToTop();
+
+        try {
+            Thread.sleep(250);
+        } catch (InterruptedException e) {
+            running = false;
+            Thread.currentThread().interrupt();
         }
     }
 
-    public void returnCursorToBottom() {
-        if (linesPrinted() > 0) {
-            moveCursorDownBegLine(linesPrinted());
+    private int getOutputLineCount() {
+        int outputLineCount = 1;
+        for (String line : output) {
+            outputLineCount += Math.max(1, (line.length() + getTerminalWidth() - 1) / getTerminalWidth());
+        }
+        return outputLineCount;
+    }
+
+    private void updateProgressBar() {
+        int total = Target.getTotalRequestNumberToSend();
+        int current = Target.getSuccessfulRequestsForAllTargets();
+        int progressWidth = 30;
+        int completed = (int) ((double) current / total * progressWidth);
+
+        StringBuilder progressBar = new StringBuilder();
+        progressBar.append("[");
+        for (int i = 0; i < progressWidth; i++) {
+            progressBar.append(i < completed ? "=" : " ");
+        }
+        progressBar.append("] ").append(current).append("/").append(total);
+
+        // Update the progress bar line
+        progressBarLine = progressBar.toString();
+        if (output.isEmpty()) {
+            output.add(progressBarLine); // Add if it's the first time
+        } else {
+            output.set(0, progressBarLine); // Replace the first line with the updated bar
         }
     }
 
-    private int linesPrinted() {
-        return Hit.getHitCount() + getMetricsLines();
+    private void printOutput() {
+        for (String line : output) {
+            System.out.println(line);
+        }
     }
 
-    public void updateOutput() {
+    private void updateHits() {
         for (Hit hit : Hit.getHits()) {
-            System.out.println(hit.toString());
+            String hitString = hit.toString();
+            if (!hitsDisplayed.contains(hitString)) {
+                output.add(hitString); // Append new hits
+                hitsDisplayed.add(hitString); // Track them to avoid duplicates
+            }
         }
     }
 
+    private void clearOutput() {
+        output.clear();
+    }
 
     public void updateMetrics() {
         System.out.println(Color.GRAY + "---------------------------------------------------------" + Color.RESET);
@@ -109,13 +150,9 @@ public class TerminalOutput implements Runnable {
     }
 
 
-    private int getMetricsLines() { // calculates lines needed by metrics
-        if (config.getConfigValue("metricsEnabled").equals("true")) {
-            return 10;
-        }
-        return 0;
+    private int getTerminalWidth() {
+        return terminal.getSize().getColumns();
     }
-
 
     private void clearScreen() {
         System.out.print("\033[J2");
@@ -131,6 +168,12 @@ public class TerminalOutput implements Runnable {
 
     private void eraseToEOL() {
         System.out.print("\033[0K");
+    }
+
+    public void returnCursorToTop() {
+        if (getOutputLineCount() > 0) {
+            moveCursorUpBegLine(getOutputLineCount());
+        }
     }
 
     private void moveCursorDownBegLine(int n) {

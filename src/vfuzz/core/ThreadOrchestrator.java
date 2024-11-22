@@ -55,7 +55,7 @@ public class ThreadOrchestrator {
         try {
             this.executor = Executors.newFixedThreadPool(THREAD_COUNT + 1); // plus one for Terminal Output
 
-            TerminalOutput2 terminalOutput = new TerminalOutput2();
+            TerminalOutput terminalOutput = new TerminalOutput();
             executor.submit(terminalOutput);
 
             WordlistReader wordlistReader = new WordlistReader(wordlistPath);
@@ -78,7 +78,7 @@ public class ThreadOrchestrator {
                 terminalOutput.setRunning(false);
                 executor.shutdown();
                 try {
-                    if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                    if (!executor.awaitTermination(20, TimeUnit.SECONDS)) {
                         executor.shutdownNow();
                     }
                 } catch (InterruptedException e) {

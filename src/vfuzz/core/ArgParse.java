@@ -302,16 +302,6 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "--debug", "", "debugEnabled",
-                (cm, value) -> cm.setConfigValue("debugEnabled", value),
-                value -> true,
-                "Enables debug mode.",
-                true,
-                "false",
-                true
-        ));
-
-        configManager.registerArgument(new CommandLineArgument(
                 "--recursive", "", "recursionEnabled",
                 (cm, value) -> cm.setConfigValue("recursionEnabled", value),
                 value -> true,

@@ -38,7 +38,6 @@ public class ConfigurationPrinter {
         System.out.println(getConfigDisplayString("maxRetries", Integer.class, isDefault, "Max Retries"));
         System.out.println(getConfigDisplayString("rateLimit", Integer.class, isDefault, "Rate Limit"));
         System.out.println(getConfigDisplayString("metricsEnabled", Boolean.class, isDefault, "Metrics Enabled"));
-        System.out.println(getConfigDisplayString("debugEnabled", Boolean.class, isDefault, "Debug Enabled"));
         System.out.println(getConfigDisplayString("recursionEnabled", Boolean.class, isDefault, "Recursion Enabled"));
         System.out.println(getConfigDisplayString("userAgent", String.class, isDefault, "User Agent"));
         System.out.println(getConfigDisplayString("requestFileFuzzing", Boolean.class, isDefault, "Request File Fuzzing"));

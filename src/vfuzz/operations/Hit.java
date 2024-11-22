@@ -33,7 +33,6 @@ public record Hit(String url, int statusCode, int length, String payload) {
         synchronized (hits) {
             if (hits.add(newHit)) { // Set.add returns true if the element was added (i.e., it was not already present)
                 hitCounter++;
-                // newHit.printHitInfo();
             }
         }
     }
