@@ -157,6 +157,7 @@ public class QueueConsumer implements Runnable {
 
             executor.submit(() -> {
                 try {
+                    Metrics.incrementRequestsCount();
                     fuzzer.fuzzAsync(payload).join(); // Ensure the CompletableFuture completes
                     target.incrementSuccessfulRequestCount();
                     Metrics.incrementSuccessfulRequestsCount();
@@ -186,11 +187,11 @@ public class QueueConsumer implements Runnable {
      * @param request The HTTP request to be sent.
      */
     private void sendAndProcessRequest(HttpRequestBase request, String payload) {
+        target.incrementSuccessfulRequestCount(); // we can increment early since we send the request until it arrives!
         WebRequester.sendRequest(request, 250, TimeUnit.MILLISECONDS)
                 .thenApplyAsync(response -> {
             try {
                 parseResponse(response, request, payload);
-                target.incrementSuccessfulRequestCount();
             } catch (Exception ignored) {
             }
             return response;

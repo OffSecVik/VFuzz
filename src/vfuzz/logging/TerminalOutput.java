@@ -157,10 +157,13 @@ public class TerminalOutput implements Runnable {
         }
 
         double retryRate = Metrics.getRetryRate() * 100;
+        if (retryRate > 100) {
+            retryRate = 100;
+        }
         String retryRateString = String.format("%.3f", retryRate) + "%";
         String retryRateColor = getRetryRateColor(retryRate);
 
-        String metrics4 = "Retry rate:     " + Color.RESET + retryRateColor + retryRateString + Color.RESET;
+        String metrics4 = "\033[0KRetry rate:     " + Color.RESET + retryRateColor + retryRateString + Color.RESET;
         if (output.size() > 4) {
             output.set(4, metrics4);
         } else {

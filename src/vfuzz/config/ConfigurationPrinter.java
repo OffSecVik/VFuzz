@@ -37,11 +37,13 @@ public class ConfigurationPrinter {
         System.out.println(getConfigDisplayString("requestMethod", RequestMethod.class, isDefault, "Request Method"));
         System.out.println(getConfigDisplayString("maxRetries", Integer.class, isDefault, "Max Retries"));
         System.out.println(getConfigDisplayString("rateLimit", Integer.class, isDefault, "Rate Limit"));
-        System.out.println(getConfigDisplayString("metricsEnabled", Boolean.class, isDefault, "Metrics Enabled"));
         System.out.println(getConfigDisplayString("recursionEnabled", Boolean.class, isDefault, "Recursion Enabled"));
         System.out.println(getConfigDisplayString("userAgent", String.class, isDefault, "User Agent"));
         System.out.println(getConfigDisplayString("requestFileFuzzing", Boolean.class, isDefault, "Request File Fuzzing"));
-        System.out.println(getConfigDisplayString("requestFilePath", String.class, isDefault, "Request File Path"));
+        String requestFile = ConfigAccessor.getConfigValue("requestFilePath", String.class);
+        if (requestFile != null) { // patchwork
+            System.out.println(getConfigDisplayString("requestFilePath", String.class, isDefault, "Request File Path"));
+        }
         System.out.println(getConfigDisplayString("headers", String.class, isDefault, "Headers"));
         System.out.println(getConfigDisplayString("cookies", String.class, isDefault, "Cookies"));
         System.out.println(getConfigDisplayString("postRequestData", String.class, isDefault, "Post Data"));

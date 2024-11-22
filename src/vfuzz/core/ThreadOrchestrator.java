@@ -1,9 +1,6 @@
 package vfuzz.core;
 
 import vfuzz.config.ConfigAccessor;
-import vfuzz.logging.Color;
-import vfuzz.logging.Metrics;
-import vfuzz.logging.TerminalOutput2;
 import vfuzz.operations.Target;
 import vfuzz.logging.TerminalOutput;
 import vfuzz.network.strategy.requestmode.RequestMode;

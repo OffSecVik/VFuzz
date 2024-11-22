@@ -287,21 +287,6 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "--metrics", "", "metricsEnabled",
-                (cm, value) -> {
-                    cm.setConfigValue("metricsEnabled", value);
-                    if ("true".equalsIgnoreCase(value)) {
-                        Metrics.startMetrics();
-                    }
-                },
-                value -> true,
-                "Enables metrics collection.",
-                true,
-                "false",
-                true
-        ));
-
-        configManager.registerArgument(new CommandLineArgument(
                 "--recursive", "", "recursionEnabled",
                 (cm, value) -> cm.setConfigValue("recursionEnabled", value),
                 value -> true,
@@ -324,7 +309,7 @@ public class ArgParse {
         configManager.registerArgument(new CommandLineArgument(
                 "-r", "--request-file", "requestFileFuzzing",
                 (cm, value) -> {
-                    cm.setConfigValue("requestFilePath", value); //TODO: Fix wrong ConfigurationPrinter
+                    cm.setConfigValue("requestFilePath", value);
                     cm.setConfigValue("requestFileFuzzing", "true");
                 },
                 Validator::isValidFile,
