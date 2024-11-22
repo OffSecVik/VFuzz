@@ -3,6 +3,7 @@ package vfuzz.core;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.logging.Color;
 import vfuzz.logging.Metrics;
+import vfuzz.logging.TerminalOutput2;
 import vfuzz.operations.Target;
 import vfuzz.logging.TerminalOutput;
 import vfuzz.network.strategy.requestmode.RequestMode;
@@ -54,7 +55,7 @@ public class ThreadOrchestrator {
         try {
             this.executor = Executors.newFixedThreadPool(THREAD_COUNT + 1); // plus one for Terminal Output
 
-            TerminalOutput terminalOutput = new TerminalOutput();
+            TerminalOutput2 terminalOutput = new TerminalOutput2();
             executor.submit(terminalOutput);
 
             WordlistReader wordlistReader = new WordlistReader(wordlistPath);

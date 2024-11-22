@@ -2,6 +2,7 @@ package vfuzz.logging;
 
 import vfuzz.network.WebRequester;
 import vfuzz.config.ConfigManager;
+import vfuzz.operations.Hit;
 
 @SuppressWarnings("CommentedOutCode")
 public class TerminalOutput implements Runnable {
@@ -21,13 +22,14 @@ public class TerminalOutput implements Runnable {
 
             // updateDynamicRateLimiter();
 
-			/*
 			updateOutput();
-			if (ArgParse.getMetricsEnabled()) {
+
+			if (config.getConfigValue("metricsEnabled").equals("true")) {
 				updatePayload();
 			}
+
 			returnCursorToTop();
-			*/
+
 
             try {
                 //noinspection BusyWait
@@ -40,17 +42,21 @@ public class TerminalOutput implements Runnable {
         }
     }
 
-    /*
+
     public void returnCursorToTop() {
-        if (Hit.getHitCount() + getMetricsLines() > 0) {
-            moveCursorUpBegLine(Hit.getHitCount() + getMetricsLines());
+        if (linesPrinted() > 0) {
+            moveCursorUpBegLine(linesPrinted() + 1);
         }
     }
 
     public void returnCursorToBottom() {
-        if (Hit.getHitCount() + getMetricsLines() > 0) {
-            moveCursorDownBegLine(Hit.getHitCount() + getMetricsLines());
+        if (linesPrinted() > 0) {
+            moveCursorDownBegLine(linesPrinted());
         }
+    }
+
+    private int linesPrinted() {
+        return Hit.getHitCount() + getMetricsLines();
     }
 
     public void updateOutput() {
@@ -58,7 +64,7 @@ public class TerminalOutput implements Runnable {
             System.out.println(hit.toString());
         }
     }
-     */
+
 
     public void updateMetrics() {
         System.out.println(Color.GRAY + "---------------------------------------------------------" + Color.RESET);
@@ -102,14 +108,14 @@ public class TerminalOutput implements Runnable {
         // System.out.println("Now fuzzing " + Metrics.getCurrentRequest());
     }
 
-    /* // TODO: reimplement
+
     private int getMetricsLines() { // calculates lines needed by metrics
-        if (ArgParse.getMetricsEnabled()) {
-            return 2;
+        if (config.getConfigValue("metricsEnabled").equals("true")) {
+            return 10;
         }
         return 0;
     }
-     */
+
 
     private void clearScreen() {
         System.out.print("\033[J2");

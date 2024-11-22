@@ -120,4 +120,20 @@ public class Target {
         }
         return fileExtensions.split(",").length;
     }
+
+    public static int getSuccessfulRequestsForAllTargets() {
+        int successfulRequests = 0;
+        for (Target target : targets) {
+            successfulRequests += target.successfulRequestCount.get();
+        }
+        return successfulRequests;
+    }
+
+    public static int getTotalRequestNumberToSend() {
+        int total = 0;
+        for (Target target : targets) {
+            total += target.getWordlistReader().getWordlistSize();
+        }
+        return total;
+    }
 }
