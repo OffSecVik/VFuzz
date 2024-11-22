@@ -31,6 +31,7 @@ public class ThreadOrchestrator {
     private ExecutorService executor;
     private ScheduledExecutorService scheduler;
     private final int THREAD_COUNT;
+    private TerminalOutput terminalOutput;
     private final ConcurrentHashMap<Target, List<QueueConsumer>> consumerTasks = new ConcurrentHashMap<>();
 
     /**
@@ -55,7 +56,7 @@ public class ThreadOrchestrator {
         try {
             this.executor = Executors.newFixedThreadPool(THREAD_COUNT + 1); // plus one for Terminal Output
 
-            TerminalOutput terminalOutput = new TerminalOutput();
+            terminalOutput = new TerminalOutput();
             executor.submit(terminalOutput);
 
             WordlistReader wordlistReader = new WordlistReader(wordlistPath);
@@ -74,8 +75,6 @@ public class ThreadOrchestrator {
 
             // Register a shutdown hook for graceful termination
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                terminalOutput.shutdown();
-                terminalOutput.setRunning(false);
                 executor.shutdown();
                 try {
                     if (!executor.awaitTermination(20, TimeUnit.SECONDS)) {
@@ -243,10 +242,7 @@ public class ThreadOrchestrator {
         scheduler = Executors.newSingleThreadScheduledExecutor();
         scheduler.scheduleAtFixedRate(() -> {
             if (Target.allTargetsAreFuzzed()) {
-                System.out.println("\n\nAll fuzzing tasks are complete. Initiating shutdown...");
-                String s = Target.getTargets().size() == 1 ? "target" : "targets";
-                System.out.println("Fuzzing completed after sending " + Metrics.getTotalSuccessfulRequests() + " web requests to " + Target.getTargets().size() + " " + s + ".");
-                System.out.println("Thank you for fuzzing with VFuzz.");
+                terminalOutput.shutdown();
                 shutdown();
                 scheduler.shutdown(); // Stop the scheduler
             }

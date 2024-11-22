@@ -1,16 +1,17 @@
 package vfuzz.logging;
 
 import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
 import vfuzz.network.WebRequester;
 import vfuzz.config.ConfigManager;
 import vfuzz.operations.Hit;
 import vfuzz.operations.Target;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
-@SuppressWarnings("CommentedOutCode")
 public class TerminalOutput implements Runnable {
 
     private String progressBarLine = "";
@@ -21,9 +22,18 @@ public class TerminalOutput implements Runnable {
 
     private volatile boolean running = true;
 
-    private ArrayList<String> output = new ArrayList<>();
+    private final ArrayList<String> output = new ArrayList<>();
 
     private final Set<String> hitsDisplayed = new HashSet<>();
+
+    public TerminalOutput() {
+        try {
+            terminal = TerminalBuilder.builder()
+                    .system(true) // Use the system terminal
+                    .build();
+        } catch (IOException ignored) {
+        }
+    }
 
     @Override
     public void run() {
@@ -34,11 +44,11 @@ public class TerminalOutput implements Runnable {
 
     public void makeAndPrintOutput() {
 
+        moveUpAndDeleteLines(getOutputLineCount());
+
         updateProgressBar();
 
         updateHits();
-
-        moveUpAndDeleteLines(getOutputLineCount());
 
         printOutput();
 
@@ -146,15 +156,27 @@ public class TerminalOutput implements Runnable {
         return terminal != null ? terminal.getSize().getColumns() : 80; // Default to 80 columns
     }
 
-
-
     public void setRunning(boolean running) {
         this.running = running;
     }
 
     public void shutdown() {
         running = false;
-        // moveCursorDownBegLine(Hit.getHitCount() + getMetricsLines());
+
+        // Clear the terminal and prepare for shutdown messages
+        moveUpAndDeleteLines(getOutputLineCount());
+
+        // Append shutdown messages
+        appendOutput("All fuzzing tasks are complete. Initiating shutdown...");
+        String s = Target.getTargets().size() == 1 ? "target" : "targets";
+        appendOutput("Fuzzing completed after sending " + Metrics.getTotalSuccessfulRequests() + " requests to " + Target.getTargets().size() + " " + s + ".");
+        appendOutput("Thank you for fuzzing with VFuzz.");
+
+        printOutput();
+    }
+
+    public void appendOutput(String o) {
+        output.add(o);
     }
 
 }

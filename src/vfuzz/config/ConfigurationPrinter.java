@@ -48,6 +48,7 @@ public class ConfigurationPrinter {
         System.out.println(getConfigDisplayString("fuzzMarker", String.class, isDefault, "Fuzz Marker"));
         System.out.println(getConfigDisplayString("followRedirects", Boolean.class, isDefault, "Follow redirects"));
         System.out.println(getConfigDisplayString("randomAgent", Boolean.class, isDefault, "Random Agent"));
+        System.out.println(); // need this line for TerminalOutput to override it later...
     }
 
     /**
