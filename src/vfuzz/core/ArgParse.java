@@ -320,7 +320,7 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "-H", "", "headers",
+                "-H", "--header", "headers",
                 (cm, value) -> headers.add(value),
                 Validator::isValidHeader,
                 "Sets custom headers for the requests. Each header must be in the 'Name: Value' format. Can be used multiple times for multiple headers.\n    Example: -H \"Content-Type: application/json\"",
