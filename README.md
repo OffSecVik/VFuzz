@@ -4,6 +4,15 @@
 
 VFuzz is a multithreaded, customizable web fuzzer designed to test the resilience of web applications. It works by fuzzing HTTP requests using various request methods (GET, POST, HEAD) and modes (VHOST, SUBDOMAIN, STANDARD). VFuzz is designed to handle high performance fuzzing tasks with accuracy.
 
+## Table of Contents
+- [Features](#Features)
+- [Usage](#usage)
+- [Command-line Arguments](#command-line-arguments)
+- [Future Improvements](#future-improvements)
+- [Limitations and Known Issues](#limitations-and-known-issues)
+- [License](#license)
+- [How to Contribute](#how-to-contribute)
+
 ## Features
 **Request Fuzzing**: Supports multiple HTTP methods (GET, POST, HEAD) and fuzzing strategies (VHOST, SUBDOMAIN, etc.).
 
@@ -33,7 +42,7 @@ Use a custom marker to insert payloads while fuzzing for certain file extensions
 ``java -jar vfuzz.jar -d "http://example.com/FUZZ/somedir" -w "/path/to/wordlist" -x ".html,.js,.txt``<br/>
 
 
-### Command-line Arguments
+## Command-line Arguments
 | Argument             | Alias | Description                                                                                                                                   | Example                                                        |
 |----------------------|-------|-----------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------|
 | --help               | -h    | Displays the help menu.                                                                                                                       | -h                                                             |
