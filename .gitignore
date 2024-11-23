@@ -36,3 +36,4 @@ out/
 /.idea/
 /target/
 /bin/
+/META-INF/MANIFEST.MF
