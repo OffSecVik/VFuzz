@@ -14,7 +14,8 @@ import java.util.Set;
 
 public class TerminalOutput implements Runnable {
 
-    private String progressBarLine = "";
+    private String requestsSentProgressBar = "";
+    private String responsesParsedProgressBar = "";
 
     private Terminal terminal;
 
@@ -33,6 +34,9 @@ public class TerminalOutput implements Runnable {
                     .build();
         } catch (IOException ignored) {
         }
+        for (int i = 0; i < 7; i++) {
+            output.add(""); // Reserve space for 2 progress bars + 4 metrics
+        }
     }
 
     @Override
@@ -44,9 +48,9 @@ public class TerminalOutput implements Runnable {
 
     public void makeAndPrintOutput() {
 
-        moveUpAndDeleteLines(getOutputLineCount());
+        updateRequestsSentProgressBar();
 
-        updateProgressBar();
+        updateResponsesProcessedProgressBar();
 
         updateHits();
 
@@ -60,6 +64,8 @@ public class TerminalOutput implements Runnable {
             running = false;
             Thread.currentThread().interrupt();
         }
+
+        moveUpAndDeleteLines(getOutputLineCount());
     }
 
     private void moveUpAndDeleteLines(int n) {
@@ -75,26 +81,32 @@ public class TerminalOutput implements Runnable {
         return lineCount;
     }
 
-    private void updateProgressBar() {
+    private void updateRequestsSentProgressBar() {
+        int total = Target.getTotalRequestNumberToSend();
+        int current = Target.getSentRequestsForAllTargets();
+        int progressWidth = 30;
+        int completed = (int) ((double) current / total * progressWidth);
+
+        StringBuilder progressBar = new StringBuilder();
+        progressBar.append("[").append("=".repeat(completed)).append(" ".repeat(progressWidth - completed)).append("]");
+        progressBar.append(" ").append(current).append("/").append(total).append(" requests sent");
+
+        requestsSentProgressBar = progressBar.toString();
+        output.set(0, requestsSentProgressBar); // Update first line
+    }
+
+    private void updateResponsesProcessedProgressBar() {
         int total = Target.getTotalRequestNumberToSend();
         int current = Target.getSuccessfulRequestsForAllTargets();
         int progressWidth = 30;
         int completed = (int) ((double) current / total * progressWidth);
 
         StringBuilder progressBar = new StringBuilder();
-        progressBar.append("[");
-        for (int i = 0; i < progressWidth; i++) {
-            progressBar.append(i < completed ? "=" : " ");
-        }
-        progressBar.append("] ").append(current).append("/").append(total);
+        progressBar.append("[").append("=".repeat(completed)).append(" ".repeat(progressWidth - completed)).append("]");
+        progressBar.append(" ").append(current).append("/").append(total).append(" responses processed");
 
-        // Update progress bar as the first line
-        progressBarLine = progressBar.toString();
-        if (output.isEmpty()) {
-            output.add(progressBarLine);
-        } else {
-            output.set(0, progressBarLine);
-        }
+        responsesParsedProgressBar = progressBar.toString();
+        output.set(1, responsesParsedProgressBar); // Update second line
     }
 
     private void printOutput() {
@@ -113,48 +125,15 @@ public class TerminalOutput implements Runnable {
         }
     }
 
-    public void updateMetricsOld() {
-        System.out.println(Color.GRAY + "---------------------------------------------------------" + Color.RESET);
-        System.out.println("Future limit: " + WebRequester.getFutureLimit());
-
-        // Print rate limit
-        int rateLimit = WebRequester.getRateLimiter().getRateLimitPerSecond();
-        String rateLimitString = rateLimit == 0 ? "-" : String.valueOf(rateLimit);
-        System.out.println(Color.YELLOW_BOLD + "Rate Limit: " + Color.RESET + Color.WHITE_BOLD + "\t\t\t\t\t\t" + rateLimitString + Color.RESET);
-
-        System.out.println(Color.BLUE_BOLD + "Attempted Requests per Second: " + Color.RESET + Color.WHITE_BOLD + "\t\t" + (int) Metrics.getRequestsPerSecond() + Color.RESET);
-        System.out.println(Color.GREEN_BOLD + "Successful Requests per Second: " + Color.RESET + Color.WHITE_BOLD + "\t" + (int) Metrics.getSuccessfulRequestsPerSecond() + Color.RESET);
-        System.out.println(Color.ORANGE_BOLD + "Retries per Second: " + Color.RESET + Color.WHITE_BOLD + "\t\t\t\t" + (int) Metrics.getRetriesPerSecond() + Color.RESET);
-
-        double retryRate = Metrics.getRetryRate() * 100;
-        String retryRateString = String.format("%.3f", retryRate) + "%";
-        String retryRateColor = getRetryRateColor(retryRate);
-
-        System.out.println("\t\t" + Color.ORANGE_BOLD + "Retry Rate: " + Color.RESET + retryRateColor + "\t\t\t\t" + retryRateString + Color.RESET);
-        System.out.println();
-    }
-
     public void updateMetrics() {
         String metrics1 = "Rate limit: " + WebRequester.getRateLimiter().getRateLimitPerSecond();
-        if (output.size() > 1) {
-            output.set(1, metrics1);
-        } else {
-            output.add(metrics1);
-        }
+        output.set(2, metrics1);
 
         String metrics2 = "Attempted R/s:  " + Metrics.getRequestsPerSecond();
-        if (output.size() > 2) {
-            output.set(2, metrics2);
-        } else {
-            output.add(metrics2);
-        }
+        output.set(3, metrics2);
 
         String metrics3 = "Successful R/s: " + Metrics.getSuccessfulRequestsPerSecond();
-        if (output.size() > 3) {
-            output.set(3, metrics3);
-        } else {
-            output.add(metrics3);
-        }
+        output.set(4, metrics3);
 
         double retryRate = Metrics.getRetryRate() * 100;
         if (retryRate > 100) {
@@ -164,17 +143,8 @@ public class TerminalOutput implements Runnable {
         String retryRateColor = getRetryRateColor(retryRate);
 
         String metrics4 = "\033[0KRetry rate:     " + Color.RESET + retryRateColor + retryRateString + Color.RESET;
-        if (output.size() > 4) {
-            output.set(4, metrics4);
-        } else {
-            output.add(metrics4);
-        }
-
-        if  (output.size() > 5) {
-            output.set(5, "");
-        } else {
-            output.add("");
-        }
+        output.set(5, metrics4);
+        output.set(6, "");
 
     }
 

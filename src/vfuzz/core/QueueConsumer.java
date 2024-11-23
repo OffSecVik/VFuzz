@@ -187,11 +187,12 @@ public class QueueConsumer implements Runnable {
      * @param request The HTTP request to be sent.
      */
     private void sendAndProcessRequest(HttpRequestBase request, String payload) {
-        target.incrementSuccessfulRequestCount(); // we can increment early since we send the request until it arrives!
+        target.incrementSentRequestCount();
         WebRequester.sendRequest(request, 250, TimeUnit.MILLISECONDS)
                 .thenApplyAsync(response -> {
             try {
                 parseResponse(response, request, payload);
+                target.incrementSuccessfulRequestCount(); // we can increment early since we send the request until it arrives!
             } catch (Exception ignored) {
             }
             return response;

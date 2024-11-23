@@ -26,6 +26,7 @@ public class Target {
     private final WordlistReader wordlistReader;
     private final AtomicBoolean allocationComplete = new AtomicBoolean(false);
     public AtomicInteger successfulRequestCount = new AtomicInteger();
+    public AtomicInteger sentRequestsCount = new AtomicInteger();
 
     /**
      * Checks if a target has been allocated CompletableFutures for each payload.
@@ -98,6 +99,18 @@ public class Target {
 
     public void incrementSuccessfulRequestCount() {
         successfulRequestCount.incrementAndGet();
+    }
+
+    public void incrementSentRequestCount() {
+        sentRequestsCount.incrementAndGet();
+    }
+
+    public static int getSentRequestsForAllTargets() {
+        int sentRequests = 0;
+        for (Target target : targets) {
+            sentRequests += target.sentRequestsCount.get();
+        }
+        return sentRequests;
     }
 
     public boolean targetIsFuzzed() {
