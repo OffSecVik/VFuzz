@@ -7,6 +7,7 @@
 package vfuzz.config;
 
 import vfuzz.core.CommandLineArgument;
+import vfuzz.logging.Color;
 import vfuzz.network.strategy.requestmode.RequestMode;
 
 import java.util.*;
@@ -88,7 +89,7 @@ public class ConfigManager {
                 if (value != null && cmdArg.validate(value)) {
                     cmdArg.executeAction(this, value);
                 } else if (!cmdArg.isFlag()) {
-                    System.out.println("Error: Argument '" + argument + "' expects a value.");
+                    System.out.println(Color.RED + "Error:" + Color.RED_BRIGHT +  " Argument '" + argument + "' expects a value." + Color.RESET);
                 }
             }
         }

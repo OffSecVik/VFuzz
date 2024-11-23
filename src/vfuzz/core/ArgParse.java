@@ -69,7 +69,7 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "-E", "--excludeResult", "excludedResults",
+                "-E", "--exclude-result", "excludedResults",
                 (cm, value) -> cm.setConfigValue("excludedResults", value),
                 value -> true,
                 "Results to exclude from being shown and used in recursive mode.",
@@ -79,7 +79,7 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "-e", "--excludeStatusCodes", "excludedStatusCodes",
+                "-e", "--exclude-status-codes", "excludedStatusCodes",
                 (cm, value) -> {
                     String[] parts = value.split(",");
                     List<String> validCodesAndRanges = new ArrayList<>();
@@ -134,7 +134,7 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "-l", "--excludeLength", "excludeLength",
+                "-l", "--exclude-length", "excludeLength",
                 (cm, value) -> {
                     String[] lengths = value.split(",");
                     List<String> validLengthsAndRanges = new ArrayList<>();
