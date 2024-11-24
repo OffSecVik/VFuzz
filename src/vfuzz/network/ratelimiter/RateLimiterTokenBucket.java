@@ -20,7 +20,7 @@ public class RateLimiterTokenBucket {
     private int refillRatePerSecond;
     private long availableTokens;
     private long lastRefillTimestamp;
-    private boolean enabled = true; // TODO: don't forget you enabled this by default!
+    private boolean enabled = true;
 
     /**
      * Constructs a new {@code RateLimiterTokenBucket} with the specified refill rate.

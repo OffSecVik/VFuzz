@@ -56,8 +56,7 @@ public class CommandLineArgument {
         return configName;
     }
 
-    @SuppressWarnings("unused")
-    public String getDescription() { //TODO: --help
+    public String getDescription() {
         return description;
     }
 
@@ -65,7 +64,6 @@ public class CommandLineArgument {
         return isOptional;
     }
 
-    @SuppressWarnings("unused")
     public String getDefaultValue() {
         return defaultValue;
     }
@@ -95,7 +93,6 @@ public class CommandLineArgument {
             action.accept(configManager, argValue);
         } else {
             System.out.println("Validation failed for argument: " + name + " with value: " + argValue);
-            //TODO: What happens after failed Validation?
         }
     }
 

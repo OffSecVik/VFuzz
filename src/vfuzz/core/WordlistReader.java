@@ -61,17 +61,6 @@ public class WordlistReader {
         return index < wordlist.size() ? wordlist.get(index) : null;
     }
 
-    /**
-     * Checks if there are more payloads available in the wordlist.
-     *
-     * <p>This method can be used to verify if there are any remaining words to process.
-     *
-     * @return {@code true} if there are more payloads in the wordlist, {@code false} otherwise.
-     */
-    public boolean hasMorePayloads() {
-        return currentIndex.get() < wordlist.size();
-    }
-
     public int getWordlistSize() {
         return wordlist.size();
     }
