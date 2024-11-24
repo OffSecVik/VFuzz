@@ -35,7 +35,7 @@ VFuzz is a multithreaded, customizable web fuzzer designed to test the resilienc
 ---
 
 ## Usage
-You can run VFuzz via the command line. The primary entry point is the VFuzz class, which accepts various command-line arguments to configure fuzzing behavior.
+Run VFuzz from the command line. Below are some example commands:
 
 ### Example usage
 Recursively fuzz a site with a specified wordlist. The payloads will be appended.<br/>
