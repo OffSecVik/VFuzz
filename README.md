@@ -92,9 +92,14 @@ Use a custom marker to insert payloads while fuzzing for certain file extensions
 
 ## Limitations and known issues
 ### Terminal Scrolling
-ANSI escape codes prevent scrolling while running. Future releases will offer alternative output options.
+- ANSI escape codes prevent scrolling while running. Future releases will offer alternative output options.
 ### Initial Delay
-Parsing of the first few thousand responses is delayed due to simultaneous processing.
+- Parsing of the first few thousand responses is delayed due to simultaneous processing.
+
+---
+
+## License
+This project is licensed under the MIT License. See the
 
 ---
 
