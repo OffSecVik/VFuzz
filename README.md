@@ -82,21 +82,19 @@ Use a custom marker to insert payloads while fuzzing for certain file extensions
 
 ## Future Improvements
 ### Improved Logging
-- provide a feature to save results to a specified file.
-### Terminal Stability
-- improve and thoroughly test the terminal output.
-### Unit Tests
-As of now, all the functionality was tested in CTF environments. While the program eventually performed as expected, we aim to write Unit Tests to ensure the Fuzzer behaves as expected.
+- Add option to save results to a file.
+### Enhanced Terminal Output
+- Improve stability and scrolling behavior in terminal-based output.
+### Unit Testing
+- Write unit tests for all core functionality.
 
 ---
 
 ## Limitations and known issues
-### Inability to scroll in the terminal while the program is running
-This is caused by using ANSI escape codes for the terminal output. We aim to find a suitable library to replace our home cooked output, and in the meantime to provide an alternative output option via a command line argument.
-### Significant delay before receiving the first results
-The way we currently handle response parsing means we can observe a delay between getting the responses for the first couple thousand requests, and then parsing said responses.
-For some reason the parsing of the first couple thousand responses seems to happen simultaneously after a short delay.
-From our testing, this does not affect the accuracy of the fuzzing. It only results in a jumpy progress bar.
+### Terminal Scrolling
+ANSI escape codes prevent scrolling while running. Future releases will offer alternative output options.
+### Initial Delay
+Parsing of the first few thousand responses is delayed due to simultaneous processing.
 
 ---
 
