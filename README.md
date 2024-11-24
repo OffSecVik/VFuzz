@@ -6,14 +6,13 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache-blue.svg" alt="License"></a>
-  <a href="https://github.com/username/vfuzz/releases"><img src="https://img.shields.io/badge/version-1.0.0-green.svg" alt="Version"></a>
+  <a href="https://github.com/VFuzz/VFuzz/releases"><img src="https://img.shields.io/badge/version-1.0.0-green.svg" alt="Version"></a>
   <a href="https://www.java.com/"><img src="https://img.shields.io/badge/Java-17%2B-blue.svg" alt="Java"></a>
   <a href="https://github.com/OffSecVik/VFuzz/releases"><img src="https://img.shields.io/github/downloads/OffSecVik/VFuzz/total.svg" alt="Downloads"></a>
   <a href="https://github.com/OffSecVik/VFuzz/issues"><img src="https://img.shields.io/github/issues/OffSecVik/VFuzz.svg" alt="Open Issues"></a>
   <a href="https://github.com/OffSecVik/VFuzz/stargazers"><img src="https://img.shields.io/github/stars/OffSecVik/VFuzz.svg" alt="Stars"></a>
   <a href="https://github.com/OffSecVik/VFuzz/graphs/contributors"><img src="https://img.shields.io/github/contributors/OffSecVik/VFuzz.svg" alt="Contributors"></a>
   <a href="https://github.com/OffSecVik/VFuzz/commits"><img src="https://img.shields.io/github/last-commit/OffSecVik/VFuzz.svg" alt="Last Commit"></a>
-  <a href="https://codeclimate.com/github/OffSecVik/VFuzz"><img src="https://img.shields.io/codeclimate/maintainability/OffSecVik/VFuzz.svg" alt="Code Quality"></a>
 </p>
 
 <p align="center">⚡ A high-performance, multithreaded web fuzzer designed to test the resilience of web applications. ⚡</p>
