@@ -56,24 +56,22 @@ Use a custom marker to insert payloads while fuzzing for certain file extensions
 | --header               | -H    | Sets custom headers for the requests.<br>Each header must be in the 'Name: Value' format.<br>Can be used multiple times for multiple headers. | -H "Content-Type: application/json"                            |
 | --user-agent           | -A    | Sets the user agent for requests.                                                                                                             | --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) [...]" |
 | --random-agent         |       | Enables randomization of User-Agent header.                                                                                                   | --random-agent                                                 |
-| --follow-redirects     |       | Makes VFuzz follow redirects.                                                                                                                 |                                                                |
+| --follow-redirects     |       | Makes VFuzz follow redirects.                                                                                                                 | --follow-redirects                                             |
 | --exclude-length       | -l    | List of content lengths or length ranges to exclude, separated by commas.<br> Each length must be a valid integer.                            | -l "200,400-600"                                               |
 | --exclude-result       | -E    | Excludes a result from being shown and used in recursive mode.                                                                                | -E "ht<span>tp://</span>donotfuzz.com/"                        |
 | --exclude-status-codes | -e    | List of HTTP status codes or ranges to exclude, separated by commas. Default: 404                                                             | -e "404,405-410,505-560"                                       |
 | --fuzz                 |       | Activates the FUZZ-marker fuzzing mode. Default marker is "FUZZ".                                                                             | --fuzz                                                         |
 | --fuzz-marker          |       | Sets a custom FUZZ marker that will be replaced with the payload.<br>Using this will activate FUZZ mode.                                      | --fuzz-marker "HELLO-WORLD"                                    |
-| --vhost                |       | Activates the virtual host fuzzing mode.                                                                                                      |                                                                |
-| --subdomain            |       | Activates the subdomain fuzzing mode.                                                                                                         |                                                                |
-| --domain-name          | -D    | Sets the domain to fuzz with subdomain fuzzing mode.<br>Required in --subdomain mode.                                                         |                                                                |
-| --dns-server           |       | Provides a custom DNS server for use with subdomain mode.                                                                                     |                                                                |
+| --vhost                |       | Activates the virtual host fuzzing mode.                                                                                                      | --vhost                                                        |
+| --subdomain            |       | Activates the subdomain fuzzing mode.                                                                                                         | --subdomain                                                    |
+| --domain-name          | -D    | Sets the domain to fuzz with subdomain fuzzing mode.<br>Required in --subdomain mode.                                                         | -D "somedomain.com"                                            |
+| --dns-server           |       | Provides a custom DNS server for use with subdomain mode.                                                                                     | --dns-server "1.2.3.4"                                         |
 | --request-file         | -r    | Specifies the filepath to the HTTP request file for fuzzing.<br>This activates file-based fuzzing mode.                                       | -r "/path/to/requestfile.txt"                                  |
-| --rate-limit           |       | Sets the maximum number of requests per second. This value must be a positive integer. Default is 4000.                                       |                                                                |
-| --extensions           | -x    | List of file extensions, which will be appended to the target.<br>Can be provided with or without a leading dot.                              |                                                                |
-| --ignore-case          |       | Makes the fuzzer case-insensitive.<br>Caution: Can lead to forking with recursion, depending on the wordlist.                                 |                                                                |
+| --rate-limit           |       | Sets the maximum number of requests per second. Default is 4000. Provide "0" to disable rate limiting.                                        | --rate-limit 500                                               |
+| --extensions           | -x    | List of file extensions, which will be appended to the target.<br>Can be provided with or without a leading dot.                              | -x ".php,.html,.txt"                                           |
+| --ignore-case          |       | Makes the fuzzer case-insensitive.<br>Caution: Can lead to forking with recursion, depending on the wordlist.                                 | --ignore-case                                                  |
 
-
-
-
+---
 
 ## Future Improvements
 ### Improved Logging
