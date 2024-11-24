@@ -2,6 +2,10 @@
 
 ![VFuzz](https://i.imgur.com/wGVMjPR.png)
 
+[![License: MIT](https://img.shields.io/badge/license-Apache-blue.svg)](LICENSE)
+[![Version: v1.0.0](https://img.shields.io/badge/version-1.0.0-green.svg)](https://github.com/username/vfuzz/releases)
+[![Java](https://img.shields.io/badge/Java-17%2B-blue)](https://www.java.com/)
+
 VFuzz is a multithreaded, customizable web fuzzer designed to test the resilience of web applications.It supports various HTTP request methods and fuzzing strategies to provide high-performance and accurate testing.
 
 ---
