@@ -38,13 +38,13 @@ VFuzz is a multithreaded, customizable web fuzzer designed to test the resilienc
 Run VFuzz from the command line. Below are some example commands:
 
 ### Example usage
-Recursively fuzz a site with a specified wordlist. The payloads will be appended.<br/>
+Recursive fuzzing:<br/>
 ``java -jar vfuzz.jar -u "http://example.com/" -w "/path/to/wordlist" --recursive``<br/>
 
-Fuzz for subdomains via DNS queries<br/>
+Subdomain fuzzing:<br/>
 ``java -jar vfuzz.jar -d "testdomain.com" -w "/path/to/wordlist"``<br/>
 
-Use a custom marker to insert payloads while fuzzing for certain file extensions.<br/>
+Fuzz in FUZZ mode with file extensions:<br/>
 ``java -jar vfuzz.jar -d "http://example.com/FUZZ/somedir" -w "/path/to/wordlist" -x ".html,.js,.txt``<br/>
 
 ---
