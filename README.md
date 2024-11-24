@@ -2,7 +2,9 @@
 
 ![VFuzz](https://i.imgur.com/wGVMjPR.png)
 
-VFuzz is a multithreaded, customizable web fuzzer designed to test the resilience of web applications. It works by fuzzing HTTP requests using various request methods (GET, POST, HEAD) and modes (VHOST, SUBDOMAIN, STANDARD). VFuzz is designed to handle high performance fuzzing tasks with accuracy.
+VFuzz is a multithreaded, customizable web fuzzer designed to test the resilience of web applications.It supports various HTTP request methods and fuzzing strategies to provide high-performance and accurate testing.
+
+---
 
 ## Table of Contents
 - [Features](#Features)
@@ -12,6 +14,8 @@ VFuzz is a multithreaded, customizable web fuzzer designed to test the resilienc
 - [Limitations and Known Issues](#limitations-and-known-issues)
 - [License](#license)
 - [How to Contribute](#how-to-contribute)
+
+---
 
 ## Features
 **Request Fuzzing**: Supports multiple HTTP methods (GET, POST, HEAD) and fuzzing strategies (VHOST, SUBDOMAIN, etc.).
@@ -28,6 +32,8 @@ VFuzz is a multithreaded, customizable web fuzzer designed to test the resilienc
 
 **File extension fuzzing** Appends a user-supplied list of file extensions to the target url
 
+---
+
 ## Usage
 You can run VFuzz via the command line. The primary entry point is the VFuzz class, which accepts various command-line arguments to configure fuzzing behavior.
 
@@ -41,6 +47,7 @@ Fuzz for subdomains via DNS queries<br/>
 Use a custom marker to insert payloads while fuzzing for certain file extensions.<br/>
 ``java -jar vfuzz.jar -d "http://example.com/FUZZ/somedir" -w "/path/to/wordlist" -x ".html,.js,.txt``<br/>
 
+---
 
 ## Command-line Arguments
 | Argument               | Alias | Description                                                                                                                                   | Example                                                        |
@@ -81,6 +88,7 @@ Use a custom marker to insert payloads while fuzzing for certain file extensions
 ### Unit Tests
 As of now, all the functionality was tested in CTF environments. While the program eventually performed as expected, we aim to write Unit Tests to ensure the Fuzzer behaves as expected.
 
+---
 
 ## Limitations and known issues
 ### Inability to scroll in the terminal while the program is running
@@ -89,6 +97,8 @@ This is caused by using ANSI escape codes for the terminal output. We aim to fin
 The way we currently handle response parsing means we can observe a delay between getting the responses for the first couple thousand requests, and then parsing said responses.
 For some reason the parsing of the first couple thousand responses seems to happen simultaneously after a short delay.
 From our testing, this does not affect the accuracy of the fuzzing. It only results in a jumpy progress bar.
+
+---
 
 ## How to Contribute
 - Fork this repository.
