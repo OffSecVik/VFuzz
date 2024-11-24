@@ -65,7 +65,9 @@ public class TerminalOutput implements Runnable {
             Thread.currentThread().interrupt();
         }
 
-        moveUpAndDeleteLines(getOutputLineCount());
+        if (running) {
+            moveUpAndDeleteLines(getOutputLineCount());
+        }
     }
 
     private void moveUpAndDeleteLines(int n) {
