@@ -3,7 +3,7 @@
   <groupId>org.vik</groupId>
   <artifactId>VFuzz</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <name>VFuzz - Vik's Fuzzer</name>
+  <name>VFuzz</name>
   <build>
     <sourceDirectory>src</sourceDirectory>
     <resources>
