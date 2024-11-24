@@ -23,7 +23,7 @@
 
 ## 📖 Table of Contents
 - [✨ Features](#-features)
-- [⚙️ Usage](#-usage)
+- [⚙️ Usage](#%EF%B8%8F-usage)
   - [🔄 Recursive Fuzzing](#-recursive-fuzzing)
   - [🌐 Subdomain Fuzzing](#-subdomain-fuzzing)
   - [🎯 FUZZ Marker Mode](#-fuzz-marker-mode)
