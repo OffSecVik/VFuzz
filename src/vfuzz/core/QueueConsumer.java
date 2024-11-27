@@ -35,6 +35,7 @@ public class QueueConsumer implements Runnable {
 
     private final ThreadOrchestrator orchestrator;
     private final ExecutorService executor;
+    private final ExecutorService parsingExecutor;
     private final WordlistReader wordlistReader;
     private final String baseTargetUrl;
     private final Target target;
@@ -60,6 +61,7 @@ public class QueueConsumer implements Runnable {
 
         this.orchestrator = orchestrator;
         this.executor = orchestrator.getExecutor();
+        parsingExecutor = Executors.newFixedThreadPool(5);
         this.wordlistReader = target.getWordlistReader();
         this.baseTargetUrl = ConfigAccessor.getConfigValue("url", String.class);
         this.target = target;
@@ -196,7 +198,7 @@ public class QueueConsumer implements Runnable {
             } catch (Exception ignored) {
             }
             return response;
-        }, executor)
+        }, parsingExecutor)
                 .exceptionally(ex -> null);
     }
 

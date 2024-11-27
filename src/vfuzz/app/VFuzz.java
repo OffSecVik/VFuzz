@@ -9,10 +9,9 @@ import vfuzz.core.ThreadOrchestrator;
 import vfuzz.logging.Color;
 import vfuzz.logging.Metrics;
 import vfuzz.network.WebRequester;
-import vfuzz.network.strategy.requestmethod.RequestMethod;
 import vfuzz.network.strategy.requestmode.RequestMode;
-
-import java.util.concurrent.CompletableFuture;
+import java.util.logging.Logger;
+import java.util.logging.Level;
 
 /**
  * The {@code VFuzz} class serves as the entry point for the VFuzz application.
@@ -73,6 +72,11 @@ public class VFuzz {
 
         // Start collecting metrics for performance analysis
         Metrics.startMetrics();
+
+        // suppress logging
+        System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog");
+        Logger logger = Logger.getLogger("org.apache.http.client.protocol.ResponseProcessCookies");
+        logger.setLevel(Level.OFF);
 
         // Start the fuzzing process
         orchestrator.startFuzzing();
