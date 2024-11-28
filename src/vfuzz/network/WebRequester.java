@@ -8,7 +8,6 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.conn.ConnectionKeepAliveStrategy;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.conn.SystemDefaultDnsResolver;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
 import org.apache.http.impl.nio.conn.PoolingNHttpClientConnectionManager;
@@ -113,6 +112,7 @@ public class WebRequester {
      *         On successful completion, returns the HTTP response. If the request fails, the method retries sending the
      *         request as per the specified delay and continues to do so indefinitely.
      */
+    @SuppressWarnings("BusyWait")
     public static CompletableFuture<HttpResponse> sendRequest(HttpRequestBase request, long retryDelay, TimeUnit unit) {
 
         while (!futureSlotAvailable()) {
@@ -255,20 +255,8 @@ public class WebRequester {
         return response;
     }
 
-    public static void setRateLimit(int i) {
-        rateLimiter.setRateLimitPerSecond(i);
-    }
-
     public static RateLimiterLeakyBucket getRateLimiter() {
         return rateLimiter;
-    }
-
-    public static void setFutureLimit(int i) {
-        futureLimit = i;
-    }
-
-    public static double getFutureLimit() {
-        return futureLimit;
     }
 
     public static void increaseFutureLimit() {

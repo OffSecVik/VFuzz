@@ -33,9 +33,6 @@ public class DNSFuzzer {
         // Detect wildcard
         wildcardIPs = detectWildcard();
         isWildcard = !wildcardIPs.isEmpty();
-
-        // System.out.println("Wildcard DNS detected: " + isWildcard);
-        // System.out.println("Wildcard IPs: " + wildcardIPs);
     }
 
     private List<String> detectWildcard() throws Exception {

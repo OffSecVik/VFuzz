@@ -177,8 +177,6 @@ public class ThreadOrchestrator {
                 }
             }
         }
-//        System.out.println(Color.GREEN + "Initiating recursion: " + Color.RESET);
-//        printActiveThreadsByTarget();
     }
 
     /**
@@ -213,7 +211,6 @@ public class ThreadOrchestrator {
     public void printActiveThreadsByTarget() {
         consumerTasks.forEach((target, consumers) -> {
             int activeCount = (int) consumers.stream().filter(QueueConsumer::isRunning).count();
-            // int inactiveCount = (int) consumers.stream().filter(consumer -> !consumer.isRunning()).count();
             System.out.println(target.getUrl() + " has " + activeCount + " working threads." + (target.getAllocationComplete() ? " (finished creating CompletableFutures for this target.)" :"")); // and " + inactiveCount + " completed thread(s).");
         });
     }

@@ -20,16 +20,33 @@ import java.util.Set;
 import java.util.concurrent.*;
 
 /**
- * The {@code QueueConsumer} class is responsible for handling the fuzzing logic within the fuzzer.
- * It reads payloads from the wordlist, sends HTTP requests using various request strategies,
- * and processes the responses.
+ * The {@code QueueConsumer} class is responsible for managing the fuzzing logic
+ * for a specific target. It operates as a worker thread that:
+ * <ul>
+ *     <li>Reads payloads from a wordlist.</li>
+ *     <li>Sends HTTP requests using various request strategies.</li>
+ *     <li>Processes HTTP responses to identify hits or excluded results.</li>
+ * </ul>
  *
- * <p> The class also supports recursion for further exploration of targets based on specific configurations.
- * It filters results based on excluded status codes, content lengths, and certain URLs, and creates
- * "Hit" objects when a valid target is found.
+ * <p>This class supports recursion to explore further targets discovered during fuzzing,
+ * filtering results based on status codes, content lengths, excluded URLs, and previously
+ * processed results.</p>
  *
- * <p> This class works as a core component of the fuzzer and operates in a multi-threaded environment
- * managed by the {@link ThreadOrchestrator}.
+ * <h2>Features:</h2>
+ * <ul>
+ *     <li>Handles multiple request modes (e.g., standard, subdomain fuzzing).</li>
+ *     <li>Supports file extension fuzzing by appending extensions to payloads.</li>
+ *     <li>Filters results based on excluded status codes, lengths, or URLs.</li>
+ *     <li>Creates {@link Hit} objects for valid results.</li>
+ *     <li>Enables recursion for deeper exploration of discovered resources.</li>
+ * </ul>
+ *
+ * <p>This class is designed to run in a multi-threaded environment, with each instance
+ * managing a specific {@link Target}. Threads are managed by the {@link ThreadOrchestrator}.</p>
+ *
+ * @see ThreadOrchestrator
+ * @see Target
+ * @see Hit
  */
 public class QueueConsumer implements Runnable {
 
@@ -52,10 +69,10 @@ public class QueueConsumer implements Runnable {
 
 
     /**
-     * Constructs a new {@code QueueConsumer} object with the given {@link ThreadOrchestrator} and {@link Target}.
+     * Constructs a new {@code QueueConsumer} instance with the specified {@link ThreadOrchestrator} and {@link Target}.
      *
      * @param orchestrator The thread orchestrator managing the execution of threads.
-     * @param target The target being fuzzed by the current consumer.
+     * @param target       The target being fuzzed by the current consumer.
      */
     public QueueConsumer(ThreadOrchestrator orchestrator, Target target) {
 
@@ -82,13 +99,18 @@ public class QueueConsumer implements Runnable {
     }
 
     /**
-     * The main logic for the QueueConsumer thread.
-     * It reads payloads from the wordlist, constructs HTTP requests, sends them, and processes the responses.
+     * Executes the main fuzzing logic for the current {@code QueueConsumer}.
+     * Determines the request mode and starts the appropriate fuzzing method.
      */
     @Override
     public void run() {
         startFuzzing();
     }
+
+    /**
+     * Initiates the fuzzing process based on the configured request mode.
+     * Either standard HTTP fuzzing or subdomain fuzzing is executed.
+     */
 
     private void startFuzzing() {
         if (ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.SUBDOMAIN) {
@@ -97,6 +119,13 @@ public class QueueConsumer implements Runnable {
             fuzzStandard();
         }
     }
+
+    /**
+     * Handles standard HTTP fuzzing by iterating over payloads from the wordlist.
+     * Supports file extension fuzzing and handles parsed requests when enabled.
+     *
+     * <p>Requests are built and sent for each payload, and responses are processed.</p>
+     */
 
     private void fuzzStandard() {
         if (ConfigAccessor.getConfigValue("requestFileFuzzing", String.class) == null) {
@@ -135,6 +164,12 @@ public class QueueConsumer implements Runnable {
         }
     }
 
+    /**
+     * Handles subdomain fuzzing by using DNS queries with payloads from the wordlist.
+     * Results are processed asynchronously, with valid subdomains logged as hits.
+     *
+     * <p>If no domain is provided, the method exits with an error message.</p>
+     */
     private void fuzzSubdomains() {
         String domain = ConfigAccessor.getConfigValue("domainName", String.class);
         if (domain == null) {
@@ -171,8 +206,8 @@ public class QueueConsumer implements Runnable {
     }
 
     /**
-     * Called when the end of the wordlist is reached.
-     * It stops the current consumer and redistributes threads if recursion is enabled.
+     * Marks the end of the wordlist for the current target. Stops the consumer and,
+     * if recursion is enabled, redistributes threads for further exploration.
      */
     private void reachedEndOfWordlist() {
         running = false;
@@ -185,8 +220,10 @@ public class QueueConsumer implements Runnable {
 
     /**
      * Sends an HTTP request and processes the response asynchronously.
+     * The response is parsed, and valid results are logged as hits.
      *
-     * @param request The HTTP request to be sent.
+     * @param request The HTTP request to send.
+     * @param payload The payload used to generate the request.
      */
     private void sendAndProcessRequest(HttpRequestBase request, String payload) {
         target.incrementSentRequestCount();
@@ -203,12 +240,13 @@ public class QueueConsumer implements Runnable {
     }
 
     /**
-     * Parses the HTTP response and determines whether it should be excluded based on
-     * status codes, content length, or previously excluded results.
-     * If the response is valid, a {@link Hit} object is created.
+     * Parses the HTTP response to determine if it matches any exclusion criteria
+     * (e.g., status codes, content length, excluded URLs).
+     * Valid responses are logged as hits, and recursion is initiated if enabled.
      *
      * @param response The HTTP response received.
-     * @param request The original HTTP request sent.
+     * @param request  The original HTTP request sent.
+     * @param payload  The payload used to generate the request.
      */
     private void parseResponse(HttpResponse response, HttpRequestBase request, String payload) {
 
@@ -299,6 +337,12 @@ public class QueueConsumer implements Runnable {
         return false;
     }
 
+    /**
+     * Determines if the given URL matches any explicitly excluded results.
+     *
+     * @param url The URL to check.
+     * @return {@code true} if the URL is excluded, {@code false} otherwise.
+     */
     private boolean isExcluded(String url) {
         if (excludedResults == null) {
             return false;

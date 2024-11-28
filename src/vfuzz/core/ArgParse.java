@@ -1,9 +1,7 @@
 package vfuzz.core;
 
 import org.apache.http.entity.ContentType;
-import vfuzz.config.ConfigAccessor;
 import vfuzz.config.ConfigManager;
-import vfuzz.logging.Metrics;
 import vfuzz.network.strategy.requestmethod.RequestMethod;
 import vfuzz.network.strategy.requestmode.RequestMode;
 import vfuzz.operations.Range;
@@ -164,7 +162,6 @@ public class ArgParse {
                 false
         ));
 
-
         configManager.setConfigValue("requestMode", RequestMode.STANDARD.name()); // Is used to avoid setting a defaultValue twice
 
         configManager.registerArgument(new CommandLineArgument(
@@ -216,7 +213,6 @@ public class ArgParse {
                 null,
                 false
         ));
-
 
         configManager.registerArgument(new CommandLineArgument(
                 "--method", "", "requestMethod",
