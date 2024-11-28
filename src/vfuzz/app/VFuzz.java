@@ -14,18 +14,42 @@ import java.util.logging.Logger;
 import java.util.logging.Level;
 
 /**
- * The {@code VFuzz} class serves as the entry point for the VFuzz application.
+ * The {@code VFuzz} class serves as the main entry point for the VFuzz application.
  *
- * <p>This class is responsible for initializing and configuring the application,
- * parsing command-line arguments, and starting the fuzzing process.
+ * <p>This class is responsible for initializing the application, processing
+ * command-line arguments, and starting the fuzzing process. It acts as a
+ * coordinator for the various components of the VFuzz system.
  *
  * <p>The application operates as follows:
  * <ul>
- *     <li>Registers command-line arguments and processes them using {@link ConfigManager}.</li>
- *     <li>Verifies required arguments and prints usage help if requested via the "--help" argument.</li>
- *     <li>Initializes the necessary components such as the {@link ThreadOrchestrator} for managing fuzzing threads and {@link WebRequester} for handling network requests.</li>
- *     <li>Starts metrics collection and begins the fuzzing process using the wordlist.</li>
+ *     <li>Registers and processes command-line arguments using {@link ArgParse} and {@link ConfigManager}.</li>
+ *     <li>Validates that all required arguments are provided, displaying help if the "--help" flag is passed.</li>
+ *     <li>Prints the current configuration to the console for verification using {@link ConfigurationPrinter}.</li>
+ *     <li>Initializes essential components such as the {@link ThreadOrchestrator} and {@link WebRequester}.</li>
+ *     <li>Starts metrics collection via {@link Metrics} for monitoring performance.</li>
+ *     <li>Suppresses unnecessary logging for cleaner output during execution.</li>
+ *     <li>Begins the fuzzing process based on the provided wordlist and configuration.</li>
  * </ul>
+ *
+ * <p>Example usage:
+ * <pre>{@code
+ * java -jar vfuzz.jar --url http://example.com --wordlist /path/to/wordlist --threads 10
+ * }</pre>
+ *
+ * <p>Features:
+ * <ul>
+ *     <li>Multi-threaded fuzzing with customizable thread counts.</li>
+ *     <li>Support for various HTTP request modes and methods.</li>
+ *     <li>Built-in metrics collection for analyzing fuzzing performance.</li>
+ *     <li>Dynamic configuration management with optional and required arguments.</li>
+ * </ul>
+ *
+ * @see ArgParse
+ * @see ConfigManager
+ * @see ConfigurationPrinter
+ * @see ThreadOrchestrator
+ * @see WebRequester
+ * @see Metrics
  */
 public class VFuzz {
     public static void main(String[] args) {

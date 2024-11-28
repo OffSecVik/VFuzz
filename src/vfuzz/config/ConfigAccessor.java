@@ -8,12 +8,30 @@ import java.util.stream.Collectors;
 
 
 /**
- * The ConfigAccessor class provides utility methods for retrieving and converting configuration values
- * from a configuration management system. It retrieves values based on keys and converts them into
- * the desired type, supporting primitive types, sets, enums, and custom types like {@link Range}.
+ * The {@code ConfigAccessor} class provides utility methods for retrieving and converting configuration values
+ * from the configuration management system. It allows for type-safe access to configuration settings and supports
+ * various data types, including primitive types, collections, enums, and custom types like {@link Range}.
  *
- * <p> It leverages the {@link ConfigManager} for fetching configuration data and provides an option
- * to detect if a configuration value is the default value.
+ * <p>The class leverages {@link ConfigManager} to fetch configuration data and provides an optional mechanism
+ * to determine whether a retrieved value is the default value.
+ *
+ * <h2>Features:</h2>
+ * <ul>
+ *     <li>Retrieve configuration values by their keys.</li>
+ *     <li>Convert configuration values to the desired type.</li>
+ *     <li>Support for various data types including {@code Integer}, {@code Boolean}, {@code Double}, {@code Float}, {@code Long}, {@code Set}, enums, and {@code String}.</li>
+ *     <li>Support for custom parsing of range sets.</li>
+ *     <li>Optional detection of default configuration values.</li>
+ * </ul>
+ *
+ * <p>Example usage:
+ * <pre>{@code
+ * AtomicBoolean isDefault = new AtomicBoolean();
+ * Integer threadCount = ConfigAccessor.getConfigValue("threadCount", Integer.class, isDefault);
+ * if (isDefault.get()) {
+ *     System.out.println("Using default value for threadCount");
+ * }
+ * }</pre>
  *
  * @see ConfigManager
  * @see Range
@@ -24,13 +42,17 @@ public class ConfigAccessor {
 
     /**
      * Retrieves a configuration value by its key and converts it to the specified type.
-     * Optionally, a flag can be provided to indicate whether the retrieved value is the default value.
+     *
+     * <p>The method supports an optional {@link AtomicBoolean} parameter to indicate whether the value is
+     * the default one. If provided, the boolean will be set to {@code true} if the retrieved value matches
+     * the default configuration value.
      *
      * @param key The configuration key to look up.
      * @param type The expected class type of the configuration value.
-     * @param isDefault (Optional) An {@link AtomicBoolean} that will be set to {@code true} if the value is the default one.
+     * @param isDefault (Optional) An {@link AtomicBoolean} that will be updated to indicate if the value is default.
      * @param <T> The type of the configuration value.
-     * @return The configuration value converted to the specified type, or {@code null} if the key does not exist or conversion fails.
+     * @return The configuration value converted to the specified type, or {@code null} if the key does not exist
+     *         or the conversion fails.
      */
     public static <T> T getConfigValue(String key, Class<T> type, AtomicBoolean... isDefault) {
         String value = configManager.getConfigValue(key);
@@ -43,7 +65,18 @@ public class ConfigAccessor {
 
     /**
      * Converts a string value to the specified type.
-     * Supported types include {@code Integer}, {@code Boolean}, {@code Double}, {@code Float}, {@code Long}, {@code Set}, enums, and {@code String}.
+     *
+     * <p>Supported types include:
+     * <ul>
+     *     <li>{@code Integer}</li>
+     *     <li>{@code Boolean}</li>
+     *     <li>{@code Double}</li>
+     *     <li>{@code Float}</li>
+     *     <li>{@code Long}</li>
+     *     <li>{@code Set<Range>}</li>
+     *     <li>Enums</li>
+     *     <li>{@code String}</li>
+     * </ul>
      *
      * @param value The string value to convert.
      * @param type The class type to which the value should be converted.
@@ -84,6 +117,9 @@ public class ConfigAccessor {
 
     /**
      * Parses a comma-separated string into a set of {@link Range} objects.
+     *
+     * <p>The input string should be formatted as comma-separated values, each representing a range.
+     * Example: {@code "1-10, 15-20, 30"} will parse into a set containing ranges [1-10], [15-20], and [30].
      *
      * @param csv The comma-separated string representing the ranges.
      * @return A set of {@link Range} objects parsed from the string.

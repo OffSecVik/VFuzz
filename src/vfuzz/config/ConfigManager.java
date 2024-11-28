@@ -1,9 +1,3 @@
-/**
- * The ConfigManager class is a singleton responsible for managing configuration values
- * and command-line arguments within the application. It allows registering command-line
- * arguments, storing config values, and handling defaults. The class also processes
- * command-line arguments and ensures required arguments are provided.
- */
 package vfuzz.config;
 
 import vfuzz.core.CommandLineArgument;
@@ -12,11 +6,47 @@ import vfuzz.network.strategy.requestmode.RequestMode;
 
 import java.util.*;
 
+/**
+ * The {@code ConfigManager} class is a singleton responsible for managing configuration values
+ * and command-line arguments within the application. It facilitates:
+ *
+ * <ul>
+ *     <li>Registration and processing of command-line arguments.</li>
+ *     <li>Storage and retrieval of configuration values.</li>
+ *     <li>Handling default values for optional arguments.</li>
+ *     <li>Validation of required arguments.</li>
+ * </ul>
+ *
+ * <p>The class ensures that all required arguments are provided and provides utility methods
+ * for working with command-line arguments and configuration values.
+ *
+ * <h2>Features:</h2>
+ * <ul>
+ *     <li>Support for required and optional arguments.</li>
+ *     <li>Ability to check if a configuration value is the default.</li>
+ *     <li>Dynamic mapping of arguments to configuration values.</li>
+ *     <li>Handles aliases for command-line arguments.</li>
+ * </ul>
+ *
+ * <p>Example usage:
+ * <pre>{@code
+ * ConfigManager configManager = ConfigManager.getInstance();
+ * configManager.registerArgument(new CommandLineArgument(
+ *     "-t", "--threads", "threadCount",
+ *     (cm, value) -> cm.setConfigValue("threadCount", value),
+ *     Validator::isPositiveInteger,
+ *     "Number of threads to use.", true, "1", false
+ * ));
+ * configManager.processArguments(args);
+ * configManager.verifyRequiredArguments();
+ * }</pre>
+ *
+ * @see CommandLineArgument
+ */
 public class ConfigManager {
 
     private static ConfigManager instance;
 
-    // Maps to store command-line arguments and their corresponding values
     private final Map<String, CommandLineArgument> arguments = new LinkedHashMap<>();
     private final Map<String, String> configValues = new HashMap<>();
     private final Map<String, String> defaultValues = new HashMap<>();
@@ -176,11 +206,11 @@ public class ConfigManager {
         }
         if (ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.SUBDOMAIN) {
             if (!providedArgs.contains("domain")) {
-                System.out.println("Please provide a domain with \'-d\'");
+                System.out.println("Please provide a domain with '-d'");
                 System.exit(0);
             }
             if (!providedArgs.contains("wordlist")) {
-                System.out.println("Please provide a wordlist with \'-w\'");
+                System.out.println("Please provide a wordlist with '-w'");
                 System.exit(0);
             }
             return;
@@ -193,16 +223,6 @@ public class ConfigManager {
     private void printMissingAndExit() {
         System.err.println("Missing required arguments. Exiting.");
         System.exit(1);
-    }
-
-    /**
-     * Checks if a command-line argument with the given name is registered.
-     *
-     * @param argName the name of the argument
-     * @return true if the argument is registered, false otherwise
-     */
-    public boolean isArgumentRegistered(String argName) {
-        return arguments.containsKey(argName);
     }
 
     /**
