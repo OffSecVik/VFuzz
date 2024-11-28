@@ -1,8 +1,8 @@
 package vfuzz.core;
 
+
 import org.xbill.DNS.*;
 import org.xbill.DNS.Record;
-import vfuzz.operations.Hit;
 
 import java.util.Arrays;
 import java.util.List;
@@ -105,5 +105,4 @@ public class DNSFuzzer {
             }
         }, executor);
     }
-
 }
