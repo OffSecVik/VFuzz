@@ -23,6 +23,7 @@ public class RateLimiterLeakyBucket {
     private long availableSpace;          // current available space in the bucket
     private long lastCheck;               // last time the bucket was checked
     private boolean enabled = false;       // controls whether rate limiting is enabled
+    private double spaceFreedBelowOne = 0;
 
     /**
      * Constructs a new {@code RateLimiterLeakyBucket} with the specified rate limit.
@@ -61,8 +62,18 @@ public class RateLimiterLeakyBucket {
         long elapsedTime = now - lastCheck;
 
         // Calculate the space that has been freed since the last check.
-        long spaceFreed = elapsedTime * rateLimitPerSecond / 1000;
-        availableSpace = Math.min(capacity, availableSpace + spaceFreed);
+        double spaceFreed = elapsedTime * rateLimitPerSecond / 1000.0;
+        if (spaceFreed < 1) {
+            spaceFreedBelowOne += spaceFreed;
+            if (spaceFreedBelowOne >= 1) {
+                spaceFreed = Math.floor(spaceFreedBelowOne);
+                spaceFreedBelowOne -= spaceFreed;
+            } else {
+                spaceFreed = 0;
+            }
+        }
+
+        availableSpace = Math.min(capacity, availableSpace + (long) spaceFreed);
         lastCheck = now;
 
         // Check if there is enough space in the bucket to accommodate the incoming requests
