@@ -3,9 +3,7 @@ package vfuzz.operations;
 import org.apache.http.HttpResponse;
 import vfuzz.config.ConfigAccessor;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 /**
  * The {@code Hit} record represents a successful fuzzing attempt where a unique URL,
@@ -18,7 +16,7 @@ import java.util.Set;
 public record Hit(String url, int statusCode, int length, String payload) {
 
     // A synchronized set that stores all unique hits
-    private static final Set<Hit> hits = Collections.synchronizedSet(new HashSet<>());
+    private static final Map<Integer, Hit> hits = Collections.synchronizedMap(new LinkedHashMap<>());
 
     private static int hitCounter = 0;
 
@@ -31,21 +29,19 @@ public record Hit(String url, int statusCode, int length, String payload) {
     public static void hitIfNotPresent(String url, HttpResponse response, String payload) {
         Hit newHit = new Hit(url, response.getStatusLine().getStatusCode(), (int) response.getEntity().getContentLength(), payload);
         synchronized (hits) {
-            if (hits.add(newHit)) { // Set.add returns true if the element was added (i.e., it was not already present)
+            if (!hits.containsValue(newHit)) {
+                hits.put(hitCounter, newHit);
                 hitCounter++;
             }
         }
     }
 
-
     @Override
     public String toString() {
-
         if (ConfigAccessor.getConfigValue(("requestMethod"), String.class).equals("POST")
                 && ConfigAccessor.getConfigValue(("requestMode"), String.class).equals("FUZZ")) {
             return "Hit for payload: " + payload;
         }
-
         return String.format("%-40s (Status Code: %d) (Length: %d)", url, statusCode, length);
     }
 
@@ -63,7 +59,11 @@ public record Hit(String url, int statusCode, int length, String payload) {
         System.out.println();
     }
 
-    public static Set<Hit> getHits() {
+    public static Collection<Hit> getHits() {
+        return hits.values();
+    }
+
+    public static Map<Integer, Hit> getHitMap() {
         return hits;
     }
 

@@ -8,231 +8,150 @@ import vfuzz.operations.Target;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
 
-/**
- * The {@code TerminalOutput} class manages the real-time output of the VFuzz application
- * to the terminal. It updates progress bars, metrics, and hit information dynamically,
- * providing the user with live feedback about the fuzzing process.
- *
- * <p>Features:</p>
- * <ul>
- *     <li>Real-time updates of requests sent and responses processed progress bars.</li>
- *     <li>Displays metrics such as rate limits, request rates, and retry rates.</li>
- *     <li>Maintains and displays a list of discovered hits.</li>
- *     <li>Uses ANSI escape codes to redraw terminal output efficiently.</li>
- * </ul>
- *
- * <p>Design:</p>
- * <ul>
- *     <li>Runs in its own thread to avoid blocking the main fuzzing process.</li>
- *     <li>Utilizes {@code jline.Terminal} for terminal interaction.</li>
- *     <li>Handles thread-safe updates to shared output data.</li>
- * </ul>
- *
- * <p>Dependencies:</p>
- * <ul>
- *     <li>{@link Target} - For tracking requests and responses.</li>
- *     <li>{@link Hit} - For managing discovered hits.</li>
- *     <li>{@link WebRequester} - For retrieving rate-limiting information.</li>
- *     <li>{@link Metrics} - For tracking performance metrics.</li>
- * </ul>
- */
 public class TerminalOutput implements Runnable {
-
-    private String requestsSentProgressBar = "";
-    private String responsesParsedProgressBar = "";
-
-    private Terminal terminal;
 
     private volatile boolean running = true;
 
-    private final ArrayList<String> output = new ArrayList<>();
+    private Terminal terminal;
 
-    private final Set<String> hitsDisplayed = new HashSet<>();
+    private int hitPrintIndex = 0;
 
-    /**
-     * Constructs a {@code TerminalOutput} instance.
-     * Initializes the terminal and reserves space in the output buffer for progress bars and metrics.
-     *
-     * <p>If the terminal cannot be initialized, output defaults to standard output without
-     * advanced terminal features.</p>
-     */
+    private ArrayList<String> temporaryOutput = new ArrayList<>();
+
     public TerminalOutput() {
         try {
             terminal = TerminalBuilder.builder()
-                    .system(true) // Use the system terminal
+                    .system(true)
                     .build();
-        } catch (IOException ignored) {
-        }
-        for (int i = 0; i < 7; i++) {
-            output.add(""); // Reserve space for 2 progress bars + 4 metrics
-        }
+        } catch (IOException ignored) {}
     }
 
-    /**
-     * Starts the real-time terminal output updates in a separate thread.
-     * Continuously refreshes the terminal with the latest progress, metrics, and hits
-     * until the {@code running} flag is set to {@code false}.
-     */
     @Override
     public void run() {
         while (running) {
-            makeAndPrintOutput();
+            handleOutput();
         }
     }
 
+    private void handleOutput() {
+        printHits(15);
+        printTemporaryOutput();
+        waitForNextPrintCycle();
+        clearTemporaryOutputInTerminal();
+    }
+
     /**
-     * Updates all output components (progress bars, metrics, and hits) and prints them to the terminal.
-     * Moves the terminal cursor up to overwrite previous output and maintains a smooth live interface.
+     * Prints a fixed number of hits from the {@code hitQueue}.
      */
-    public void makeAndPrintOutput() {
-
-        updateRequestsSentProgressBar();
-
-        updateResponsesProcessedProgressBar();
-
-        updateHits();
-
-        updateMetrics();
-
-        printOutput();
-
+    private void printHits(int numberOfHitsToPrint) {
         try {
-            Thread.sleep(250);
+            for (int i = 0; i < numberOfHitsToPrint; i++) {
+                if (hitPrintIndex + 1 > Hit.getHitCount()) {
+                    return;
+                }
+                System.out.println(Hit.getHitMap().get(hitPrintIndex).toString());
+                hitPrintIndex++;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void printTemporaryOutput() {
+        // TODO - make sure this works with adaptive terminal width
+        clearTemporaryOutput(); // clear it before rebuilding
+        buildTemporaryOutput();
+        for (String s : temporaryOutput) {
+            System.out.println(s);
+        }
+    }
+
+    private void clearTemporaryOutputInTerminal() {
+        moveUpAndDeleteLines(temporaryOutput.size()); // TODO - again make sure this works with small terminals
+    }
+
+    private void waitForNextPrintCycle() {
+        try {
+            Thread.sleep(125);
         } catch (InterruptedException e) {
             running = false;
             Thread.currentThread().interrupt();
         }
-
-        if (running) {
-            moveUpAndDeleteLines(getOutputLineCount());
-        }
     }
 
-    /**
-     * Moves the terminal cursor up by the specified number of lines and deletes those lines.
-     * Uses ANSI escape codes for cursor movement.
-     *
-     * @param n The number of lines to move up.
-     */
-    private void moveUpAndDeleteLines(int n) {
-        System.out.printf("\033[%dF",n);
-    }
-
-    /**
-     * Calculates the total number of terminal lines occupied by the current output.
-     * Accounts for multi-line wrapping caused by long strings.
-     *
-     * @return The total number of terminal lines used by the output.
-     */
-    private int getOutputLineCount() {
-        int lineCount = 0;
-        for (String line : output) {
-            // Calculate how many terminal lines this string spans
-            lineCount += Math.max(1, (line.length() + getTerminalWidth() - 1) / getTerminalWidth());
-        }
-        return lineCount;
-    }
-
-    /**
-     * Updates the progress bar for requests sent.
-     * Calculates the proportion of completed requests and visualizes it as a progress bar.
-     */
-    private void updateRequestsSentProgressBar() {
-        int total = Target.getTotalRequestNumberToSend();
-        int current = Target.getSentRequestsForAllTargets();
-        int progressWidth = 30;
-        int completed = (int) ((double) current / total * progressWidth);
+    private String progressBar(int total, int current, int width, String message) {
+        int completed = (int) ((double) current / total * width);
 
         StringBuilder progressBar = new StringBuilder();
-        progressBar.append("[").append("=".repeat(completed)).append(" ".repeat(progressWidth - completed)).append("]");
-        progressBar.append(" ").append(current).append("/").append(total).append(" requests sent");
-
-        requestsSentProgressBar = progressBar.toString();
-        output.set(0, requestsSentProgressBar); // Update first line
+        progressBar.append("[").append("=".repeat(completed)).append(" ".repeat(width - completed)).append("]");
+        progressBar.append(" ").append(current).append("/").append(total).append(" " + message);
+        return progressBar.toString();
     }
 
-    /**
-     * Updates the progress bar for responses processed.
-     * Calculates the proportion of successful responses and visualizes it as a progress bar.
-     */
-    private void updateResponsesProcessedProgressBar() {
-        int total = Target.getTotalRequestNumberToSend();
-        int current = Target.getSuccessfulRequestsForAllTargets();
-        int progressWidth = 30;
-        int completed = (int) ((double) current / total * progressWidth);
-
-        StringBuilder progressBar = new StringBuilder();
-        progressBar.append("[").append("=".repeat(completed)).append(" ".repeat(progressWidth - completed)).append("]");
-        progressBar.append(" ").append(current).append("/").append(total).append(" responses processed");
-
-        responsesParsedProgressBar = progressBar.toString();
-        output.set(1, responsesParsedProgressBar); // Update second line
+    private void buildTemporaryOutput() {
+        buildMetrics();
+        buildProgressBars();
+        buildWarnings();
     }
 
-    /**
-     * Prints the current output buffer to the terminal, line by line.
-     */
-    private void printOutput() {
-        for (String line : output) {
-            System.out.println(line);
-        }
+    private void clearTemporaryOutput() {
+        temporaryOutput.clear();
     }
 
-    /**
-     * Updates the list of discovered hits.
-     * Adds new hits to the output buffer if they haven't been displayed yet.
-     */
-    private void updateHits() {
-        for (Hit hit : Hit.getHits()) {
-            String hitString = hit.toString();
-            if (!hitsDisplayed.contains(hitString)) {
-                output.add(hitString);
-                hitsDisplayed.add(hitString);
-            }
-        }
-    }
-
-    /**
-     * Updates various performance metrics, such as:
-     * <ul>
-     *     <li>Rate limit</li>
-     *     <li>Attempted requests per second</li>
-     *     <li>Successful requests per second</li>
-     *     <li>Retry rate (with colored output based on severity)</li>
-     * </ul>
-     */
-    public void updateMetrics() {
-        String metrics1 = "Rate limit: " + WebRequester.getRateLimiter().getRateLimitPerSecond();
-        output.set(2, metrics1);
-
-        String metrics2 = "Attempted R/s:  " + Metrics.getRequestsPerSecond();
-        output.set(3, metrics2);
-
-        String metrics3 = "Successful R/s: " + Metrics.getSuccessfulRequestsPerSecond();
-        output.set(4, metrics3);
-
+    private void buildMetrics() {
+        temporaryOutput.add("");
+        temporaryOutput.add(
+                "Rate limit: " + WebRequester.getRateLimiter().getRateLimitPerSecond()
+        );
+        temporaryOutput.add(
+                "Attempted R/s:  " + Metrics.getRequestsPerSecond()
+        );
+        temporaryOutput.add(
+                "Successful R/s: " + Metrics.getSuccessfulRequestsPerSecond()
+        );
         double retryRate = Metrics.getRetryRate() * 100;
         if (retryRate > 100) {
             retryRate = 100;
         }
-        String retryRateString = String.format("%.3f", retryRate) + "%";
-        String retryRateColor = getRetryRateColor(retryRate);
-
-        String metrics4 = "\033[0KRetry rate:     " + Color.RESET + retryRateColor + retryRateString + Color.RESET;
-        output.set(5, metrics4);
-        output.set(6, "");
-
+        temporaryOutput.add(
+                "\033[0KRetry rate:     "
+                + Color.RESET
+                + getRetryRateColor(retryRate)
+                + String.format("%.3f", retryRate) + "%"
+                + Color.RESET
+        );
     }
 
-    /**
-     * Determines the color to represent the retry rate based on its value.
-     *
-     * @param retryRate The retry rate as a percentage.
-     * @return The ANSI color code corresponding to the retry rate severity.
-     */
+    private void buildProgressBars() {
+        temporaryOutput.add(
+                progressBar(
+                        Target.getTotalRequestNumberToSend(),
+                        Target.getSentRequestsForAllTargets(),
+                        30,
+                        "requests sent"
+                )
+        );
+        temporaryOutput.add(
+                progressBar(
+                        Target.getTotalRequestNumberToSend(),
+                        Target.getSuccessfulRequestsForAllTargets(),
+                        30,
+                        "responses processed"
+                )
+        );
+    }
+
+    private void buildWarnings() {
+        if (Hit.getHitCount() > 50) {
+            temporaryOutput.add(
+                    Color.RED_BRIGHT
+                    + "Warning: Suspicious number of positive results. Check your parameters?"
+                    + Color.RESET
+            );
+        }
+    }
+
     private String getRetryRateColor(double retryRate) {
         if (retryRate >= 90) {
             return Color.RED;
@@ -249,37 +168,23 @@ public class TerminalOutput implements Runnable {
         }
     }
 
-    /**
-     * Retrieves the width of the terminal in columns.
-     * Defaults to 80 columns if the terminal is not available.
-     *
-     * @return The terminal width in columns.
-     */
-    private int getTerminalWidth() {
-        return terminal != null ? terminal.getSize().getColumns() : 80; // Default to 80 columns
-    }
-
-    public void setRunning(boolean running) {
-        this.running = running;
-    }
-
-    /**
-     * Stops the terminal output thread gracefully.
-     * Clears the terminal and displays shutdown messages to the user.
-     */
     public void shutdown() {
         running = false;
+        handleOutput(); // print one last time
+        printExitMessage();
+    }
 
-        // Clear the terminal and prepare for shutdown messages
-        moveUpAndDeleteLines(getOutputLineCount());
+    private void moveUpAndDeleteLines(int n) {
+        // System.out.printf("\033[%dF",n);
+        System.out.printf("\033[%dF\033[J", n);
+    }
 
-        // Append shutdown messages
-        output.add("");
-        output.add("All fuzzing tasks are complete. Initiating shutdown...");
+    private void printExitMessage() {
         String s = Target.getTargets().size() == 1 ? "target" : "targets";
-        output.add("Fuzzing completed after sending " + Metrics.getTotalSuccessfulRequests() + " requests to " + Target.getTargets().size() + " " + s + ".");
-        output.add("Thank you for fuzzing with VFuzz.");
-
-        printOutput();
+        System.out.println(
+                "\nAll fuzzing tasks are complete. Initiating shutdown...\n"
+                + "Fuzzing completed after sending " + Metrics.getTotalSuccessfulRequests() + " requests to " + Target.getTargets().size() + " " + s + ".\n"
+                + "Thank you for fuzzing with VFuzz."
+        );
     }
 }
