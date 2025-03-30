@@ -7,6 +7,7 @@ import java.nio.file.InvalidPathException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import vfuzz.except.WordlistException;
 
 /**
  * The {@code WordlistReader} class provides functionality to read and iterate through a wordlist file.
@@ -31,18 +32,18 @@ public class WordlistReader {
      * @throws IllegalArgumentException If the path is null, empty, or invalid.
      * @throws RuntimeException If an I/O error occurs while reading the wordlist.
      */
-    public WordlistReader(String path) {
+    public WordlistReader(String path) throws WordlistException {
         if (path == null || path.trim().isEmpty()) {
-            throw new IllegalArgumentException("Path cannot be null or empty");
+            throw new WordlistException("Path cannot be null or empty");
         }
         synchronized (WordlistReader.class) {
             if (wordlist == null) {
                 try {
                     wordlist = Collections.unmodifiableList(Files.readAllLines(Paths.get(path)));
                 } catch (InvalidPathException ipe) {
-                    throw new IllegalArgumentException("Invalid path provided: " + path);
+                    throw new WordlistException("Invalid path provided: " + path);
                 } catch (IOException ie) {
-                    throw new RuntimeException("Failed to read wordlist from path: " + path, ie);
+                    throw new WordlistException("Failed to read wordlist from path: " + path, ie);
                 }
             }
         }

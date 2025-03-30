@@ -1,6 +1,7 @@
 package vfuzz.core;
 
 import vfuzz.config.ConfigAccessor;
+import vfuzz.except.WordlistException;
 import vfuzz.operations.Target;
 import vfuzz.logging.TerminalOutput;
 import vfuzz.network.strategy.requestmode.RequestMode;
@@ -49,7 +50,7 @@ public class ThreadOrchestrator {
      * <p>Each {@code QueueConsumer} consumes payloads from the wordlist and sends HTTP requests.
      * The initial target is created based on the URL fetched from the configuration.
      */
-    public void startFuzzing() {
+    public void startFuzzing() throws WordlistException {
         try {
             this.executor = Executors.newFixedThreadPool(THREAD_COUNT + 1); // plus one for Terminal Output
 
@@ -57,6 +58,7 @@ public class ThreadOrchestrator {
             executor.submit(terminalOutput);
 
             WordlistReader wordlistReader = new WordlistReader(wordlistPath);
+
             Target initialTarget = new Target(ConfigAccessor.getConfigValue("url", String.class), 0, wordlistReader);
 
             // Submit the initial tasks to the executor
@@ -148,7 +150,13 @@ public class ThreadOrchestrator {
         }
 
         // Create a new target and allocate threads to it
-        WordlistReader recursiveReader = new WordlistReader(wordlistPath);
+        WordlistReader recursiveReader = null;
+        try {
+            recursiveReader = new WordlistReader(wordlistPath);
+        } catch (WordlistException ignored) {
+            // never happens, if the wordlist is invalid, the program will not reach this point
+        }
+
         Target recursiveTarget = new Target(newTargetUrl, newDepth, recursiveReader);
         allocateThreads();
         List<QueueConsumer> consumersForRecursiveURL = new ArrayList<>();

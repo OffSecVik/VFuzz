@@ -6,6 +6,7 @@ import vfuzz.config.ConfigManager;
 import vfuzz.core.ArgParse;
 import vfuzz.core.CommandLineArgument;
 import vfuzz.core.ThreadOrchestrator;
+import vfuzz.except.WordlistException;
 import vfuzz.logging.Color;
 import vfuzz.logging.Metrics;
 import vfuzz.network.WebRequester;
@@ -102,7 +103,11 @@ public class VFuzz {
         Logger logger = Logger.getLogger("org.apache.http.client.protocol.ResponseProcessCookies");
         logger.setLevel(Level.OFF);
 
-        // Start the fuzzing process
-        orchestrator.startFuzzing();
+        try {
+            // Start the fuzzing process
+            orchestrator.startFuzzing();
+        } catch (WordlistException wordlistException) {
+            orchestrator.shutdown(); // stop fuzzing
+        }
     }
 }
