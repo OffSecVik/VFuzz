@@ -206,7 +206,7 @@ public class ConfigManager {
         }
         if (ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.SUBDOMAIN) {
             if (!providedArgs.contains("domain")) {
-                System.out.println("Please provide a domain with '-d'");
+                System.out.println("Please provide a domain with '-D'");
                 System.exit(0);
             }
             if (!providedArgs.contains("wordlist")) {

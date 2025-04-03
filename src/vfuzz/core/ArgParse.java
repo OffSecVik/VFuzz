@@ -186,7 +186,7 @@ public class ArgParse {
 
         configManager.registerArgument(new CommandLineArgument(
                 "-D", "--domain", "domainName",
-                (cm, value) -> cm.setConfigValue("domainName", value),
+                (cm, value) -> cm.setConfigValue("domain", value),
                 value -> true,
                 "Sets the domain to fuzz with subdomain fuzzing mode.",
                 true,
