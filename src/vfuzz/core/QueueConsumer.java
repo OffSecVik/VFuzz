@@ -3,6 +3,7 @@ package vfuzz.core;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpRequestBase;
 import vfuzz.config.ConfigAccessor;
+import vfuzz.except.MalformedRequestException;
 import vfuzz.logging.Metrics;
 import vfuzz.network.request.ParsedRequestFactory;
 import vfuzz.network.request.WebRequestFactory;
@@ -83,7 +84,6 @@ public class QueueConsumer implements Runnable {
         this.baseTargetUrl = ConfigAccessor.getConfigValue("url", String.class);
         this.target = target;
         this.url = target.getUrl();
-        this.recursionEnabled = ConfigAccessor.getConfigValue("recursionEnabled", Boolean.class);
         this.recursionDepth = target.getRecursionDepth();
         this.excludedStatusCodes = ArgParse.getExcludedStatusCodes();
         this.excludedLength = ArgParse.getExcludedLength();
@@ -96,6 +96,11 @@ public class QueueConsumer implements Runnable {
         }
 
         this.vhostMode = ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.VHOST;
+        if (vhostMode) {
+            this.recursionEnabled = false;
+        } else {
+            this.recursionEnabled = ConfigAccessor.getConfigValue("recursionEnabled", Boolean.class);
+        }
     }
 
     /**
@@ -230,6 +235,9 @@ public class QueueConsumer implements Runnable {
         WebRequester.sendRequest(request, 250, TimeUnit.MILLISECONDS)
                 .thenApplyAsync(response -> {
             try {
+                if (response.getStatusLine().getStatusCode() == 666) {
+                    throw new MalformedRequestException("Fuck");
+                }
                 parseResponse(response, request, payload);
                 target.incrementSuccessfulRequestCount(); // we can increment early since we send the request until it arrives!
             } catch (Exception ignored) {
@@ -250,6 +258,7 @@ public class QueueConsumer implements Runnable {
      */
     private void parseResponse(HttpResponse response, HttpRequestBase request, String payload) {
 
+        // check for excluded status codes
         int responseCode = response.getStatusLine().getStatusCode();
         for (Range range : excludedStatusCodes) {
             if (range.contains(responseCode)) {
@@ -257,8 +266,13 @@ public class QueueConsumer implements Runnable {
             }
         }
 
-        // checking for excluded status codes
-        int responseContentLength = (int)response.getEntity().getContentLength();
+        // check for excluded response length
+        int responseContentLength = 0;
+        if (response.getEntity() != null
+                && response.getEntity().getContentLength() != -1) {
+            responseContentLength = (int)response.getEntity().getContentLength();
+        }
+
         for (Range range : excludedLength) {
             if (range.contains(responseContentLength)) {
                 return;
@@ -379,5 +393,4 @@ public class QueueConsumer implements Runnable {
     public boolean isRunning() {
         return running;
     }
-
 }
