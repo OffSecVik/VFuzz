@@ -107,6 +107,7 @@ public class VFuzz {
             // Start the fuzzing process
             orchestrator.startFuzzing();
         } catch (WordlistException wordlistException) {
+            System.out.println(wordlistException.getMessage());
             orchestrator.shutdown(); // stop fuzzing
         }
     }
