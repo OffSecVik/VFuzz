@@ -43,7 +43,7 @@ public class ArgParse {
                 "Number of threads. Must be a number between 1 and 200.", // Description
                 true, // Optional?
                 "1", // Default Value
-                false // isFlag? (e.g. --recursive)
+                ArgumentType.SINGLE_VALUE // isFlag? (e.g. --recursive)
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -53,7 +53,7 @@ public class ArgParse {
                 "Path to the word list. This argument is required.",
                 false,
                 null, // Null as default due to the arg being non-optional
-                false
+                ArgumentType.MULTI_VALUE
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -63,7 +63,7 @@ public class ArgParse {
                 "URL to the target website. This argument is required and must start with http:// or https://. Trailing slashes are automatically removed.",
                 false,
                 null,
-                false
+                ArgumentType.SINGLE_VALUE
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -73,7 +73,7 @@ public class ArgParse {
                 "Results to exclude from being shown and used in recursive mode.",
                 true,
                 null,
-                false
+                ArgumentType.SINGLE_VALUE
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -105,7 +105,7 @@ public class ArgParse {
                 "List of HTTP status codes or ranges to exclude, separated by commas. Each code or range must be valid.\n    Example: 404,405-410,505-560.",
                 true,
                 "404",
-                false
+                ArgumentType.SINGLE_VALUE
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -126,7 +126,7 @@ public class ArgParse {
                 "List of file extensions to fuzz for.",
                 true,
                 null,
-                false
+                ArgumentType.SINGLE_VALUE
 
 
         ));
@@ -159,7 +159,7 @@ public class ArgParse {
                 "List of content lengths or length ranges to exclude, separated by commas. Each length must be a valid integer.",
                 true,
                 null,
-                false
+                ArgumentType.SINGLE_VALUE
         ));
 
         configManager.setConfigValue("requestMode", RequestMode.STANDARD.name()); // Is used to avoid setting a defaultValue twice
@@ -171,7 +171,7 @@ public class ArgParse {
                 "Activates the virtual host fuzzing mode.",
                 true,
                 null,
-                true
+                ArgumentType.FLAG
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -181,7 +181,7 @@ public class ArgParse {
                 "Activates the subdomain fuzzing mode.",
                 true,
                 null,
-                true
+                ArgumentType.FLAG
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -191,7 +191,7 @@ public class ArgParse {
                 "Sets the domain to fuzz with subdomain fuzzing mode.",
                 true,
                 null,
-                false
+                ArgumentType.SINGLE_VALUE
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -201,7 +201,7 @@ public class ArgParse {
                 "Activates the FUZZ-marker fuzzing mode.",
                 true,
                 null,
-                true
+                ArgumentType.FLAG
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -211,7 +211,7 @@ public class ArgParse {
                 "Provides a custom DNS server for subdomain mode.",
                 true,
                 null,
-                false
+                ArgumentType.SINGLE_VALUE
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -231,7 +231,7 @@ public class ArgParse {
                 "Specifies the HTTP method to use for requests. Supported methods are GET, POST, and HEAD. Default is GET.",
                 true,
                 RequestMethod.GET.name(),
-                false
+                ArgumentType.SINGLE_VALUE
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -255,7 +255,7 @@ public class ArgParse {
                 "Specifies the maximum number of retries for a request. This value must be an integer. Default is 5.",
                 true,
                 "5",
-                false
+                ArgumentType.SINGLE_VALUE
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -279,7 +279,7 @@ public class ArgParse {
                 "Sets the maximum number of requests per second. Default is 4000. Set to 0 to disable",
                 true,
                 "4000",
-                false
+                ArgumentType.SINGLE_VALUE
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -289,7 +289,7 @@ public class ArgParse {
                 "Enables recursive fuzzing mode.",
                 true,
                 "false",
-                true
+                ArgumentType.FLAG
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -299,7 +299,7 @@ public class ArgParse {
                 "Sets the user agent for requests.\n    Example: --user-agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"",
                 true,
                 null,
-                false
+                ArgumentType.SINGLE_VALUE
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -312,7 +312,7 @@ public class ArgParse {
                 "Specifies the filepath to the HTTP request file for fuzzing. This activates file-based fuzzing mode. Ensure the file exists.\n    Example: -r \"/path/to/requestfile.txt\"",
                 true,
                 null,
-                false
+                ArgumentType.SINGLE_VALUE
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -320,7 +320,7 @@ public class ArgParse {
                 (cm, value) -> headers.add(value),
                 Validator::isValidHeader,
                 "Sets custom headers for the requests. Each header must be in the 'Name: Value' format. Can be used multiple times for multiple headers.\n    Example: -H \"Content-Type: application/json\"",
-                true, null, false
+                true, null, ArgumentType.SINGLE_VALUE
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -337,7 +337,7 @@ public class ArgParse {
                 "Sets custom cookies for the requests. Can be used multiple times for multiple cookies.\n    Example: -C \"username=JohnDoe\"",
                 true,
                 null,
-                false
+                ArgumentType.SINGLE_VALUE
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -347,7 +347,7 @@ public class ArgParse {
                 "Specifies the fuzz marker that will be replaced with the payloads.\n    Example: --fuzz-marker \"FUZZ\"",
                 true,
                 "FUZZ",
-                false
+                ArgumentType.MULTI_VALUE
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -360,7 +360,7 @@ public class ArgParse {
                 "Sets data to be used in POST request.",
                 true,
                 null,
-                false
+                ArgumentType.SINGLE_VALUE
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -370,7 +370,7 @@ public class ArgParse {
                 "Makes the fuzzer follow redirects.",
                 true,
                 "false",
-                true
+                ArgumentType.FLAG
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -380,7 +380,7 @@ public class ArgParse {
                 "Enables randomization of User-Agent header.",
                 true,
                 "false",
-                true
+                ArgumentType.FLAG
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -390,7 +390,7 @@ public class ArgParse {
                 "Displays this menu.",
                 true,
                 "false",
-                true
+                ArgumentType.FLAG
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -400,7 +400,7 @@ public class ArgParse {
                 "Makes the fuzzer case insensitive. Can lead to forking with recursion, depending on the wordlist.",
                 true,
                 "false",
-                true
+                ArgumentType.FLAG
         ));
 
         configManager.registerArgument(new CommandLineArgument(
@@ -410,7 +410,7 @@ public class ArgParse {
                 "Disables noisy prints like progress bar and metrics.",
                 true,
                 "false",
-                true
+                ArgumentType.FLAG
         ));
     }
 

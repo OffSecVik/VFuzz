@@ -17,7 +17,7 @@ public class CommandLineArgument {
     private final String description;
     private final boolean isOptional;
     private final String defaultValue;
-    private final boolean isFlag;
+    private final ArgumentType argumentType;
 
     /**
      * Constructs a CommandLineArgument with the provided parameters.
@@ -30,9 +30,9 @@ public class CommandLineArgument {
      * @param description  A brief description of the argument's purpose, useful for generating help messages.
      * @param isOptional   Indicates whether the argument is optional.
      * @param defaultValue The default value to use if the argument is not provided.
-     * @param isFlag       Indicates whether the argument is a flag (i.e., no value required).
+     * @param argumentType Indicates whether the argument is a flag (i.e., no value required), holds a single value, or multiple values.
      */
-    public CommandLineArgument(String name, String alias, String configName, BiConsumer<ConfigManager, String> action, Predicate<String> validator, String description, boolean isOptional, String defaultValue, boolean isFlag) {
+    public CommandLineArgument(String name, String alias, String configName, BiConsumer<ConfigManager, String> action, Predicate<String> validator, String description, boolean isOptional, String defaultValue, ArgumentType argumentType) {
         this.name = name;
         this.alias = alias;
         this.configName = configName;
@@ -41,7 +41,7 @@ public class CommandLineArgument {
         this.description = description;
         this.isOptional = isOptional;
         this.defaultValue = defaultValue;
-        this.isFlag = isFlag;
+        this.argumentType = argumentType;
     }
 
     public String getName() {
@@ -69,7 +69,7 @@ public class CommandLineArgument {
     }
 
     public boolean isFlag() {
-        return isFlag;
+        return argumentType == ArgumentType.FLAG;
     }
 
     /**
