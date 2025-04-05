@@ -110,6 +110,13 @@ public class TerminalOutput implements Runnable {
         temporaryOutput.add(
                 "Successful R/s: " + Metrics.getSuccessfulRequestsPerSecond()
         );
+        long malformedRequests = Metrics.getTotalMalformedRequests();
+        if (malformedRequests > 5) {
+            String malformedRequestsColor = getMalformedRequestsColor(malformedRequests);
+            temporaryOutput.add(
+                    malformedRequestsColor + "Malformed Requests: " + malformedRequests + Color.RESET
+            );
+        }
         double retryRate = Metrics.getRetryRate() * 100;
         if (retryRate > 100) {
             retryRate = 100;
@@ -121,6 +128,19 @@ public class TerminalOutput implements Runnable {
                 + String.format("%.3f", retryRate) + "%"
                 + Color.RESET
         );
+    }
+
+    private String getMalformedRequestsColor(long malformedRequests) {
+        if (malformedRequests > 1000) {
+            return Color.RED;
+        }
+        if (malformedRequests > 100) {
+            return Color.ORANGE;
+        }
+        if (malformedRequests > 10) {
+            return Color.YELLOW;
+        }
+        return Color.RESET;
     }
 
     private void buildProgressBars() {
