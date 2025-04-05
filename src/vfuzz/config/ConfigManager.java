@@ -48,7 +48,7 @@ public class ConfigManager {
     private static ConfigManager instance;
 
     private final Map<String, CommandLineArgument> arguments = new LinkedHashMap<>();
-    private final Map<String, String> configValues = new HashMap<>();
+    private final Map<String, List<String>> configValues = new HashMap<>();
     private final Map<String, String> defaultValues = new HashMap<>();
     private final Set<String> providedArgs = new HashSet<>();
 
@@ -82,7 +82,7 @@ public class ConfigManager {
     private void setOptionalDefaultValue(CommandLineArgument arg) {
         if (arg.isOptional() && !providedArgs.contains(arg.getConfigName())) {
             arg.applyDefaultValue(this);
-            defaultValues.put(arg.getConfigName(), configValues.get(arg.getConfigName()));
+            defaultValues.put(arg.getConfigName(), getConfigValue(arg.getConfigName()));
         }
     }
 
@@ -93,7 +93,7 @@ public class ConfigManager {
      * @return true if the value is the default, false otherwise
      */
     public boolean isDefaultValue(String key) {
-        return defaultValues.containsKey(key) && Objects.equals(configValues.get(key), defaultValues.get(key));
+        return defaultValues.containsKey(key) && Objects.equals(getConfigValue(key), defaultValues.get(key));
     }
 
     /**
@@ -185,7 +185,10 @@ public class ConfigManager {
      * @param value the value to be set
      */
     public void setConfigValue(String key, String value) {
-        configValues.put(key, value);
+        if (!configValues.containsKey(key)) {
+            configValues.put(key, new ArrayList<>());
+        }
+        configValues.get(key).add(value);
     }
 
     /**
@@ -195,6 +198,13 @@ public class ConfigManager {
      * @return the configuration value, or null if the key doesn't exist
      */
     public String getConfigValue(String key) {
+        if (configValues.containsKey(key)) {
+            return configValues.get(key).get(0);
+        }
+        return null;
+    }
+
+    public List<String> getConfigValues(String key) {
         return configValues.get(key);
     }
 

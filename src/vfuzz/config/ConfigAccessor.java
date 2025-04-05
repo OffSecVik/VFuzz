@@ -1,7 +1,10 @@
 package vfuzz.config;
 
 import vfuzz.operations.Range;
+
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -57,6 +60,18 @@ public class ConfigAccessor {
     public static <T> T getConfigValue(String key, Class<T> type, AtomicBoolean... isDefault) {
         String value = configManager.getConfigValue(key);
         T result = convertToType(value, type);
+        if (isDefault.length > 0 && isDefault[0] != null) {
+            isDefault[0].set(configManager.isDefaultValue(key));
+        }
+        return result;
+    }
+
+    public static <T> List<T> getConfigValues(String key, Class<T> type, AtomicBoolean... isDefault) {
+        List<String> values = configManager.getConfigValues(key);
+        List<T> result = new ArrayList<>();
+        for (String value : values) {
+            result.add(convertToType(value, type));
+        }
         if (isDefault.length > 0 && isDefault[0] != null) {
             isDefault[0].set(configManager.isDefaultValue(key));
         }
