@@ -105,9 +105,9 @@ public class ConfigManager {
     public void processArguments(String[] passedArguments) {
 
         if (passedArguments.length == 0) {
-            CommandLineArgument cmdArg = findArgumentByString("--help");
-            providedArgs.add(cmdArg.getConfigName());
-            cmdArg.executeAction(this, "true");
+            CommandLineArgument help = findArgumentByString("--help");
+            providedArgs.add(help.getConfigName());
+            help.executeAction(this, "true");
         }
 
         for (int i = 0; i < passedArguments.length; i++) {
@@ -120,15 +120,26 @@ public class ConfigManager {
                     cmdArg.executeAction(this, value);
                 } else if (!cmdArg.isFlag()) {
                     System.out.println(Color.RED + "Error:" + Color.RED_BRIGHT +  " Argument '" + argument + "' expects a value." + Color.RESET);
+                    System.exit(0);
                 }
             }
         }
+
         String postRequestData = ConfigAccessor.getConfigValue("postRequestData",String.class);
         String fuzzMarker = ConfigAccessor.getConfigValue("fuzzMarker",String.class);
         if (postRequestData != null && fuzzMarker != null) {
             if ((postRequestData).contains(fuzzMarker)) {
                 this.setConfigValue("requestMode", RequestMode.FUZZ.name());
             }
+        }
+
+        if (ConfigAccessor.getConfigValue("recursionEnabled", Boolean.class)
+            && ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.VHOST) {
+            System.out.println(Color.YELLOW + "Note: recursive mode is not available for vhost fuzzing." + Color.RESET);
+            CommandLineArgument recursion = findArgumentByString("--recursive");
+            providedArgs.remove(recursion.getConfigName());
+            providedArgs.add(recursion.getConfigName());
+            recursion.executeAction(this, "false");
         }
     }
 
@@ -216,14 +227,15 @@ public class ConfigManager {
             return;
         }
 
-        if (arguments.values().stream().anyMatch(arg -> !arg.isOptional() && !providedArgs.contains(arg.getConfigName()))) {
-            printMissingAndExit();
-        }
+        arguments.values().stream()
+                .filter(arg -> !arg.isOptional() && !providedArgs.contains(arg.getConfigName()))
+                .findFirst()
+                .ifPresent(missingArg -> {
+                    System.err.println("Missing required argument: " + missingArg.getName());
+                    System.exit(0);
+                });
     }
-    private void printMissingAndExit() {
-        System.err.println("Missing required arguments. Exiting.");
-        System.exit(1);
-    }
+
 
     /**
      * Unregisters a command-line argument by its name.
