@@ -18,6 +18,7 @@ import org.apache.http.nio.client.HttpAsyncClient;
 import org.apache.http.nio.reactor.ConnectingIOReactor;
 import org.apache.http.nio.reactor.IOReactorException;
 import vfuzz.config.ConfigAccessor;
+import vfuzz.except.MalformedRequestException;
 import vfuzz.logging.Metrics;
 import vfuzz.network.ratelimiter.RateLimiterLeakyBucket;
 import java.nio.charset.StandardCharsets;
@@ -128,7 +129,13 @@ public class WebRequester {
 
         CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
 
-        Runnable requestTask = () -> executeRequest(request, responseFuture);
+        Runnable requestTask = () -> {
+            try {
+                executeRequest(request, responseFuture);
+            } catch (Exception e) {
+                responseFuture.completeExceptionally(new MalformedRequestException(request.getURI() + "", e.getMessage(), e.getCause()));
+            }
+        };
 
         if (jitterEnabled) {
             int jitter = random.nextInt(500);
@@ -137,10 +144,17 @@ public class WebRequester {
             requestTask.run();
         }
 
+
         return responseFuture.handle((response, throwable) -> {
             activeFutures.decrementAndGet();
             Metrics.incrementRequestsCount();
+
             if (throwable != null) {
+                if (throwable instanceof MalformedRequestException) {
+                    Metrics.incrementMalformedRequestsCount();
+                    response.setStatusCode(666);
+                    return CompletableFuture.completedFuture(response);
+                }
                 Metrics.incrementRetriesCount();
                 return handleRetries(request, retryDelay, unit);
             } else {
