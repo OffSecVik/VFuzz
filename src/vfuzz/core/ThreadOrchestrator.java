@@ -236,7 +236,6 @@ public class ThreadOrchestrator {
         return executor;
     }
 
-
     /**
      * Schedules a periodic task to check for fuzzing completion every 2 seconds.
      */
