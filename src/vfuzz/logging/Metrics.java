@@ -58,6 +58,7 @@ public class Metrics {
     private static final AtomicLong totalRequests = new AtomicLong();
     private static final AtomicLong totalSuccessfulRequests = new AtomicLong();
     private static final AtomicLong totalRetries = new AtomicLong();
+    private static final AtomicLong totalMalformedRequests = new AtomicLong();
 
     // Counter for successive measuring points with increased retry rate
     private static int requestsWithIncident = 0;
@@ -136,6 +137,10 @@ public class Metrics {
         totalRetries.incrementAndGet();
     }
 
+    public static void incrementMalformedRequestsCount() {
+        totalMalformedRequests.incrementAndGet();
+    }
+
     /**
      * Calculates and returns the average number of requests per second over the duration of the buffer.
      *
@@ -207,4 +212,6 @@ public class Metrics {
     public static long getTotalSuccessfulRequests() {
         return totalSuccessfulRequests.get();
     }
+
+    public static long getTotalMalformedRequests() { return totalMalformedRequests.get(); }
 }
