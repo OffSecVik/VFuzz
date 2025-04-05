@@ -41,9 +41,11 @@ public class WordlistReader {
                 try {
                     wordlist = Collections.unmodifiableList(Files.readAllLines(Paths.get(path)));
                 } catch (InvalidPathException ipe) {
-                    throw new WordlistException("Invalid path provided: " + path);
+                    throw new WordlistException("Invalid path provided: \n" + path);
                 } catch (IOException ie) {
-                    throw new WordlistException("Failed to read wordlist from path: " + path, ie);
+                    throw new WordlistException("Failed to read wordlist from path: \n" + path, ie);
+                } catch (Exception e) {
+                    throw new WordlistException("Encountered unknown error related to the wordlist. Check your path?");
                 }
             }
         }
