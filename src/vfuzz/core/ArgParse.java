@@ -402,6 +402,16 @@ public class ArgParse {
                 "false",
                 true
         ));
+
+        configManager.registerArgument(new CommandLineArgument(
+                "-q", "--quiet", "quietMode",
+                (cm, value) -> cm.setConfigValue("quietMode", "true"),
+                value -> true,
+                "Disables noisy prints like progress bar and metrics.",
+                true,
+                "false",
+                true
+        ));
     }
 
     /**

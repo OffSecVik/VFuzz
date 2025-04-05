@@ -2,6 +2,7 @@ package vfuzz.logging;
 
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
+import vfuzz.config.ConfigAccessor;
 import vfuzz.network.WebRequester;
 import vfuzz.operations.Hit;
 import vfuzz.operations.Target;
@@ -17,9 +18,12 @@ public class TerminalOutput implements Runnable {
 
     private int hitPrintIndex = 0;
 
+    private boolean quietMode;
+
     private ArrayList<String> temporaryOutput = new ArrayList<>();
 
     public TerminalOutput() {
+        quietMode = ConfigAccessor.getConfigValue("quietMode", Boolean.class);
         try {
             terminal = TerminalBuilder.builder()
                     .system(true)
@@ -90,9 +94,11 @@ public class TerminalOutput implements Runnable {
     }
 
     private void buildTemporaryOutput() {
-        buildMetrics();
-        buildProgressBars();
-        buildWarnings();
+        if (!quietMode) {
+            buildMetrics();
+            buildProgressBars();
+            buildWarnings();
+        }
     }
 
     private void clearTemporaryOutput() {
@@ -123,10 +129,10 @@ public class TerminalOutput implements Runnable {
         }
         temporaryOutput.add(
                 "\033[0KRetry rate:     "
-                + Color.RESET
-                + getRetryRateColor(retryRate)
-                + String.format("%.3f", retryRate) + "%"
-                + Color.RESET
+                        + Color.RESET
+                        + getRetryRateColor(retryRate)
+                        + String.format("%.3f", retryRate) + "%"
+                        + Color.RESET
         );
     }
 
@@ -166,8 +172,8 @@ public class TerminalOutput implements Runnable {
         if (Hit.getHitCount() > 50) {
             temporaryOutput.add(
                     Color.RED_BRIGHT
-                    + "Warning: Suspicious number of positive results. Check your parameters?"
-                    + Color.RESET
+                            + "Warning: Suspicious number of positive results. Check your parameters?"
+                            + Color.RESET
             );
         }
     }
@@ -203,8 +209,8 @@ public class TerminalOutput implements Runnable {
         String s = Target.getTargets().size() == 1 ? "target" : "targets";
         System.out.println(
                 "\nAll fuzzing tasks are complete. Initiating shutdown...\n"
-                + "Fuzzing completed after sending " + Metrics.getTotalSuccessfulRequests() + " requests to " + Target.getTargets().size() + " " + s + ".\n"
-                + "Thank you for fuzzing with VFuzz."
+                        + "Fuzzing completed after sending " + Metrics.getTotalSuccessfulRequests() + " requests to " + Target.getTargets().size() + " " + s + ".\n"
+                        + "Thank you for fuzzing with VFuzz."
         );
     }
 }
