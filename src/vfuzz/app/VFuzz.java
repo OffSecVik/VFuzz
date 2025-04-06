@@ -11,6 +11,8 @@ import vfuzz.logging.Color;
 import vfuzz.logging.Metrics;
 import vfuzz.network.WebRequester;
 import vfuzz.network.strategy.requestmode.RequestMode;
+
+import java.util.List;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
@@ -85,7 +87,7 @@ public class VFuzz {
 
         // Retrieve the thread count and wordlist path from the configuration
         int threadCount = ConfigAccessor.getConfigValue("threadCount", Integer.class);
-        String wordlistPath = ConfigAccessor.getConfigValue("wordlistPath", String.class);
+        List<String> wordlistPath = ConfigAccessor.getConfigValues("wordlistPath", String.class);
 
         // Initialize the ThreadOrchestrator for managing fuzzing threads
         ThreadOrchestrator orchestrator = new ThreadOrchestrator(wordlistPath, threadCount);
@@ -103,12 +105,6 @@ public class VFuzz {
         Logger logger = Logger.getLogger("org.apache.http.client.protocol.ResponseProcessCookies");
         logger.setLevel(Level.OFF);
 
-        try {
-            // Start the fuzzing process
-            orchestrator.startFuzzing();
-        } catch (WordlistException wordlistException) {
-            System.out.println(wordlistException.getMessage());
-            orchestrator.shutdown(); // stop fuzzing
-        }
+        orchestrator.startFuzzing();
     }
 }

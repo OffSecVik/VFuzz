@@ -1,6 +1,13 @@
 package vfuzz.network.request;
 
 import org.apache.http.client.methods.HttpRequestBase;
+import vfuzz.config.ConfigAccessor;
+import vfuzz.core.WordlistReader;
+import vfuzz.except.WordlistCompletedException;
+import vfuzz.except.WordlistException;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The {@code WebRequestFactory} interface defines a contract for creating HTTP requests.
@@ -18,7 +25,18 @@ import org.apache.http.client.methods.HttpRequestBase;
  *     HttpRequestBase request = requestFactory.buildRequest("fuzzPayload");
  * </pre>
  */
-public interface WebRequestFactory {
+public abstract class WebRequestFactory {
+
+    List<String> currentPayloads = new ArrayList<>();
+
+
+    public List<String> getPayloads() {
+        return currentPayloads;
+    }
+
+    public WebRequestFactory() {
+
+    }
 
     /**
      * Builds an HTTP request using the provided fuzzing payload.
@@ -27,9 +45,7 @@ public interface WebRequestFactory {
      * the specific implementation. The returned request will be fully configured and
      * ready to be sent.
      *
-     * @param payload The fuzzing payload to be included in the request.
      * @return A {@link HttpRequestBase} object representing the HTTP request.
      */
-    HttpRequestBase buildRequest(String payload);
-
+    public abstract HttpRequestBase buildRequest() throws WordlistCompletedException;
 }

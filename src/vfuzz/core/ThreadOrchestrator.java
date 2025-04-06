@@ -25,7 +25,7 @@ import java.util.concurrent.*;
  */
 public class ThreadOrchestrator {
 
-    private final String wordlistPath;
+    private final List<String> wordlistPath;
     private ExecutorService executor;
     private ScheduledExecutorService scheduler;
     private final int THREAD_COUNT;
@@ -38,7 +38,7 @@ public class ThreadOrchestrator {
      * @param wordlistPath The path to the wordlist file used during fuzzing.
      * @param threadLimit  The maximum number of threads allowed for fuzzing.
      */
-    public ThreadOrchestrator(String wordlistPath, int threadLimit) {
+    public ThreadOrchestrator(List<String> wordlistPath, int threadLimit) {
         this.wordlistPath = wordlistPath;
         this.THREAD_COUNT = threadLimit;
     }
@@ -50,16 +50,14 @@ public class ThreadOrchestrator {
      * <p>Each {@code QueueConsumer} consumes payloads from the wordlist and sends HTTP requests.
      * The initial target is created based on the URL fetched from the configuration.
      */
-    public void startFuzzing() throws WordlistException {
+    public void startFuzzing() {
         try {
             this.executor = Executors.newFixedThreadPool(THREAD_COUNT + 1); // plus one for Terminal Output
 
             terminalOutput = new TerminalOutput();
             executor.submit(terminalOutput);
 
-            WordlistReader wordlistReader = new WordlistReader(wordlistPath);
-
-            Target initialTarget = new Target(ConfigAccessor.getConfigValue("url", String.class), 0, wordlistReader);
+            Target initialTarget = new Target(ConfigAccessor.getConfigValue("url", String.class), 0);
 
             // Submit the initial tasks to the executor
             List<QueueConsumer> consumersForURL = new ArrayList<>();
@@ -149,15 +147,8 @@ public class ThreadOrchestrator {
             newTargetUrl += "/FUZZ";
         }
 
-        // Create a new target and allocate threads to it
-        WordlistReader recursiveReader = null;
-        try {
-            recursiveReader = new WordlistReader(wordlistPath);
-        } catch (WordlistException ignored) {
-            // never happens, if the wordlist is invalid, the program will not reach this point
-        }
 
-        Target recursiveTarget = new Target(newTargetUrl, newDepth, recursiveReader);
+        Target recursiveTarget = new Target(newTargetUrl, newDepth);
         allocateThreads();
         List<QueueConsumer> consumersForRecursiveURL = new ArrayList<>();
         for (int i = 0; i < recursiveTarget.getAllocatedThreads(); i++) {

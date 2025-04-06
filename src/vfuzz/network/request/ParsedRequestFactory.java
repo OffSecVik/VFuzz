@@ -6,11 +6,16 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.StringEntity;
 import vfuzz.config.ConfigAccessor;
+import vfuzz.core.WordlistReader;
+import vfuzz.except.WordlistCompletedException;
+import vfuzz.except.WordlistException;
 import vfuzz.operations.RandomAgent;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -24,10 +29,11 @@ import java.util.Objects;
  * requests that replace the fuzz marker with a specified payload. This is particularly useful
  * for more complex or customized requests that may be used in fuzzing scenarios.
  */
-public class ParsedRequestFactory implements WebRequestFactory {
+public class ParsedRequestFactory extends WebRequestFactory {
 
     private final ParsedHttpRequest prototypeRequest;
 
+    private List<WordlistReader> wordlistReaders;
 
     /**
      * Constructs a new {@code ParsedRequestFactory} by reading and parsing an HTTP request
@@ -38,6 +44,14 @@ public class ParsedRequestFactory implements WebRequestFactory {
      * If the file cannot be read, a {@link RuntimeException} is thrown.
      */
     public ParsedRequestFactory() {
+        super();
+        for (String path : ConfigAccessor.getConfigValues("wordlistPath", String.class)) {
+            try {
+                wordlistReaders.add(new WordlistReader(path));
+            } catch (WordlistException we) {
+
+            }
+        }
         try {
             prototypeRequest = new ParsedHttpRequest().parseHttpRequestFromFile(ConfigAccessor.getConfigValue("requestFilePath", String.class));
         } catch (IOException e) {
@@ -50,11 +64,14 @@ public class ParsedRequestFactory implements WebRequestFactory {
      * template. This method clones the prototype request, replaces the fuzz marker with the
      * provided payload, and then constructs a new {@link HttpRequestBase} object accordingly.
      *
-     * @param payload The fuzzing payload to inject into the request.
      * @return A fully-constructed {@link HttpRequestBase} object with the fuzzing payload inserted.
      */
     @Override
-    public HttpRequestBase buildRequest(String payload) {
+    public HttpRequestBase buildRequest() throws WordlistCompletedException {
+        String payload = wordlistReaders.get(0).getNextPayload();
+        if (payload == null) {
+            throw new WordlistCompletedException();
+        }
         ParsedHttpRequest rawCopy = new ParsedHttpRequest(prototypeRequest);
         return buildRequestFromFile(rawCopy, payload);
     }

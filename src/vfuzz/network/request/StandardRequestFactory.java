@@ -4,12 +4,18 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.ContentType;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.core.ArgParse;
+import vfuzz.core.WordlistReader;
+import vfuzz.except.WordlistCompletedException;
 import vfuzz.network.strategy.requestmethod.*;
 import vfuzz.network.strategy.requestmode.*;
 import vfuzz.operations.RandomAgent;
+import vfuzz.operations.Target;
+
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The {@code StandardRequestFactory} class is responsible for constructing
@@ -21,13 +27,15 @@ import java.nio.charset.StandardCharsets;
  * It supports dynamically setting request headers, user agents, and cookies from
  * configurations and can handle payloads that are injected into the URL for fuzzing purposes.
  */
-public class StandardRequestFactory implements WebRequestFactory {
+public class StandardRequestFactory extends WebRequestFactory {
 
     private static RequestModeStrategy requestModeStrategy;
     private static RequestMethodStrategy requestMethodStrategy;
 
     private final boolean isUserAgentRandomizationEnabled;
     private final String targetUrl;
+    private final Target target;
+    private final List<WordlistReader> wordlistReaders;
 
     private HttpRequestBase prototypeRequest;
 
@@ -45,17 +53,12 @@ public class StandardRequestFactory implements WebRequestFactory {
         }
     }
 
-    /**
-     * Constructs a new {@code StandardRequestFactory} for a given target URL.
-     *
-     * <p>This constructor builds a prototype request that can be cloned and customized
-     * for individual fuzzing payloads. It also checks the configuration for user-agent
-     * randomization settings.
-     *
-     * @param targetUrl The base URL of the target that will be fuzzed.
-     */
-    public StandardRequestFactory(String targetUrl) {
-        this.targetUrl = targetUrl;
+
+    public StandardRequestFactory(Target target) {
+        super();
+        this.target = target;
+        this.targetUrl = target.getUrl();
+        this.wordlistReaders = target.getWordlistReaders();
         buildPrototypeRequest();
         isUserAgentRandomizationEnabled = ConfigAccessor.getConfigValue("randomAgent", Boolean.class);
 
@@ -119,12 +122,18 @@ public class StandardRequestFactory implements WebRequestFactory {
      * request according to the selected request mode (e.g., VHOST, SUBDOMAIN). Additionally,
      * it randomizes the User-Agent header if that feature is enabled in the configuration.
      *
-     * @param payload The fuzzing payload to be injected into the URL.
      * @return A {@link HttpRequestBase} object representing the fully configured HTTP request.
      */
     @Override
-    public HttpRequestBase buildRequest(String payload) {
+    public HttpRequestBase buildRequest() throws WordlistCompletedException {
+        String payload = wordlistReaders.get(0).getNextPayload();
+        if (payload == null) {
+            throw new WordlistCompletedException();
+        }
+        currentPayloads.clear();
+        currentPayloads.add(payload);
         try {
+
             String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8);
 
             if (!payload.equals(encodedPayload)) {
@@ -149,4 +158,6 @@ public class StandardRequestFactory implements WebRequestFactory {
 
         return null;
     }
+
+
 }

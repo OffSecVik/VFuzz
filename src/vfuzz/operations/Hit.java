@@ -14,7 +14,7 @@ import java.util.*;
  * <p>This class provides functionality to store and retrieve unique hits, preventing duplicates,
  * and it also keeps track of the total number of hits.
  */
-public record Hit(String url, HttpResponse response, String payload) {
+public record Hit(String url, HttpResponse response, List<String> payloads) {
 
     // A synchronized set that stores all unique hits
     private static final Map<Integer, Hit> hits = Collections.synchronizedMap(new LinkedHashMap<>());
@@ -26,10 +26,10 @@ public record Hit(String url, HttpResponse response, String payload) {
      *
      * @param url        The URL that was hit
      * @param response   The HTTP response that was received for the hit
-     * @param payload    The payload used
+     * @param payloads    The payloads used
      */
-    public static void hitIfNotPresent(String url, HttpResponse response, String payload) {
-        Hit newHit = new Hit(url, response, payload);
+    public static void hitIfNotPresent(String url, HttpResponse response, List<String> payloads) {
+        Hit newHit = new Hit(url, response, payloads);
         synchronized (hits) {
             if (!hits.containsValue(newHit)) {
                 hits.put(hitCounter, newHit);
@@ -56,7 +56,7 @@ public record Hit(String url, HttpResponse response, String payload) {
     public String toString() {
         if (ConfigAccessor.getConfigValue(("requestMethod"), String.class).equals("POST")
                 && ConfigAccessor.getConfigValue(("requestMode"), String.class).equals("FUZZ")) {
-            return Color.YELLOW + "Hit for payload: " + payload + Color.RESET;
+            return Color.YELLOW + "Hit for payload: " + payloads.toString() + Color.RESET;
         }
 
         int statusCode = getStatusCode();
@@ -86,7 +86,7 @@ public record Hit(String url, HttpResponse response, String payload) {
         System.out.println(this);
         if (ConfigAccessor.getConfigValue(("requestMethod"), String.class).equals("POST")
         && ConfigAccessor.getConfigValue(("requestMode"), String.class).equals("FUZZ")) {
-            System.out.println("Payload:\t" + payload);
+            System.out.println("Payload:\t" + payloads.toString());
         }
         System.out.println();
     }

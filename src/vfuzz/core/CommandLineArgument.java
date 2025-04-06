@@ -122,7 +122,7 @@ public class CommandLineArgument {
      */
     public void applyDefaultValue(ConfigManager configManager) {
         if (defaultValue != null) {
-            List<String> l = new ArrayList<String>();
+            List<String> l = new ArrayList<>();
             l.add(defaultValue);
             action.accept(configManager, l);
         }

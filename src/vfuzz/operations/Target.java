@@ -2,6 +2,10 @@ package vfuzz.operations;
 
 import vfuzz.config.ConfigAccessor;
 import vfuzz.core.WordlistReader;
+import vfuzz.except.WordlistException;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -23,7 +27,7 @@ public class Target {
     private final String url; // the url to fuzz
     private final int recursionDepth; // the recursion depth at which this is fuzzed
     private int allocatedThreads;
-    private final WordlistReader wordlistReader;
+    private final List<WordlistReader> wordlistReaders = new ArrayList<>();
     private final AtomicBoolean allocationComplete = new AtomicBoolean(false);
     public AtomicInteger successfulRequestCount = new AtomicInteger();
     public AtomicInteger sentRequestsCount = new AtomicInteger();
@@ -60,13 +64,12 @@ public class Target {
      *
      * @param url The URL to be fuzzed.
      * @param recursionDepth The recursion depth for this target.
-     * @param wordlistReader The wordlist reader for fuzzing payloads.
      */
-    public Target(String url, int recursionDepth, WordlistReader wordlistReader) {
+    public Target(String url, int recursionDepth) {
         this.url = url;
         this.recursionDepth = recursionDepth;
-        this.wordlistReader = wordlistReader;
         targets.add(this);
+        createWordlistReaders();
     }
 
     public static CopyOnWriteArrayList<Target> getTargets() {
@@ -89,8 +92,8 @@ public class Target {
         this.allocatedThreads = allocatedThreads;
     }
 
-    public WordlistReader getWordlistReader() {
-        return wordlistReader;
+    public List<WordlistReader> getWordlistReaders() {
+        return wordlistReaders;
     }
 
     public boolean setAllocationComplete() {
@@ -114,7 +117,7 @@ public class Target {
     }
 
     public boolean targetIsFuzzed() {
-        return successfulRequestCount.get() == wordlistReader.getWordlistSize() * fileExtensionCount();
+        return successfulRequestCount.get() == wordlistReaders.stream().mapToInt(WordlistReader::getWordlistSize).sum() * fileExtensionCount();
     }
 
     public static boolean allTargetsAreFuzzed() {
@@ -145,8 +148,19 @@ public class Target {
     public static int getTotalRequestNumberToSend() {
         int total = 0;
         for (Target target : targets) {
-            total += target.getWordlistReader().getWordlistSize();
+            total += target.getWordlistReaders().stream().mapToInt(WordlistReader::getWordlistSize).sum();
         }
         return total;
+    }
+
+    private void createWordlistReaders() {
+        List<String> wordlistPaths = ConfigAccessor.getConfigValues("wordlistPath", String.class);
+        for (String wordlistPath : wordlistPaths) {
+            try {
+                wordlistReaders.add(new WordlistReader(wordlistPath));
+            } catch (WordlistException ignored) {
+
+            }
+        }
     }
 }

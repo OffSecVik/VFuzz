@@ -23,7 +23,10 @@ public class TerminalOutput implements Runnable {
     private ArrayList<String> temporaryOutput = new ArrayList<>();
 
     public TerminalOutput() {
-        quietMode = ConfigAccessor.getConfigValue("quietMode", Boolean.class);
+        String quietMode = ConfigAccessor.getConfigValue("quietMode", String.class);
+        if (quietMode.equals("true")) {
+            System.out.println("Quiet mode enabled");
+        }
         try {
             terminal = TerminalBuilder.builder()
                     .system(true)

@@ -2,8 +2,11 @@ package vfuzz.core;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.xbill.DNS.dnssec.R;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.except.MalformedRequestException;
+import vfuzz.except.WordlistCompletedException;
+import vfuzz.except.WordlistException;
 import vfuzz.logging.Metrics;
 import vfuzz.network.request.ParsedRequestFactory;
 import vfuzz.network.request.WebRequestFactory;
@@ -54,7 +57,7 @@ public class QueueConsumer implements Runnable {
     private final ThreadOrchestrator orchestrator;
     private final ExecutorService executor;
     private final ExecutorService parsingExecutor;
-    private final WordlistReader wordlistReader;
+    private final List<WordlistReader> wordlistReaders;
     private final String baseTargetUrl;
     private final Target target;
     private final String url;
@@ -80,7 +83,7 @@ public class QueueConsumer implements Runnable {
         this.orchestrator = orchestrator;
         this.executor = orchestrator.getExecutor();
         parsingExecutor = Executors.newFixedThreadPool(5);
-        this.wordlistReader = target.getWordlistReader();
+        this.wordlistReaders = target.getWordlistReaders();
         this.baseTargetUrl = ConfigAccessor.getConfigValue("url", String.class);
         this.target = target;
         this.url = target.getUrl();
@@ -118,10 +121,14 @@ public class QueueConsumer implements Runnable {
      */
 
     private void startFuzzing() {
-        if (ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.SUBDOMAIN) {
-            fuzzSubdomains();
-        } else {
+        RequestMode requestMode = ConfigAccessor.getConfigValue("requestMode", RequestMode.class);
+
+        if (requestMode == RequestMode.STANDARD){
             fuzzStandard();
+        } else if (requestMode == RequestMode.SUBDOMAIN) {
+            fuzzSubdomains();
+        } else if (requestMode == RequestMode.FUZZ) {
+            // fuzzFuzzMode();
         }
     }
 
@@ -134,7 +141,7 @@ public class QueueConsumer implements Runnable {
 
     private void fuzzStandard() {
         if (ConfigAccessor.getConfigValue("requestFileFuzzing", String.class) == null) {
-            webRequestFactory = new StandardRequestFactory(url);
+            webRequestFactory = new StandardRequestFactory(target);
         } else {
             webRequestFactory = new ParsedRequestFactory();
         }
@@ -148,24 +155,24 @@ public class QueueConsumer implements Runnable {
         }
 
         while (running) {
-            String payload = wordlistReader.getNextPayload();
-            if (payload == null) {
-                reachedEndOfWordlist();
+            try {
+                if (fileFuzzingEnabled && fileExtensions.length > 0) {
+                    for (String extension : fileExtensions) {
+                        HttpRequestBase request = webRequestFactory.buildRequest();
+                        List<String> payloads = webRequestFactory.getPayloads();
+                        String uri = String.valueOf(request.getURI());
+                        request.setURI(URI.create(uri + extension));
+                        sendAndProcessRequest(request, payloads);
+                    }
+                } else {
+                    HttpRequestBase request = webRequestFactory.buildRequest();
+                    List<String> payloads = webRequestFactory.getPayloads();
+                    sendAndProcessRequest(request, payloads);
+                }
+            } catch (WordlistCompletedException we) {
                 break;
             }
 
-            if (fileFuzzingEnabled && fileExtensions.length > 0) {
-                for (String extension : fileExtensions) {
-                    HttpRequestBase request = webRequestFactory.buildRequest(payload);
-                    String uri = String.valueOf(request.getURI());
-                    request.setURI(URI.create(uri + extension));
-                    sendAndProcessRequest(request, payload);
-                }
-            } else {
-                HttpRequestBase request = webRequestFactory.buildRequest(payload);
-
-                sendAndProcessRequest(request, payload);
-            }
         }
     }
 
@@ -190,7 +197,12 @@ public class QueueConsumer implements Runnable {
         }
 
         while (running) {
+            WordlistReader wordlistReader = null;
+            try {
+                wordlistReader = new WordlistReader(ConfigAccessor.getConfigValue("wordlistPath", String.class));
+            } catch (WordlistException ignored) {
 
+            }
             String payload = wordlistReader.getNextPayload();
             if (payload == null) {
                 reachedEndOfWordlist();
@@ -230,7 +242,7 @@ public class QueueConsumer implements Runnable {
      * @param request The HTTP request to send.
      * @param payload The payload used to generate the request.
      */
-    private void sendAndProcessRequest(HttpRequestBase request, String payload) {
+    private void sendAndProcessRequest(HttpRequestBase request, List<String> payload) {
         target.incrementSentRequestCount();
         WebRequester.sendRequest(request, 250, TimeUnit.MILLISECONDS)
                 .thenApplyAsync(response -> {
@@ -247,16 +259,7 @@ public class QueueConsumer implements Runnable {
                 .exceptionally(ex -> null);
     }
 
-    /**
-     * Parses the HTTP response to determine if it matches any exclusion criteria
-     * (e.g., status codes, content length, excluded URLs).
-     * Valid responses are logged as hits, and recursion is initiated if enabled.
-     *
-     * @param response The HTTP response received.
-     * @param request  The original HTTP request sent.
-     * @param payload  The payload used to generate the request.
-     */
-    private void parseResponse(HttpResponse response, HttpRequestBase request, String payload) {
+    private void parseResponse(HttpResponse response, HttpRequestBase request, List<String> payloads) {
 
         // check for excluded status codes
         int responseCode = response.getStatusLine().getStatusCode();
@@ -290,7 +293,7 @@ public class QueueConsumer implements Runnable {
             return;
         }
 
-        Hit.hitIfNotPresent(requestUrl, response, payload);
+        Hit.hitIfNotPresent(requestUrl, response, payloads);
 
         if (recursionEnabled) {
             orchestrator.initiateRecursion(requestUrl, recursionDepth);
