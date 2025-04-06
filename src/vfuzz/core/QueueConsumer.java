@@ -163,8 +163,7 @@ public class QueueConsumer implements Runnable {
                         try {
                             request = webRequestFactory.buildRequest();
                         } catch (RequestBuildingException re) {
-                            target.incrementSkippedRequestCount();
-                            Metrics.incrementMalformedRequestsCount();
+                            handleMalformedRequest();
                             continue;
                         }
 
@@ -178,8 +177,7 @@ public class QueueConsumer implements Runnable {
                     try {
                         request = webRequestFactory.buildRequest();
                     } catch (RequestBuildingException re) {
-                        target.incrementSkippedRequestCount();
-                        Metrics.incrementMalformedRequestsCount();
+                        handleMalformedRequest();
                         continue;
                     }
 
@@ -251,6 +249,10 @@ public class QueueConsumer implements Runnable {
         }
     }
 
+    private void handleMalformedRequest() {
+        target.incrementSkippedRequestCount();
+        Metrics.incrementMalformedRequestsCount();
+    }
 
     /**
      * Sends an HTTP request and processes the response asynchronously.
@@ -268,8 +270,7 @@ public class QueueConsumer implements Runnable {
             return response;
         }, parsingExecutor)
                 .exceptionally(ex -> {
-                    target.incrementSkippedRequestCount();
-                    Metrics.incrementMalformedRequestsCount();
+                    handleMalformedRequest();
                     return null;
                 });
     }
