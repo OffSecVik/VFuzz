@@ -133,6 +133,9 @@ public class WebRequester {
             try {
                 executeRequest(request, responseFuture);
             } catch (Exception e) {
+                if (e.getMessage().equals("HTTP host may not be null")) {
+
+                }
                 responseFuture.completeExceptionally(new MalformedRequestException(request.getURI() + "", e.getMessage(), e.getCause()));
             }
         };
@@ -151,9 +154,7 @@ public class WebRequester {
 
             if (throwable != null) {
                 if (throwable instanceof MalformedRequestException) {
-                    Metrics.incrementMalformedRequestsCount();
-                    response.setStatusCode(666);
-                    return CompletableFuture.completedFuture(response);
+                    return null;
                 }
                 Metrics.incrementRetriesCount();
                 return handleRetries(request, retryDelay, unit);

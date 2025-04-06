@@ -264,16 +264,17 @@ public class QueueConsumer implements Runnable {
         WebRequester.sendRequest(request, 250, TimeUnit.MILLISECONDS)
                 .thenApplyAsync(response -> {
             try {
-                if (response.getStatusLine().getStatusCode() == 666) {
-                    throw new MalformedRequestException("Fuck");
-                }
                 parseResponse(response, request, payload);
                 target.incrementSuccessfulRequestCount(); // we can increment early since we send the request until it arrives!
             } catch (Exception ignored) {
             }
             return response;
         }, parsingExecutor)
-                .exceptionally(ex -> null);
+                .exceptionally(ex -> {
+                    target.incrementSkippedRequestCount();
+                    Metrics.incrementMalformedRequestsCount();
+                    return null;
+                });
     }
 
     private void parseResponse(HttpResponse response, HttpRequestBase request, List<String> payloads) {

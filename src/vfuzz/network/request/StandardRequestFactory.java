@@ -148,8 +148,6 @@ public class StandardRequestFactory extends WebRequestFactory {
                 clonedRequest.setHeader("User-Agent", RandomAgent.get());
             }
 
-
-
             return clonedRequest;
 
         } catch (Exception e) {
