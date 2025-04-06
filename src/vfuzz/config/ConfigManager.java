@@ -209,6 +209,7 @@ public class ConfigManager {
         if (!configValues.containsKey(key)) {
             configValues.put(key, new ArrayList<>());
         }
+        configValues.get(key).clear();
         configValues.get(key).add(value);
     }
 
