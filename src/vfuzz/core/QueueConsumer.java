@@ -263,11 +263,8 @@ public class QueueConsumer implements Runnable {
         target.incrementSentRequestCount();
         WebRequester.sendRequest(request, 250, TimeUnit.MILLISECONDS)
                 .thenApplyAsync(response -> {
-            try {
-                parseResponse(response, request, payload);
-                target.incrementSuccessfulRequestCount(); // we can increment early since we send the request until it arrives!
-            } catch (Exception ignored) {
-            }
+                    parseResponse(response, request, payload);
+                    target.incrementSuccessfulRequestCount(); // we can increment early since we send the request until it arrives!
             return response;
         }, parsingExecutor)
                 .exceptionally(ex -> {
