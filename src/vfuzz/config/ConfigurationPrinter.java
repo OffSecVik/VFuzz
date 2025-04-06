@@ -4,6 +4,7 @@ import vfuzz.logging.Color;
 import vfuzz.network.strategy.requestmethod.RequestMethod;
 import vfuzz.network.strategy.requestmode.RequestMode;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -107,8 +108,13 @@ public class ConfigurationPrinter {
      * @return A string formatted with the label, configuration value, and color.
      */
     private static <T> String getConfigDisplayString(String key, Class<T> type, AtomicBoolean isDefault, String label) {
-        T value = ConfigAccessor.getConfigValue(key, type, isDefault);
+        List<T> value = ConfigAccessor.getConfigValues(key, type, isDefault);
         String color = isDefault.get() ? Color.GRAY : Color.BLUE_BRIGHT;
-        return label + ": " + color + value + Color.RESET;
+        StringBuilder printString = new StringBuilder(label + ": " + color + value.get(0));
+        for (int i = 1; i < value.size(); i++) {
+            printString.append(", ").append(value.get(i));
+        }
+        printString.append(Color.RESET);
+        return printString.toString();
     }
 }

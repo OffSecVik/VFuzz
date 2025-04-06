@@ -1,5 +1,6 @@
 package vfuzz.config;
 
+import vfuzz.core.ArgumentType;
 import vfuzz.core.CommandLineArgument;
 import vfuzz.logging.Color;
 import vfuzz.network.strategy.requestmode.RequestMode;
@@ -115,9 +116,17 @@ public class ConfigManager {
             CommandLineArgument cmdArg = findArgumentByString(argument);
 
             if (cmdArg != null) {
-                String value = getValueForArgument(passedArguments, cmdArg, i);
-                if (value != null && cmdArg.validate(value)) {
-                    cmdArg.executeAction(this, value);
+                List<String> values = getValueForArgument(passedArguments, cmdArg, i);
+                boolean validationFailed = false;
+                if (values != null) {
+                    for (String value : values) {
+                        if (!cmdArg.validate(value)) {
+                            validationFailed = true;
+                        }
+                    }
+                    if (!validationFailed) {
+                        cmdArg.executeAction(this, values);
+                    }
                 } else if (!cmdArg.isFlag()) {
                     System.out.println(Color.RED + "Error:" + Color.RED_BRIGHT +  " Argument '" + argument + "' expects a value." + Color.RESET);
                     System.exit(0);
@@ -166,14 +175,26 @@ public class ConfigManager {
      * @param index the current index in the command-line arguments
      * @return the value for the argument, or null if no valid value is found
      */
-    private String getValueForArgument(String[] args, CommandLineArgument cmdArg, int index) {
+    private List<String> getValueForArgument(String[] args, CommandLineArgument cmdArg, int index) {
+        List<String> values = new ArrayList<>();
         if (cmdArg.isFlag()) {
             providedArgs.add(cmdArg.getConfigName());
-            return "true";
+            values.add("true");
+            return values;
         }
-        if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
+        if (cmdArg.getArgumentType() == ArgumentType.SINGLE_VALUE) {
+            if (index + 1 < args.length && !args[index + 1].startsWith("-")) {
+                providedArgs.add(cmdArg.getConfigName());
+                values.add(args[++index]);
+                return values;
+            }
+        }
+        if (cmdArg.getArgumentType() == ArgumentType.MULTI_VALUE) {
             providedArgs.add(cmdArg.getConfigName());
-            return args[++index];
+            while (index + 1  < args.length && !args[index + 1].startsWith("-")) {
+                values.add(args[++index]);
+            }
+            return values;
         }
         return null;
     }
@@ -189,6 +210,15 @@ public class ConfigManager {
             configValues.put(key, new ArrayList<>());
         }
         configValues.get(key).add(value);
+    }
+
+    public void setConfigValue(String key, List<String> value) {
+        if (!configValues.containsKey(key)) {
+            configValues.put(key, value);
+        } else {
+            configValues.get(key).clear();
+            configValues.get(key).addAll(value);
+        }
     }
 
     /**

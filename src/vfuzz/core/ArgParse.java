@@ -27,7 +27,6 @@ public class ArgParse {
 
     private static final Set<String> headers = new HashSet<>();
 
-
     /**
      * Registers all available command-line arguments with the {@code ConfigManager} instance.
      * Each argument can be configured with an associated action, validator, description,
@@ -79,7 +78,7 @@ public class ArgParse {
         configManager.registerArgument(new CommandLineArgument(
                 "-e", "--exclude-status-codes", "excludedStatusCodes",
                 (cm, value) -> {
-                    String[] parts = value.split(",");
+                    String[] parts = value.get(0).split(",");
                     List<String> validCodesAndRanges = new ArrayList<>();
                     for (String part : parts) {
                         // in case a range was provided
@@ -111,7 +110,7 @@ public class ArgParse {
         configManager.registerArgument(new CommandLineArgument(
                 "-x", "--extensions","fileExtensions",
                 (cm, value) -> {
-                    String[] extensions = value.split(",");
+                    String[] extensions = value.get(0).split(",");
                     List<String> fileExtensions = new ArrayList<>();
                     for (String e : extensions) {
                         e = e.trim();
@@ -134,7 +133,7 @@ public class ArgParse {
         configManager.registerArgument(new CommandLineArgument(
                 "-l", "--exclude-length", "excludeLength",
                 (cm, value) -> {
-                    String[] lengths = value.split(",");
+                    String[] lengths = value.get(0).split(",");
                     List<String> validLengthsAndRanges = new ArrayList<>();
                     for (String length : lengths) {
                         // in case a range was provided
@@ -218,7 +217,7 @@ public class ArgParse {
                 "--method", "", "requestMethod",
                 (cm, value) -> {
                     try {
-                        RequestMethod method = RequestMethod.valueOf(value.toUpperCase());
+                        RequestMethod method = RequestMethod.valueOf(value.get(0).toUpperCase());
                         cm.setConfigValue("requestMethod", method.name());
                     } catch (IllegalArgumentException e) {
                         System.err.println("Error: Unsupported HTTP method. Currently supported methods are: GET, POST, HEAD");
@@ -238,7 +237,7 @@ public class ArgParse {
                 "--max-retries", "", "maxRetries",
                 (cm, value) -> {
                     try {
-                        int maxRetries = Integer.parseInt(value);
+                        int maxRetries = Integer.parseInt(value.get(0));
                         cm.setConfigValue("maxRetries", String.valueOf(maxRetries));
                     } catch (NumberFormatException e) {
                         System.out.println("Error: --max-retries requires an integer.");
@@ -262,7 +261,7 @@ public class ArgParse {
                 "--rate-limit", "", "rateLimit",
                 (cm, value) -> {
                     try {
-                        int rateLimit = Integer.parseInt(value);
+                        int rateLimit = Integer.parseInt(value.get(0));
                         cm.setConfigValue("rateLimit", String.valueOf(rateLimit));
                     } catch (NumberFormatException e) {
                         System.out.println("Error: --rate-limit requires an integer (max requests per second).");
@@ -317,7 +316,7 @@ public class ArgParse {
 
         configManager.registerArgument(new CommandLineArgument(
                 "-H", "--header", "headers",
-                (cm, value) -> headers.add(value),
+                (cm, value) -> headers.add(value.get(0)),
                 Validator::isValidHeader,
                 "Sets custom headers for the requests. Each header must be in the 'Name: Value' format. Can be used multiple times for multiple headers.\n    Example: -H \"Content-Type: application/json\"",
                 true, null, ArgumentType.SINGLE_VALUE

@@ -1,6 +1,9 @@
 package vfuzz.core;
 
 import vfuzz.config.ConfigManager;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 
@@ -12,7 +15,7 @@ public class CommandLineArgument {
     private final String name;
     private final String alias;
     private final String configName;
-    private final BiConsumer<ConfigManager, String> action;
+    private final BiConsumer<ConfigManager, List<String>> action;
     private final Predicate<String> validator;
     private final String description;
     private final boolean isOptional;
@@ -32,7 +35,7 @@ public class CommandLineArgument {
      * @param defaultValue The default value to use if the argument is not provided.
      * @param argumentType Indicates whether the argument is a flag (i.e., no value required), holds a single value, or multiple values.
      */
-    public CommandLineArgument(String name, String alias, String configName, BiConsumer<ConfigManager, String> action, Predicate<String> validator, String description, boolean isOptional, String defaultValue, ArgumentType argumentType) {
+    public CommandLineArgument(String name, String alias, String configName, BiConsumer<ConfigManager, List<String>> action, Predicate<String> validator, String description, boolean isOptional, String defaultValue, ArgumentType argumentType) {
         this.name = name;
         this.alias = alias;
         this.configName = configName;
@@ -68,6 +71,10 @@ public class CommandLineArgument {
         return defaultValue;
     }
 
+    public ArgumentType getArgumentType() {
+        return argumentType;
+    }
+
     public boolean isFlag() {
         return argumentType == ArgumentType.FLAG;
     }
@@ -88,9 +95,21 @@ public class CommandLineArgument {
      * @param configManager The ConfigManager to which the action is applied.
      * @param argValue      The argument value to process.
      */
+    public void executeAction(ConfigManager configManager, List<String> argValue) {
+        for (String value : argValue) {
+            if (!validator.test(value)) {
+                System.out.println("Validation failed for argument: " + name + " with value: " + argValue);
+                return;
+            }
+        }
+        action.accept(configManager, argValue);
+    }
+
     public void executeAction(ConfigManager configManager, String argValue) {
         if (validator.test(argValue)) {
-            action.accept(configManager, argValue);
+            List<String> a = new ArrayList<>();
+            a.add(argValue);
+            action.accept(configManager, a);
         } else {
             System.out.println("Validation failed for argument: " + name + " with value: " + argValue);
         }
@@ -103,7 +122,9 @@ public class CommandLineArgument {
      */
     public void applyDefaultValue(ConfigManager configManager) {
         if (defaultValue != null) {
-            action.accept(configManager, defaultValue);
+            List<String> l = new ArrayList<String>();
+            l.add(defaultValue);
+            action.accept(configManager, l);
         }
     }
 }
