@@ -25,7 +25,7 @@ public class TerminalOutput implements Runnable {
     public TerminalOutput() {
         String quietMode = ConfigAccessor.getConfigValue("quietMode", String.class);
         if (quietMode.equals("true")) {
-            System.out.println("Quiet mode enabled");
+            this.quietMode = true;
         }
         try {
             terminal = TerminalBuilder.builder()

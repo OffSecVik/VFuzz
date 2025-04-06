@@ -148,9 +148,7 @@ public class StandardRequestFactory extends WebRequestFactory {
                 clonedRequest.setHeader("User-Agent", RandomAgent.get());
             }
 
-            if (clonedRequest.getHeaders("Host").length == 0) {
-                throw new IllegalArgumentException("Host header is empty");
-            }
+
 
             return clonedRequest;
 
