@@ -39,6 +39,8 @@ public class TerminalOutput implements Runnable {
         while (running) {
             handleOutput();
         }
+        printTemporaryOutput(); // hotfix to not lose output before shutdown
+        printExitMessage();
     }
 
     private void handleOutput() {
@@ -179,6 +181,13 @@ public class TerminalOutput implements Runnable {
                             + Color.RESET
             );
         }
+        if (Metrics.getTotalMalformedRequests() > 10) {
+            temporaryOutput.add(
+                    Color.RED_BRIGHT
+                            + "Warning: Suspicious number of malformed requests. Check your parameters?"
+                            + Color.RESET
+            );
+        }
     }
 
     private String getRetryRateColor(double retryRate) {
@@ -199,8 +208,7 @@ public class TerminalOutput implements Runnable {
 
     public void shutdown() {
         running = false;
-        handleOutput(); // print one last time
-        printExitMessage();
+        // handleOutput(); // print one last time
     }
 
     private void moveUpAndDeleteLines(int n) {

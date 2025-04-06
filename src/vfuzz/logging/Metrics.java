@@ -58,7 +58,7 @@ public class Metrics {
     private static final AtomicLong totalRequests = new AtomicLong();
     private static final AtomicLong totalSuccessfulRequests = new AtomicLong();
     private static final AtomicLong totalRetries = new AtomicLong();
-    private static final AtomicLong totalMalformedRequests = new AtomicLong();
+    private static final AtomicLong totalMalformedRequests = new AtomicLong(); // increments when trying to send a malformed request
 
     // Counter for successive measuring points with increased retry rate
     private static int requestsWithIncident = 0;

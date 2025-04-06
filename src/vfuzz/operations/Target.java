@@ -31,6 +31,7 @@ public class Target {
     private final AtomicBoolean allocationComplete = new AtomicBoolean(false);
     public AtomicInteger successfulRequestCount = new AtomicInteger();
     public AtomicInteger sentRequestsCount = new AtomicInteger();
+    public AtomicInteger skippedRequestsCount = new AtomicInteger();
 
     /**
      * Checks if a target has been allocated CompletableFutures for each payload.
@@ -108,6 +109,8 @@ public class Target {
         sentRequestsCount.incrementAndGet();
     }
 
+    public void incrementSkippedRequestCount() { skippedRequestsCount.incrementAndGet(); }
+
     public static int getSentRequestsForAllTargets() {
         int sentRequests = 0;
         for (Target target : targets) {
@@ -116,8 +119,9 @@ public class Target {
         return sentRequests;
     }
 
+    // Returns true if all requests were either sent or threw an exception
     public boolean targetIsFuzzed() {
-        return successfulRequestCount.get() == wordlistReaders.stream().mapToInt(WordlistReader::getWordlistSize).sum() * fileExtensionCount();
+        return (successfulRequestCount.get() + skippedRequestsCount.get()) == wordlistReaders.stream().mapToInt(WordlistReader::getWordlistSize).sum() * fileExtensionCount();
     }
 
     public static boolean allTargetsAreFuzzed() {

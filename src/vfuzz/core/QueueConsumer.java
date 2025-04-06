@@ -5,6 +5,7 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.xbill.DNS.dnssec.R;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.except.MalformedRequestException;
+import vfuzz.except.RequestBuildingException;
 import vfuzz.except.WordlistCompletedException;
 import vfuzz.except.WordlistException;
 import vfuzz.logging.Metrics;
@@ -156,16 +157,32 @@ public class QueueConsumer implements Runnable {
 
         while (running) {
             try {
-                if (fileFuzzingEnabled && fileExtensions.length > 0) {
+                if (fileFuzzingEnabled && fileExtensions.length > 0) { //TODO move file extension logic into web request factory
                     for (String extension : fileExtensions) {
-                        HttpRequestBase request = webRequestFactory.buildRequest();
+                        HttpRequestBase request;
+                        try {
+                            request = webRequestFactory.buildRequest();
+                        } catch (RequestBuildingException re) {
+                            target.incrementSkippedRequestCount();
+                            Metrics.incrementMalformedRequestsCount();
+                            continue;
+                        }
+
                         List<String> payloads = webRequestFactory.getPayloads();
                         String uri = String.valueOf(request.getURI());
                         request.setURI(URI.create(uri + extension));
                         sendAndProcessRequest(request, payloads);
                     }
                 } else {
-                    HttpRequestBase request = webRequestFactory.buildRequest();
+                    HttpRequestBase request;
+                    try {
+                        request = webRequestFactory.buildRequest();
+                    } catch (RequestBuildingException re) {
+                        target.incrementSkippedRequestCount();
+                        Metrics.incrementMalformedRequestsCount();
+                        continue;
+                    }
+
                     List<String> payloads = webRequestFactory.getPayloads();
                     sendAndProcessRequest(request, payloads);
                 }

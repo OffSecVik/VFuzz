@@ -1,10 +1,10 @@
 package vfuzz.network.request;
 
 import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.entity.ContentType;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.core.ArgParse;
 import vfuzz.core.WordlistReader;
+import vfuzz.except.RequestBuildingException;
 import vfuzz.except.WordlistCompletedException;
 import vfuzz.network.strategy.requestmethod.*;
 import vfuzz.network.strategy.requestmode.*;
@@ -14,7 +14,7 @@ import vfuzz.operations.Target;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -125,7 +125,7 @@ public class StandardRequestFactory extends WebRequestFactory {
      * @return A {@link HttpRequestBase} object representing the fully configured HTTP request.
      */
     @Override
-    public HttpRequestBase buildRequest() throws WordlistCompletedException {
+    public HttpRequestBase buildRequest() throws WordlistCompletedException, RequestBuildingException {
         String payload = wordlistReaders.get(0).getNextPayload();
         if (payload == null) {
             throw new WordlistCompletedException();
@@ -148,15 +148,15 @@ public class StandardRequestFactory extends WebRequestFactory {
                 clonedRequest.setHeader("User-Agent", RandomAgent.get());
             }
 
+            if (clonedRequest.getHeaders("Host").length == 0) {
+                throw new IllegalArgumentException("Host header is empty");
+            }
+
             return clonedRequest;
 
-        } catch (IllegalArgumentException e) {
-            System.err.println("Invalid URI: " + e.getMessage());
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            throw new RequestBuildingException(e.getMessage(), e.getCause());
         }
-
-        return null;
     }
 
 
