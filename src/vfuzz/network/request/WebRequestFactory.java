@@ -1,6 +1,7 @@
 package vfuzz.network.request;
 
 import org.apache.http.client.methods.HttpRequestBase;
+import vfuzz.except.controlflow.PayloadGenerationFinishedException;
 import vfuzz.except.controlflow.WordlistCompletedException;
 
 import java.util.ArrayList;
@@ -44,5 +45,9 @@ public abstract class WebRequestFactory {
      *
      * @return A {@link HttpRequestBase} object representing the HTTP request.
      */
-    public abstract HttpRequestBase buildRequest() throws WordlistCompletedException;
+    public abstract HttpRequestBase buildRequest() throws PayloadGenerationFinishedException;
+
+    protected void setPayloads(List<String> payloads) {
+        this.currentPayloads = payloads;
+    }
 }

@@ -4,10 +4,12 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpRequestBase;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.except.RequestBuildingException;
+import vfuzz.except.controlflow.PayloadGenerationFinishedException;
 import vfuzz.except.controlflow.WordlistCompletedException;
 import vfuzz.except.WordlistException;
 import vfuzz.logging.Metrics;
-import vfuzz.network.request.ParsedRequestFactory;
+import vfuzz.network.request.FuzzRequestFactory;
+import vfuzz.network.request.FileRequestFactory;
 import vfuzz.network.request.WebRequestFactory;
 import vfuzz.network.strategy.requestmode.RequestMode;
 import vfuzz.network.request.StandardRequestFactory;
@@ -122,12 +124,11 @@ public class QueueConsumer implements Runnable {
     private void startFuzzing() {
         RequestMode requestMode = ConfigAccessor.getConfigValue("requestMode", RequestMode.class);
 
-        if (requestMode == RequestMode.STANDARD){
-            fuzzStandard();
-        } else if (requestMode == RequestMode.SUBDOMAIN) {
-            fuzzSubdomains();
-        } else if (requestMode == RequestMode.FUZZ) {
-            // fuzzFuzzMode();
+        switch (requestMode) {
+            case STANDARD -> fuzzStandard();
+            case SUBDOMAIN -> fuzzSubdomains();
+            case FUZZ -> fuzzFuzzMode();
+            case FILE -> fuzzFileMode();
         }
     }
 
@@ -138,54 +139,30 @@ public class QueueConsumer implements Runnable {
      * <p>Requests are built and sent for each payload, and responses are processed.</p>
      */
 
+    private void fuzzFileMode() {
+        webRequestFactory = new FileRequestFactory();
+    }
+
+    private void fuzzFuzzMode() {
+        webRequestFactory = new FuzzRequestFactory(target);
+    }
+
     private void fuzzStandard() {
-        if (ConfigAccessor.getConfigValue("requestFileFuzzing", String.class) == null) {
-            webRequestFactory = new StandardRequestFactory(target);
-        } else {
-            webRequestFactory = new ParsedRequestFactory();
-        }
-
-        boolean fileFuzzingEnabled = false;
-
-        String[] fileExtensions = null;
-        if (ConfigAccessor.getConfigValue("fileExtensions", String.class) != null) {
-            fileFuzzingEnabled = true;
-            fileExtensions = ConfigAccessor.getConfigValue("fileExtensions", String.class).split(",");
-        }
-
+        webRequestFactory = new StandardRequestFactory(target);
         while (running) {
             try {
-                if (fileFuzzingEnabled && fileExtensions.length > 0) { //TODO move file extension logic into web request factory
-                    for (String extension : fileExtensions) {
-                        HttpRequestBase request;
-                        try {
-                            request = webRequestFactory.buildRequest();
-                        } catch (RequestBuildingException re) {
-                            handleMalformedRequest();
-                            continue;
-                        }
-
-                        List<String> payloads = webRequestFactory.getPayloads();
-                        String uri = String.valueOf(request.getURI());
-                        request.setURI(URI.create(uri + extension));
-                        sendAndProcessRequest(request, payloads);
-                    }
-                } else {
-                    HttpRequestBase request;
-                    try {
-                        request = webRequestFactory.buildRequest();
-                    } catch (RequestBuildingException re) {
-                        handleMalformedRequest();
-                        continue;
-                    }
-
-                    List<String> payloads = webRequestFactory.getPayloads();
-                    sendAndProcessRequest(request, payloads);
+                HttpRequestBase request;
+                try {
+                    request = webRequestFactory.buildRequest();
+                } catch (RequestBuildingException re) {
+                    handleMalformedRequest();
+                    continue;
                 }
-            } catch (WordlistCompletedException we) {
+                List<String> payloads = webRequestFactory.getPayloads();
+                sendAndProcessRequest(request, payloads);
+                } catch (PayloadGenerationFinishedException pe) {
                 break;
             }
-
         }
     }
 

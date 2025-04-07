@@ -32,5 +32,7 @@ public enum RequestMode {
      * The fuzzing request mode, where the request is modified dynamically
      * with different payloads (e.g., fuzzing inputs) inserted into the URL path.
      */
-    FUZZ
+    FUZZ,
+
+    FILE
 }

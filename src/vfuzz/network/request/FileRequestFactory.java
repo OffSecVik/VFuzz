@@ -7,6 +7,7 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.StringEntity;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.core.WordlistReader;
+import vfuzz.except.controlflow.PayloadGenerationFinishedException;
 import vfuzz.except.controlflow.WordlistCompletedException;
 import vfuzz.except.WordlistException;
 import vfuzz.operations.RandomAgent;
@@ -28,7 +29,7 @@ import java.util.Objects;
  * requests that replace the fuzz marker with a specified payload. This is particularly useful
  * for more complex or customized requests that may be used in fuzzing scenarios.
  */
-public class ParsedRequestFactory extends WebRequestFactory {
+public class FileRequestFactory extends WebRequestFactory {
 
     private final ParsedHttpRequest prototypeRequest;
 
@@ -42,7 +43,7 @@ public class ParsedRequestFactory extends WebRequestFactory {
      * {@link ParsedHttpRequest} object is initialized by parsing the content of the file.
      * If the file cannot be read, a {@link RuntimeException} is thrown.
      */
-    public ParsedRequestFactory() {
+    public FileRequestFactory() {
         super();
         for (String path : ConfigAccessor.getConfigValues("wordlistPath", String.class)) {
             try {
@@ -66,10 +67,10 @@ public class ParsedRequestFactory extends WebRequestFactory {
      * @return A fully-constructed {@link HttpRequestBase} object with the fuzzing payload inserted.
      */
     @Override
-    public HttpRequestBase buildRequest() throws WordlistCompletedException {
+    public HttpRequestBase buildRequest() throws PayloadGenerationFinishedException {
         String payload = wordlistReaders.get(0).getNextPayload();
         if (payload == null) {
-            throw new WordlistCompletedException();
+            throw new PayloadGenerationFinishedException();
         }
         ParsedHttpRequest rawCopy = new ParsedHttpRequest(prototypeRequest);
         return buildRequestFromFile(rawCopy, payload);

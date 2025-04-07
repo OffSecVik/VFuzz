@@ -3,17 +3,17 @@ package vfuzz.network.request;
 import org.apache.http.client.methods.HttpRequestBase;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.core.ArgParse;
-import vfuzz.core.WordlistReader;
+import vfuzz.core.PayloadGenerator;
 import vfuzz.except.RequestBuildingException;
-import vfuzz.except.controlflow.WordlistCompletedException;
+import vfuzz.except.controlflow.PayloadGenerationFinishedException;
 import vfuzz.network.strategy.requestmethod.*;
 import vfuzz.network.strategy.requestmode.*;
 import vfuzz.operations.RandomAgent;
 import vfuzz.operations.Target;
 
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 /**
  * The {@code StandardRequestFactory} class is responsible for constructing
@@ -32,8 +32,9 @@ public class StandardRequestFactory extends WebRequestFactory {
 
     private final boolean isUserAgentRandomizationEnabled;
     private final String targetUrl;
-    private final Target target;
-    private final List<WordlistReader> wordlistReaders;
+    private final PayloadGenerator payloadGenerator;
+    private String[] fileExtensions = null;
+    private int fileExtensionIndex = 0;
 
     private HttpRequestBase prototypeRequest;
 
@@ -54,11 +55,14 @@ public class StandardRequestFactory extends WebRequestFactory {
 
     public StandardRequestFactory(Target target) {
         super();
-        this.target = target;
         this.targetUrl = target.getUrl();
-        this.wordlistReaders = target.getWordlistReaders();
+        this.payloadGenerator = new PayloadGenerator(target.getWordlistReaders());
         buildPrototypeRequest();
         isUserAgentRandomizationEnabled = ConfigAccessor.getConfigValue("randomAgent", Boolean.class);
+
+        if (ConfigAccessor.getConfigValue("fileExtensions", String.class) != null) {
+            fileExtensions = ConfigAccessor.getConfigValue("fileExtensions", String.class).split(",");
+        }
 
     }
 
@@ -74,7 +78,6 @@ public class StandardRequestFactory extends WebRequestFactory {
         setUpUserAgent();
         setUpCookies();
     }
-
 
     /**
      * Sets up request headers from the configuration.
@@ -113,21 +116,50 @@ public class StandardRequestFactory extends WebRequestFactory {
         }
     }
 
-    /**
-     * Builds a customized HTTP request by injecting a fuzzing payload into the URL.
-     *
-     * <p>This method encodes the payload, clones the prototype request, and modifies the
-     * request according to the selected request mode (e.g., VHOST, SUBDOMAIN). Additionally,
-     * it randomizes the User-Agent header if that feature is enabled in the configuration.
-     *
-     * @return A {@link HttpRequestBase} object representing the fully configured HTTP request.
-     */
-    @Override
-    public HttpRequestBase buildRequest() throws WordlistCompletedException, RequestBuildingException {
-        String payload = wordlistReaders.get(0).getNextPayload();
-        if (payload == null) {
-            throw new WordlistCompletedException();
+    private HttpRequestBase buildRequestWithFileExtensions() throws PayloadGenerationFinishedException {
+        if (getPayloads().isEmpty()) {
+            setPayloads(payloadGenerator.generatePayloads());
         }
+        if (fileExtensionIndex == fileExtensions.length) {
+            fileExtensionIndex = 0;
+            setPayloads(payloadGenerator.generatePayloads());
+        }
+        String payload = getPayloads().get(0);
+
+        currentPayloads.clear();
+        currentPayloads.add(payload);
+
+        String extension = fileExtensions[fileExtensionIndex];
+
+        try {
+            String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8);
+
+            if (!payload.equals(encodedPayload)) {
+                payload = encodedPayload;
+            }
+
+            HttpRequestBase clonedRequest = requestMethodStrategy.cloneRequest(prototypeRequest);
+
+            requestModeStrategy.modifyRequest(clonedRequest, targetUrl, payload);
+
+            if (isUserAgentRandomizationEnabled) {
+                clonedRequest.setHeader("User-Agent", RandomAgent.get());
+            }
+
+            String uri = String.valueOf(clonedRequest.getURI());
+            clonedRequest.setURI(URI.create(uri + extension));
+            fileExtensionIndex++;
+            return clonedRequest;
+
+        } catch (Exception e) {
+            throw new RequestBuildingException(e.getMessage(), e.getCause());
+        }
+    }
+
+    private HttpRequestBase buildRequestWithoutFileExtensions() throws PayloadGenerationFinishedException {
+        setPayloads(payloadGenerator.generatePayloads());
+        String payload = getPayloads().get(0);
+
         currentPayloads.clear();
         currentPayloads.add(payload);
         try {
@@ -153,5 +185,22 @@ public class StandardRequestFactory extends WebRequestFactory {
         }
     }
 
+    /**
+     * Builds a customized HTTP request by injecting a fuzzing payload into the URL.
+     *
+     * <p>This method encodes the payload, clones the prototype request, and modifies the
+     * request according to the selected request mode (e.g., VHOST, SUBDOMAIN). Additionally,
+     * it randomizes the User-Agent header if that feature is enabled in the configuration.
+     *
+     * @return A {@link HttpRequestBase} object representing the fully configured HTTP request.
+     */
+    @Override
+    public HttpRequestBase buildRequest() throws RequestBuildingException, PayloadGenerationFinishedException {
 
+        if (fileExtensions != null) {
+            return buildRequestWithFileExtensions();
+        } else {
+            return buildRequestWithoutFileExtensions();
+        }
+    }
 }
