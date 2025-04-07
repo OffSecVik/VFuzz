@@ -134,6 +134,7 @@ public class ConfigManager {
             }
         }
 
+        // set mode to FUZZ in case there was a FUZZ marker in POST data
         String postRequestData = ConfigAccessor.getConfigValue("postRequestData",String.class);
         String fuzzMarker = ConfigAccessor.getConfigValue("fuzzMarker",String.class);
         if (postRequestData != null && fuzzMarker != null) {
@@ -142,6 +143,7 @@ public class ConfigManager {
             }
         }
 
+        // Handle availability of recursive mode
         if (ConfigAccessor.getConfigValue("recursionEnabled", Boolean.class)
             && ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.VHOST) {
             System.out.println(Color.YELLOW + "Note: recursive mode is not available for vhost fuzzing." + Color.RESET);
@@ -149,6 +151,47 @@ public class ConfigManager {
             providedArgs.remove(recursion.getConfigName());
             providedArgs.add(recursion.getConfigName());
             recursion.executeAction(this, "false");
+        }
+
+        if (ConfigAccessor.getConfigValue("recursionEnabled", Boolean.class)
+                && ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.SUBDOMAIN) {
+            System.out.println(Color.YELLOW + "Note: recursive mode is not available for subdomain fuzzing." + Color.RESET);
+            CommandLineArgument recursion = findArgumentByString("--recursive");
+            providedArgs.remove(recursion.getConfigName());
+            providedArgs.add(recursion.getConfigName());
+            recursion.executeAction(this, "false");
+        }
+
+        if (ConfigAccessor.getConfigValue("recursionEnabled", Boolean.class)
+                && ConfigAccessor.getConfigValue("requestFileMode", RequestMode.class) != null) {
+            System.out.println(Color.YELLOW + "Note: recursive mode is not available for file fuzzing." + Color.RESET);
+            CommandLineArgument recursion = findArgumentByString("--recursive");
+            providedArgs.remove(recursion.getConfigName());
+            providedArgs.add(recursion.getConfigName());
+            recursion.executeAction(this, "false");
+        }
+
+        // handle availability of file extension fuzzing
+        if ((ConfigAccessor.getConfigValue("fileExtensions", String.class) != null)
+                && !((ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.FUZZ
+                || ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.STANDARD)))
+        {
+            System.out.println(Color.YELLOW + "Note: fuzzing for file extensions is only available in standard or FUZZ mode." + Color.RESET);
+            CommandLineArgument fileExtensions = findArgumentByString("-x");
+            providedArgs.remove(fileExtensions.getConfigName());
+        }
+
+        // handle supplying too many wordlists when not in FUZZ mode
+        if (ConfigAccessor.getConfigValue("requestMode", RequestMode.class) != RequestMode.FUZZ
+                && ConfigAccessor.getConfigValues("wordlistPath", String.class).size() > 1)
+        {
+            System.out.println(Color.YELLOW + "Note: supplied too many wordlists, using only the first one." + Color.RESET);
+            CommandLineArgument wordlists = findArgumentByString("-w");
+            List<String> firstWordlistProvided = new ArrayList<>();
+            firstWordlistProvided.add(ConfigAccessor.getConfigValues("wordlistPath", String.class).get(0));
+            providedArgs.remove(wordlists.getConfigName());
+            providedArgs.add(wordlists.getConfigName());
+            wordlists.executeAction(this, firstWordlistProvided);
         }
     }
 
