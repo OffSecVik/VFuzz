@@ -3,6 +3,7 @@ package vfuzz.network.strategy.requestmode;
 import org.apache.http.client.methods.HttpRequestBase;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 
 /**
  * The {@code RequestModeStrategySubdomain} class is a concrete implementation of
@@ -29,14 +30,14 @@ public class RequestModeStrategySubdomain extends RequestModeStrategy {
      * @throws URISyntaxException If the modified URL is invalid or malformed.
      */
     @Override
-    public void modifyRequest(HttpRequestBase request, String requestUrl, String payload) throws URISyntaxException {
+    public void modifyRequest(HttpRequestBase request, String requestUrl, List<String> payload) throws URISyntaxException {
         requestUrl = requestUrl.endsWith("/") ? requestUrl : requestUrl + "/";
 
         // Rebuild the URL with the payload as the subdomain
-        String rebuiltUrl = urlRebuilder(requestUrl, payload);
+        String rebuiltUrl = urlRebuilder(requestUrl, payload.get(0));
 
         // Build the virtual host URL for the Host header
-        String vhostUrl = vhostRebuilder(requestUrl, payload);
+        String vhostUrl = vhostRebuilder(requestUrl, payload.get(0));
 
         // Set the modified URI and Host header in the request
         request.setURI(new URI(rebuiltUrl));

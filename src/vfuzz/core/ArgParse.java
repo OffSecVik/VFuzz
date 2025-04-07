@@ -204,16 +204,6 @@ public class ArgParse {
         ));
 
         configManager.registerArgument(new CommandLineArgument(
-                "--file", "", "requestMode",
-                (cm, value) -> cm.setConfigValue("requestMode", RequestMode.FILE.name()),
-                value -> true,
-                "Activates the FILE fuzzing mode.",
-                true,
-                null,
-                ArgumentType.FLAG
-        ));
-
-        configManager.registerArgument(new CommandLineArgument(
                 "--dns-server","","DNSServer",
                 (cm, value) -> cm.setConfigValue("DNSServer", value),
                 value -> true,
@@ -315,7 +305,8 @@ public class ArgParse {
                 "-r", "--request-file", "requestFileFuzzing",
                 (cm, value) -> {
                     cm.setConfigValue("requestFilePath", value);
-                    cm.setConfigValue("requestMode", RequestMode.FILE.name());
+                    cm.setConfigValue("requestFileMode", "true");
+                    cm.setConfigValue("requestMode", RequestMode.FUZZ.name());
                 },
                 Validator::isValidFile,
                 "Specifies the filepath to the HTTP request file for fuzzing. This activates file-based fuzzing mode. Ensure the file exists.\n    Example: -r \"/path/to/requestfile.txt\"",

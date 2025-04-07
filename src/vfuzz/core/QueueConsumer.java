@@ -5,10 +5,8 @@ import org.apache.http.client.methods.HttpRequestBase;
 import vfuzz.config.ConfigAccessor;
 import vfuzz.except.RequestBuildingException;
 import vfuzz.except.controlflow.PayloadGenerationFinishedException;
-import vfuzz.except.controlflow.WordlistCompletedException;
 import vfuzz.except.WordlistException;
 import vfuzz.logging.Metrics;
-import vfuzz.network.request.FuzzRequestFactory;
 import vfuzz.network.request.FileRequestFactory;
 import vfuzz.network.request.WebRequestFactory;
 import vfuzz.network.strategy.requestmode.RequestMode;
@@ -18,7 +16,6 @@ import vfuzz.operations.Hit;
 import vfuzz.operations.Range;
 import vfuzz.operations.Target;
 
-import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -71,7 +68,7 @@ public class QueueConsumer implements Runnable {
     private final Set<Range> excludedLength;
     private final List<String> excludedResults;
     private WebRequestFactory webRequestFactory;
-
+    private RequestMode requestMode;
 
     /**
      * Constructs a new {@code QueueConsumer} instance with the specified {@link ThreadOrchestrator} and {@link Target}.
@@ -80,7 +77,7 @@ public class QueueConsumer implements Runnable {
      * @param target       The target being fuzzed by the current consumer.
      */
     public QueueConsumer(ThreadOrchestrator orchestrator, Target target) {
-
+        requestMode = ConfigAccessor.getConfigValue("requestMode", RequestMode.class);
         this.orchestrator = orchestrator;
         this.executor = orchestrator.getExecutor();
         parsingExecutor = Executors.newFixedThreadPool(5);
@@ -122,13 +119,21 @@ public class QueueConsumer implements Runnable {
      */
 
     private void startFuzzing() {
-        RequestMode requestMode = ConfigAccessor.getConfigValue("requestMode", RequestMode.class);
 
         switch (requestMode) {
-            case STANDARD -> fuzzStandard();
+            case STANDARD, FUZZ, VHOST -> {
+                setUpRequestFactory();
+                fuzzStandard();
+            }
             case SUBDOMAIN -> fuzzSubdomains();
-            case FUZZ -> fuzzFuzzMode();
-            case FILE -> fuzzFileMode();
+        }
+    }
+
+    private void setUpRequestFactory() {
+        if (ConfigAccessor.getConfigValue("requestFileMode", String.class) != null) {
+            webRequestFactory = new FileRequestFactory();
+        } else {
+            webRequestFactory = new StandardRequestFactory(target);
         }
     }
 
@@ -138,14 +143,6 @@ public class QueueConsumer implements Runnable {
      *
      * <p>Requests are built and sent for each payload, and responses are processed.</p>
      */
-
-    private void fuzzFileMode() {
-        webRequestFactory = new FileRequestFactory();
-    }
-
-    private void fuzzFuzzMode() {
-        webRequestFactory = new FuzzRequestFactory(target);
-    }
 
     private void fuzzStandard() {
         webRequestFactory = new StandardRequestFactory(target);

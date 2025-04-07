@@ -2,6 +2,7 @@ package vfuzz.network.strategy.requestmode;
 
 import org.apache.http.client.methods.HttpRequestBase;
 import java.net.URISyntaxException;
+import java.util.List;
 
 /**
  * The {@code RequestModeStrategy} abstract class defines a strategy for modifying
@@ -26,7 +27,7 @@ public abstract class RequestModeStrategy {
      * @param payload The payload to be injected into the URL.
      * @throws URISyntaxException if the URL is malformed or invalid.
      */
-    public abstract void modifyRequest(HttpRequestBase request, String url, String payload) throws URISyntaxException;
+    public abstract void modifyRequest(HttpRequestBase request, String url, List<String> payload) throws URISyntaxException;
 
     /**
      * Rebuilds the URL for VHOST and SUBDOMAIN modes by injecting the payload

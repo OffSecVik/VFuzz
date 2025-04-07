@@ -3,6 +3,7 @@ package vfuzz.network.strategy.requestmode;
 import org.apache.http.client.methods.HttpRequestBase;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 
 /**
  * The {@code RequestModeStrategyVhost} class is a concrete implementation of
@@ -26,7 +27,7 @@ public class RequestModeStrategyVhost extends RequestModeStrategy {
      * @throws URISyntaxException If the modified URL or host header is malformed.
      */
     @Override
-    public void modifyRequest(HttpRequestBase request, String requestUrl, String payload) throws URISyntaxException {
+    public void modifyRequest(HttpRequestBase request, String requestUrl, List<String> payload) throws URISyntaxException {
 
         // Ensure the base URL ends with a trailing slash
         requestUrl = requestUrl.endsWith("/") ? requestUrl : requestUrl + "/";
@@ -35,7 +36,7 @@ public class RequestModeStrategyVhost extends RequestModeStrategy {
         request.setURI(new URI(requestUrl));
 
         // Rebuild the virtual host URL using the payload
-        String vhostUrl = vhostRebuilder(requestUrl, payload);
+        String vhostUrl = vhostRebuilder(requestUrl, payload.get(0));
 
         // Set the "Host" header to the virtual host URL
         request.setHeader("Host", vhostUrl);

@@ -4,6 +4,7 @@ import org.apache.http.client.methods.HttpRequestBase;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 
 /**
  * The {@code RequestModeStrategyStandard} class is a concrete implementation of
@@ -28,8 +29,8 @@ public class RequestModeStrategyStandard extends RequestModeStrategy {
      * @throws URISyntaxException If the modified URL is invalid or malformed.
      */
     @Override
-    public void modifyRequest(HttpRequestBase request, String requestUrl, String payload) throws URISyntaxException {
+    public void modifyRequest(HttpRequestBase request, String requestUrl, List<String> payload) throws URISyntaxException {
         requestUrl = requestUrl.endsWith("/") ? requestUrl : requestUrl + "/";
-        request.setURI(new URI(requestUrl + payload));
+        request.setURI(new URI(requestUrl + payload.get(0)));
     }
 }

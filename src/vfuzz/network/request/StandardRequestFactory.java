@@ -14,6 +14,7 @@ import vfuzz.operations.Target;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * The {@code StandardRequestFactory} class is responsible for constructing
@@ -117,6 +118,7 @@ public class StandardRequestFactory extends WebRequestFactory {
     }
 
     private HttpRequestBase buildRequestWithFileExtensions() throws PayloadGenerationFinishedException {
+        // generate payloads for the first time
         if (getPayloads().isEmpty()) {
             setPayloads(payloadGenerator.generatePayloads());
         }
@@ -124,23 +126,17 @@ public class StandardRequestFactory extends WebRequestFactory {
             fileExtensionIndex = 0;
             setPayloads(payloadGenerator.generatePayloads());
         }
-        String payload = getPayloads().get(0);
-
-        currentPayloads.clear();
-        currentPayloads.add(payload);
+        List<String> payloads = getPayloads();
 
         String extension = fileExtensions[fileExtensionIndex];
 
         try {
-            String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8);
 
-            if (!payload.equals(encodedPayload)) {
-                payload = encodedPayload;
-            }
+            urlEncodePayloads(payloads);
 
             HttpRequestBase clonedRequest = requestMethodStrategy.cloneRequest(prototypeRequest);
 
-            requestModeStrategy.modifyRequest(clonedRequest, targetUrl, payload);
+            requestModeStrategy.modifyRequest(clonedRequest, targetUrl, payloads);
 
             if (isUserAgentRandomizationEnabled) {
                 clonedRequest.setHeader("User-Agent", RandomAgent.get());
@@ -158,21 +154,15 @@ public class StandardRequestFactory extends WebRequestFactory {
 
     private HttpRequestBase buildRequestWithoutFileExtensions() throws PayloadGenerationFinishedException {
         setPayloads(payloadGenerator.generatePayloads());
-        String payload = getPayloads().get(0);
+        List<String> payloads = getPayloads();
 
-        currentPayloads.clear();
-        currentPayloads.add(payload);
         try {
 
-            String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8);
-
-            if (!payload.equals(encodedPayload)) {
-                payload = encodedPayload;
-            }
+            urlEncodePayloads(payloads);
 
             HttpRequestBase clonedRequest = requestMethodStrategy.cloneRequest(prototypeRequest);
 
-            requestModeStrategy.modifyRequest(clonedRequest, targetUrl, payload);
+            requestModeStrategy.modifyRequest(clonedRequest, targetUrl, payloads);
 
             if (isUserAgentRandomizationEnabled) {
                 clonedRequest.setHeader("User-Agent", RandomAgent.get());
@@ -201,6 +191,17 @@ public class StandardRequestFactory extends WebRequestFactory {
             return buildRequestWithFileExtensions();
         } else {
             return buildRequestWithoutFileExtensions();
+        }
+    }
+
+    private void urlEncodePayloads(List<String> payloads) {
+        for (int i = 0; i < payloads.size(); i++) {
+            String payload = payloads.get(i);
+            String encodedPayload = URLEncoder.encode(payload, StandardCharsets.UTF_8);
+
+            if (!payload.equals(encodedPayload)) {
+                payloads.set(i, encodedPayload);
+            }
         }
     }
 }

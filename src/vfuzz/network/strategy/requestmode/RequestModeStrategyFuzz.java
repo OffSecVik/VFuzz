@@ -11,6 +11,8 @@ import vfuzz.core.ArgParse;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.regex.Matcher;
 
 /**
  * The {@code RequestModeStrategyFuzz} class is a concrete implementation of
@@ -36,38 +38,44 @@ public class RequestModeStrategyFuzz extends RequestModeStrategy {
         contentType = ArgParse.getContentType();
     }
 
-    /**
-     * Modifies the given HTTP request by replacing the fuzz marker in the
-     * request URL with the fuzzing payload.
-     *
-     * <p>This method replaces the first occurrence of the fuzz marker in the
-     * URL with the provided payload, constructing a new URL that is used for
-     * the HTTP request.
-     *
-     * @param request    The {@link HttpRequestBase} object representing the HTTP request to be modified.
-     * @param requestUrl The original URL containing the fuzz marker.
-     * @param payload    The fuzzing payload that will replace the fuzz marker in the URL.
-     * @throws URISyntaxException If the modified URL is invalid or malformed.
-     */
     @Override
-    public void modifyRequest(HttpRequestBase request, String requestUrl, String payload) throws URISyntaxException {
-        if ("POST".equals(ConfigAccessor.getConfigValue("requestMethod", String.class))) {
+    public void modifyRequest(HttpRequestBase request, String requestUrl, List<String> payloads) throws URISyntaxException {
+
+        if ("POST".equalsIgnoreCase(ConfigAccessor.getConfigValue("requestMethod", String.class))) {
             try {
-                byte[] contentBytes = ((HttpPost) request).getEntity().getContent().readAllBytes();
-                String content = new String(contentBytes, StandardCharsets.UTF_8).replaceFirst(fuzzMarker, payload);
+                HttpPost postRequest = (HttpPost) request;
+                byte[] contentBytes = postRequest.getEntity().getContent().readAllBytes();
+                String content = new String(contentBytes, StandardCharsets.UTF_8);
+
+                for (String payload : payloads) {
+                    if (requestUrl.contains(fuzzMarker)) {
+                        requestUrl = requestUrl.replaceFirst(fuzzMarker, Matcher.quoteReplacement(payload));
+                        continue;
+                    }
+
+                    if (content.contains(fuzzMarker)) {
+                        content = content.replaceFirst(fuzzMarker, Matcher.quoteReplacement(payload));
+                    }
+                }
 
                 if (contentType != null) {
-                    ((HttpPost) request).setEntity(new StringEntity(content, contentType));
+                    postRequest.setEntity(new StringEntity(content, contentType));
                 } else {
-                    ((HttpPost) request).setEntity(new StringEntity(content));
+                    postRequest.setEntity(new StringEntity(content));
                 }
 
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Failed to modify POST request body", e);
             }
-            request.setURI(new URI(requestUrl));
+
+            request.setURI(new URI(requestUrl)); // leave URL untouched for POST
             return;
         }
-        request.setURI(new URI(requestUrl.replaceFirst(fuzzMarker, payload)));
+
+        for (String payload : payloads) {
+            requestUrl = requestUrl.replaceFirst(fuzzMarker, Matcher.quoteReplacement(payload));
+        }
+        request.setURI(new URI(requestUrl));
     }
 }
+
