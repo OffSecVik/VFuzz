@@ -25,7 +25,7 @@ import java.util.regex.Matcher;
  */
 public class RequestModeStrategyFuzz extends RequestModeStrategy {
 
-    private final String fuzzMarker;
+    private final List<String> fuzzMarkers;
     private final ContentType contentType;
 
     /**
@@ -34,7 +34,7 @@ public class RequestModeStrategyFuzz extends RequestModeStrategy {
      * in the URL that will be replaced with fuzzing payloads.
      */
     public RequestModeStrategyFuzz() {
-        fuzzMarker = ConfigAccessor.getConfigValue("fuzzMarker", String.class);
+        fuzzMarkers = ConfigAccessor.getConfigValues("fuzzMarker", String.class);
         contentType = ArgParse.getContentType();
     }
 
@@ -47,7 +47,11 @@ public class RequestModeStrategyFuzz extends RequestModeStrategy {
                 byte[] contentBytes = postRequest.getEntity().getContent().readAllBytes();
                 String content = new String(contentBytes, StandardCharsets.UTF_8);
 
-                for (String payload : payloads) {
+
+                for (int i = 0; i < fuzzMarkers.size(); i++) {
+                    String fuzzMarker = fuzzMarkers.get(i);
+                    String payload = payloads.get(i);
+
                     if (requestUrl.contains(fuzzMarker)) {
                         requestUrl = requestUrl.replaceFirst(fuzzMarker, Matcher.quoteReplacement(payload));
                         continue;
@@ -72,9 +76,10 @@ public class RequestModeStrategyFuzz extends RequestModeStrategy {
             return;
         }
 
-        for (String payload : payloads) {
-            requestUrl = requestUrl.replaceFirst(fuzzMarker, Matcher.quoteReplacement(payload));
+        for (int i = 0; i < fuzzMarkers.size(); i++) {
+            requestUrl = requestUrl.replaceFirst(fuzzMarkers.get(i), Matcher.quoteReplacement(payloads.get(i)));
         }
+
         request.setURI(new URI(requestUrl));
     }
 }
