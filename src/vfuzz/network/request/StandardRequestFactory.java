@@ -5,16 +5,14 @@ import vfuzz.config.ConfigAccessor;
 import vfuzz.core.ArgParse;
 import vfuzz.core.WordlistReader;
 import vfuzz.except.RequestBuildingException;
-import vfuzz.except.WordlistCompletedException;
+import vfuzz.except.controlflow.WordlistCompletedException;
 import vfuzz.network.strategy.requestmethod.*;
 import vfuzz.network.strategy.requestmode.*;
 import vfuzz.operations.RandomAgent;
 import vfuzz.operations.Target;
 
-import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.List;
 
 /**

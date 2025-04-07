@@ -18,7 +18,8 @@ import vfuzz.except.WordlistException;
  * the current index being accessed from the wordlist.
  */
 public class WordlistReader {
-    private static List<String> wordlist;
+    private final String path;
+    private List<String> wordlist;
     private final AtomicInteger currentIndex = new AtomicInteger(0);
 
 
@@ -36,6 +37,7 @@ public class WordlistReader {
         if (path == null || path.trim().isEmpty()) {
             throw new WordlistException("Path cannot be null or empty");
         }
+        this.path = path;
         synchronized (WordlistReader.class) {
             if (wordlist == null) {
                 try {
@@ -62,6 +64,14 @@ public class WordlistReader {
     public String getNextPayload() {
         int index = currentIndex.getAndIncrement();
         return index < wordlist.size() ? wordlist.get(index) : null;
+    }
+
+    public void reset() {
+        currentIndex.set(0);
+    }
+
+    public String getPath() {
+        return path;
     }
 
     public int getWordlistSize() {

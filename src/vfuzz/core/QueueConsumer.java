@@ -2,11 +2,9 @@ package vfuzz.core;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpRequestBase;
-import org.xbill.DNS.dnssec.R;
 import vfuzz.config.ConfigAccessor;
-import vfuzz.except.MalformedRequestException;
 import vfuzz.except.RequestBuildingException;
-import vfuzz.except.WordlistCompletedException;
+import vfuzz.except.controlflow.WordlistCompletedException;
 import vfuzz.except.WordlistException;
 import vfuzz.logging.Metrics;
 import vfuzz.network.request.ParsedRequestFactory;

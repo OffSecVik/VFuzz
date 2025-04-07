@@ -1,4 +1,4 @@
-package vfuzz.except;
+package vfuzz.except.controlflow;
 
 public class WordlistCompletedException extends Exception {
     public WordlistCompletedException() {

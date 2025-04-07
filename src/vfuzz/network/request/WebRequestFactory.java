@@ -1,10 +1,7 @@
 package vfuzz.network.request;
 
 import org.apache.http.client.methods.HttpRequestBase;
-import vfuzz.config.ConfigAccessor;
-import vfuzz.core.WordlistReader;
-import vfuzz.except.WordlistCompletedException;
-import vfuzz.except.WordlistException;
+import vfuzz.except.controlflow.WordlistCompletedException;
 
 import java.util.ArrayList;
 import java.util.List;
