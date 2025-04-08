@@ -182,14 +182,12 @@ public class QueueConsumer implements Runnable {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        WordlistReader wordlistReader = null;
+        try {
+            wordlistReader = new WordlistReader(ConfigAccessor.getConfigValue("wordlistPath", String.class));
+        } catch (WordlistException ignored) {}
 
         while (running) {
-            WordlistReader wordlistReader = null;
-            try {
-                wordlistReader = new WordlistReader(ConfigAccessor.getConfigValue("wordlistPath", String.class));
-            } catch (WordlistException ignored) {
-
-            }
             String payload = wordlistReader.getNextPayload();
             if (payload == null) {
                 reachedEndOfWordlist();
@@ -198,7 +196,9 @@ public class QueueConsumer implements Runnable {
 
             executor.submit(() -> {
                 try {
+                    target.incrementSentRequestCount();
                     Metrics.incrementRequestsCount();
+
                     fuzzer.fuzzAsync(payload).join(); // Ensure the CompletableFuture completes
                     target.incrementSuccessfulRequestCount();
                     Metrics.incrementSuccessfulRequestsCount();

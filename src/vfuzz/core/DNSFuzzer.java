@@ -97,9 +97,19 @@ public class DNSFuzzer {
 
                     System.out.println("Found: " + subdomain);
                 }
+            } catch (TextParseException tpe) {
+                fuzzAsync(sanitizedPayload(payload));
             } catch (Exception e) {
                 System.err.println("Error querying subdomain: " + e.getMessage());
             }
         }, executor);
+    }
+
+    private String sanitizedPayload(String payload) {
+        String sanitizedPayload = payload;
+        while (sanitizedPayload.startsWith(".")) {
+            sanitizedPayload = sanitizedPayload.substring(1);
+        }
+        return sanitizedPayload;
     }
 }

@@ -57,7 +57,12 @@ public class ThreadOrchestrator {
             terminalOutput = new TerminalOutput();
             executor.submit(terminalOutput);
 
-            Target initialTarget = new Target(ConfigAccessor.getConfigValue("url", String.class), 0);
+            Target initialTarget;
+            if (ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.SUBDOMAIN) {
+                initialTarget = new Target(ConfigAccessor.getConfigValue("domainName", String.class), 0);
+            } else {
+                initialTarget = new Target(ConfigAccessor.getConfigValue("url", String.class), 0);
+            }
 
             // Submit the initial tasks to the executor
             List<QueueConsumer> consumersForURL = new ArrayList<>();
