@@ -69,8 +69,11 @@ public class ConfigAccessor {
     public static <T> List<T> getConfigValues(String key, Class<T> type, AtomicBoolean... isDefault) {
         List<String> values = configManager.getConfigValues(key);
         List<T> result = new ArrayList<>();
-        for (String value : values) {
-            result.add(convertToType(value, type));
+
+        if (values != null) {
+            for (String value : values) {
+                result.add(convertToType(value, type));
+            }
         }
         if (isDefault.length > 0 && isDefault[0] != null) {
             isDefault[0].set(configManager.isDefaultValue(key));
