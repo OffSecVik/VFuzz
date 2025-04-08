@@ -35,8 +35,8 @@ public class ConfigurationPrinter {
 
         System.out.println(getConfigDisplayString("wordlistPath", String.class, isDefault, "Wordlist Path"));
 
-        System.out.println(getConfigDisplayString("url", String.class, isDefault, "URL"));
-
+        printIfNotNull("url", "URL");
+        printIfNotNull("domainName", "Domain");
         System.out.println(getConfigDisplayString("excludedStatusCodes", Set.class, isDefault, "Excluded Status Codes"));
 
         printIfNotNull("excludedLength", "Excluded Lengths");
