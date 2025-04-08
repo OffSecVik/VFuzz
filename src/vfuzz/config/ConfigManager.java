@@ -109,6 +109,7 @@ public class ConfigManager {
             CommandLineArgument help = findArgumentByString("--help");
             providedArgs.add(help.getConfigName());
             help.executeAction(this, "true");
+            return;
         }
 
         for (int i = 0; i < passedArguments.length; i++) {
@@ -300,11 +301,11 @@ public class ConfigManager {
             return;
         }
         if (ConfigAccessor.getConfigValue("requestMode", RequestMode.class) == RequestMode.SUBDOMAIN) {
-            if (!providedArgs.contains("domain")) {
+            if (!providedArgs.contains("domainName")) {
                 System.out.println("Please provide a domain with '-D'");
                 System.exit(0);
             }
-            if (!providedArgs.contains("wordlist")) {
+            if (!providedArgs.contains("wordlistPath")) {
                 System.out.println("Please provide a wordlist with '-w'");
                 System.exit(0);
             }
